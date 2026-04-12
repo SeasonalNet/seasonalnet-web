@@ -1,0 +1,8 @@
+{
+  "name": "seasonalnet-web",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ]
+}
