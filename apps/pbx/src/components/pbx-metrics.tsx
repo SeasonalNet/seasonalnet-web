@@ -1,7 +1,7 @@
 "use client"
 
 import { useEffect, useMemo, useState } from "react"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@seasonalnet/shell/src/components/ui/card"
 import { Users, PhoneCall, CalendarDays, History, AlertTriangle } from "lucide-react"
 import { AnimatedNumber } from "@/components/animated-number"
 

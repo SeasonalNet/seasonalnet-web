@@ -1,15 +1,15 @@
 "use client"
 
 
-import { BrandMark } from "@/components/brand-mark"
+import { BrandMark } from "@seasonalnet/shell/src/components/brand-mark"
 import { site } from "@/lib/site"
-import { ModeToggle } from "@/components/mode-toggle"
+import { ModeToggle } from "@seasonalnet/shell/src/components/mode-toggle"
 import {
   NavigationMenu,
   NavigationMenuItem,
   NavigationMenuLink,
   NavigationMenuList,
-} from "@/components/ui/navigation-menu"
+} from "@seasonalnet/shell/src/components/ui/navigation-menu"
 
 const navLinkClass =
   "inline-flex flex-row items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-medium " +

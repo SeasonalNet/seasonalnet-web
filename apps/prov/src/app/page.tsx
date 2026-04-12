@@ -1,6 +1,6 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
+import { Card, CardContent, CardHeader, CardTitle } from "@seasonalnet/shell/src/components/ui/card"
+import { Badge } from "@seasonalnet/shell/src/components/ui/badge"
+import { Separator } from "@seasonalnet/shell/src/components/ui/separator"
 import { SiteFooter } from "@/components/site-footer"
 
 const examples = [

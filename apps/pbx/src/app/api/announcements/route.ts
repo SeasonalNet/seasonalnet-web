@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { loadAnnouncements, getActiveAnnouncementsFrom } from "@/lib/announcements"
+import { loadAnnouncements, getActiveAnnouncementsFrom } from "@seasonalnet/shell/src/lib/announcements"
 
 export const runtime = "nodejs"
 

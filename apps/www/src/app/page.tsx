@@ -2,10 +2,10 @@ import { site } from "@/lib/site"
 import { BlurFade } from "@/components/magic/blur-fade"
 import { SiteFooter } from "@/components/site-footer"
 
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Separator } from "@/components/ui/separator"
+import { Badge } from "@seasonalnet/shell/src/components/ui/badge"
+import { Button } from "@seasonalnet/shell/src/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@seasonalnet/shell/src/components/ui/card"
+import { Separator } from "@seasonalnet/shell/src/components/ui/separator"
 
 function PortalCard({ p }: { p: (typeof site.portals)[number] }) {
   const Icon = p.icon

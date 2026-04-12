@@ -4,7 +4,7 @@
 // Renders the service-area Leaflet map wired to both alert feeds.
 
 import * as React from "react";
-import { Button } from "@/components/ui/button";
+import { Button } from "@seasonalnet/shell/src/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import StationMap from "@/components/station-map";
 import { STATION_ALERTS } from "@/lib/station-alert-config";

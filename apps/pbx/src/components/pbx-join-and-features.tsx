@@ -1,5 +1,5 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardHeader, CardTitle } from "@seasonalnet/shell/src/components/ui/card"
+import { Button } from "@seasonalnet/shell/src/components/ui/button"
 import { Shield, Code, Bot, MessagesSquare } from "lucide-react"
 
 function FeatureCard({

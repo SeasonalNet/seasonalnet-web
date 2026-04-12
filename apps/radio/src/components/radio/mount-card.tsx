@@ -1,6 +1,6 @@
 // src/components/radio/mount-card.tsx
 
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card, CardContent, CardHeader, CardTitle } from "@seasonalnet/shell/src/components/ui/card"
 import { BustedAudio } from "@/components/busted-audio"
 import { RADIO_STATIONS } from "@/lib/radio-stations"
 

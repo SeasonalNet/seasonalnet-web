@@ -1,7 +1,7 @@
 // src/app/page.tsx
 
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
+import { Badge } from "@seasonalnet/shell/src/components/ui/badge"
+import { Separator } from "@seasonalnet/shell/src/components/ui/separator"
 import { StationTile } from "@/components/radio/station-tile"
 import { RADIO_STATIONS } from "@/lib/radio-stations"
 import { SiteFooter } from "@/components/site-footer"

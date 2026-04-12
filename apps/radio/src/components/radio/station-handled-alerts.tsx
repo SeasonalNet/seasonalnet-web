@@ -2,9 +2,9 @@
 
 import * as React from "react"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { cn } from "@/lib/utils"
+import { Badge } from "@seasonalnet/shell/src/components/ui/badge"
+import { Button } from "@seasonalnet/shell/src/components/ui/button"
+import { cn } from "@seasonalnet/shell/src/lib/utils"
 import { ExternalLink, RefreshCw, TriangleAlert } from "lucide-react"
 import { AlertEventIcon, alertToneClassEasHandled } from "@/components/radio/alert-event-icon"
 import { STATION_HANDLED_ALERTS } from "@/lib/station-handled-alert-config"

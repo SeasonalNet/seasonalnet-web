@@ -4,8 +4,8 @@ import * as React from "react"
 import { useTheme } from "next-themes"
 import { Moon, Sun } from "lucide-react"
 
-import { Button } from "@/components/ui/button"
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Button } from "@seasonalnet/shell/src/components/ui/button"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@seasonalnet/shell/src/components/ui/tooltip"
 
 export function ModeToggle() {
   const { theme, setTheme } = useTheme()

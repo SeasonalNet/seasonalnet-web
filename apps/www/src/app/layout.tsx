@@ -1,9 +1,9 @@
 import type { Metadata } from "next"
 import "./globals.css"
 
-import { ThemeProvider } from "@/components/theme-provider"
+import { ThemeProvider } from "@seasonalnet/shell/src/components/theme-provider"
 import { SiteHeader } from "@/components/site-header"
-import { SiteAnnouncements } from "@/components/site-announcements"
+import { SiteAnnouncements } from "@seasonalnet/shell/src/components/site-announcements"
 
 export const metadata: Metadata = {
   title: "SeasonalNet",

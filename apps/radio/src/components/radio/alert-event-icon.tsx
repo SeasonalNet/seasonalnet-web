@@ -1,7 +1,7 @@
 // src/components/radio/alert-event-icon.tsx
 
 import * as React from "react"
-import { cn } from "@/lib/utils"
+import { cn } from "@seasonalnet/shell/src/lib/utils"
 import * as Lucide from "lucide-react"
 
 type Props = {

@@ -1,5 +1,5 @@
 import { site } from "@/lib/site"
-import { Separator } from "@/components/ui/separator"
+import { Separator } from "@seasonalnet/shell/src/components/ui/separator"
 
 export function SiteFooter() {
   return (

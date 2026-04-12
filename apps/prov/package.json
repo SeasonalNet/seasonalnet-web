@@ -1,5 +1,5 @@
 {
-  "name": "seasonalnet-spa",
+  "name": "@seasonalnet/prov",
   "version": "0.1.0",
   "private": true,
   "scripts": {

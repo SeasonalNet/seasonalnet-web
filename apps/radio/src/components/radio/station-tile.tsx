@@ -1,6 +1,6 @@
 // src/components/radio/station-tile.tsx
-import { Badge } from "@/components/ui/badge"
-import { Separator } from "@/components/ui/separator"
+import { Badge } from "@seasonalnet/shell/src/components/ui/badge"
+import { Separator } from "@seasonalnet/shell/src/components/ui/separator"
 import { MountCard } from "@/components/radio/mount-card"
 import { StationAlerts } from "@/components/radio/station-alerts"
 import { StationHandledAlerts } from "@/components/radio/station-handled-alerts"
