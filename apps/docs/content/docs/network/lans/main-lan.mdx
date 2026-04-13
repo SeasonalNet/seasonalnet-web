@@ -1,0 +1,90 @@
+---
+title: "SeasonalNet Main LAN"
+description: "Address bands, infrastructure inventory, and routing notes for the main LAN."
+---
+
+**Subnet:** `192.168.1.0/24`  
+**Gateway:** `192.168.1.1` (Verizon WNC-CR200A)  
+**Last updated:** 2026-04-11
+
+---
+
+## Address Bands
+
+| Range | Purpose |
+|---|---|
+| `.1` | Gateway (Verizon WNC-CR200A) |
+| `.2 – .5` | Network infrastructure (static, assigned on-device) |
+| `.6 – .19` | Servers & VMs (static, assigned in-guest) |
+| `.20 – .49` | Reserved / Assigned static non-server devices (Hypervisors, important machines, etc.) |
+| `.50 – .99` | Static non-server devices (IoT, printers, etc.) |
+| `.100 – .254` | DHCP pool (dynamic clients) |
+
+---
+
+## Infrastructure Band (`.2 – .5`)
+
+| IP | Device | Notes |
+|---|---|---|
+| `192.168.1.2` | SeasonalBRIDGE-ROOT (AIR-AP1142N-A-K9) | Wireless bridge ROOT to SeasonalCME LAN |
+| `192.168.1.3` | SeasonalBRIDGE-NONROOT (AIR-AP1142N-A-K9) | Wireless bridge NONROOT, connects to SeasonalCME SW2 Gi1/0/1 |
+| `192.168.1.4` | SeasonalEDGE-R1 (Cisco 1921) | SeasonalCME lab edge router, Gi0/0 WAN uplink |
+| `192.168.1.5` | *(reserved)* | |
+
+---
+
+## VM / Server Band (`.6 – .19`)
+
+All VMs hosted on `seasonal-victus` (VirtualBox). Static IPs configured in `/etc/network/interfaces` on each guest.
+
+| IP | VM | Interface | Notes |
+|---|---|---|---|
+| `192.168.1.6` | SeasonalAuth | `enp0s8` | Authentik SSO layer |
+| `192.168.1.7` | SeasonalForge | `enp0s8` | Forgejo git instance (`git.seasonalnet.org`) |
+| `192.168.1.8` | SeasonalWeb | `enp0s8` | NGINX reverse proxy, Next.js SPAs, DDNS updater |
+| `192.168.1.9` | SeasonalRain | `enp0s8` | SeasonalNet Discord bot (`seasonalnet-discord-bot`) |
+| `192.168.1.10` | SeasonalWeather | `enp0s8` | Weather radio pipeline, Icecast |
+| `192.168.1.11` | SeasonalUtilities | `enp0s8` | Uptime Kuma (`status.seasonalnet.org`) |
+| `192.168.1.12` | FreePBX17 | `enp0s9` | FreePBX / Asterisk SIP PBX. Also has `enp0s3` (VBox NAT, `10.0.2.15`) and `enp0s8` (Phone-LAN, `192.168.56.10`) |
+| `192.168.1.13 – .19` | *(reserved for future VMs)* | | |
+
+
+
+---
+
+## Reserved / Assigned static non-server devices (`.20 – .49`)
+
+| IP | Device | Notes |
+|---|---|---|
+| `192.168.1.20` | seasonal-victus (Victus by HP Gaming Laptop 15-fa1xxx) | VM hypervisor; seasonal-agent host |
+
+---
+
+## Other Networks
+
+| Network | Purpose | Gateway |
+|---|---|---|
+| `10.42.0.0/24` | SeasonalCME VOICE VLAN (VLAN 10) | `10.42.0.1` (SeasonalEDGE-R1 Gi0/1) |
+| `10.42.2.0/24` | SeasonalCME MGMT VLAN (VLAN 42) | `10.42.2.1` (SeasonalEDGE-R1 Vlan42) |
+| `192.168.56.0/24` | Phone-LAN (FreePBX17 + IP phones desk LAN) | `192.168.56.10` (FreePBX17) |
+
+---
+
+## Port Forwarding (Verizon WNC-CR200A)
+
+| Rule | Port | Protocol | Forwards To |
+|---|---|---|---|
+| SeasonalFPBX (HTTP) | 80 | TCP | `192.168.1.8` (SeasonalWeb) |
+| SeasonalFPBXHTTPS | 443 | TCP | `192.168.1.8` (SeasonalWeb) |
+| AstroIAX | 4569 | UDP | `192.168.1.12` (FreePBX17) |
+| SeasonalFPBX RTP | 10000-20000 | UDP | `192.168.1.12` (FreePBX17) |
+| SeasonalPBX SIP | 5060 | Both | `192.168.1.12` (FreePBX17) |
+| SeasonalPBX SIP TLS | 5061 | TCP | `192.168.1.12` (FreePBX17) |
+
+---
+
+## Known Remaining Items
+
+- `seasonal-teal-laptop` is dynamic (`.240` area) — candidate for `.20–.49` static band
+- SeasonalBRIDGE-NONROOT BVI1 still has stale `ipv6 address dhcp` / `ipv6 address autoconfig` — clean up via console next opportunity
+- Phone-LAN gateway is non-standard (`.10` over `.1`) — non-urgent

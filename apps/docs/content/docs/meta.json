@@ -1,4 +1,7 @@
 {
   "title": "Documentation",
-  "pages": ["index", "network"]
+  "pages": [
+    "index",
+    "network"
+  ]
 }

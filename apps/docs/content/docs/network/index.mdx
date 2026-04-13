@@ -1,20 +1,61 @@
 ---
-title: Network Overview
-description: Seed network documentation page used to validate docs navigation, metadata, and page rendering.
+title: "SeasonalNet Network Overview"
+description: "Top-level index of SeasonalNet network segments and routing boundaries."
 ---
 
-## Overview
+Top-level index of all SeasonalNet network segments. For full topology detail, see the per-segment map files in `LANs/`.
 
-SeasonalNet uses a documented LAN layout so infrastructure, services, and operational boundaries stay understandable.
+---
 
-## Why this page exists
+## Segment Index
 
-This page is intentionally small. Its job is to prove that:
+| Segment | Subnet(s) | IPv6 ULA | Gateway | Map |
+|---|---|---|---|---|
+| Main LAN | `192.168.1.0/24` | ISP-assigned (native) | `192.168.1.1` | [`LANs/seasonalnet-lan-map.md`](/docs/network/lans/main-lan) |
+| SeasonalCME Voice | `10.42.0.0/24` (VLAN 10) | `FD42:42::/64` | `10.42.0.1` | [`LANs/seasonalcme-network-map.md`](/docs/network/lans/seasonalcme) |
+| SeasonalCME Management | `10.42.2.0/24` (VLAN 42) | `FD42:42:2::/64` | `10.42.2.1` | [`LANs/seasonalcme-network-map.md`](/docs/network/lans/seasonalcme) |
+| Phone-LAN | `192.168.56.0/24` | `FD42:56::/64` | `192.168.56.10` | [`LANs/phonelan-map.md`](/docs/network/lans/phone-lan) |
 
-- nested docs routes render correctly,
-- the sidebar tree is generated from content,
-- page metadata and table of contents work.
+---
 
-## Later
+## Segment Relationships
 
-Detailed LAN and published network material will come from the canonical docs repository during the sync phase.
+```text
+Internet
+    |
+Verizon WNC-CR200A (192.168.1.1)
+    |
+Main LAN (192.168.1.0/24)
+    |
+    |-- SeasonalEDGE-R1 (192.168.1.4)
+    |       |
+    |       |-- SeasonalCME Voice VLAN (10.42.0.0/24, VLAN 10)
+    |       `-- SeasonalCME Management VLAN (10.42.2.0/24, VLAN 42)
+    |
+    `-- FreePBX17 (192.168.1.12)
+            |
+            `-- Phone-LAN (192.168.56.0/24)
+```
+
+---
+
+## Internet Exposure (Port Forwards on WNC-CR200A)
+
+| Service | Port(s) | Protocol | Target |
+|---|---|---|---|
+| HTTP | 80 | TCP | SeasonalWeb (`192.168.1.8`) |
+| HTTPS | 443 | TCP | SeasonalWeb (`192.168.1.8`) |
+| SIP | 5060 | TCP+UDP | FreePBX17 (`192.168.1.12`) |
+| SIP TLS | 5061 | TCP | FreePBX17 (`192.168.1.12`) |
+| IAX2 | 4569 | UDP | FreePBX17 (`192.168.1.12`) |
+| RTP | 10000–20000 | UDP | FreePBX17 (`192.168.1.12`) |
+
+---
+
+## DNS / DHCP
+
+| Segment | DNS | DHCP |
+|---|---|---|
+| Main LAN | ISP / `192.168.1.1` | Verizon WNC-CR200A |
+| SeasonalCME | SeasonalEDGE-R1 (OSPF 42 domain) | SeasonalEDGE-R1 |
+| Phone-LAN | `dnsmasq` on FreePBX17 (`192.168.56.10`) | `dnsmasq` on FreePBX17 |

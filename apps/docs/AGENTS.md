@@ -46,4 +46,4 @@ This app already has:
 - shared shell integration
 - a defined public publishing policy
 
-The next implementation step is the build/deploy-time sync from `seasonalnet-docs`.
+The app now has a build/deploy-time sync script for `seasonalnet-docs`, but live deployment wiring remains separate.

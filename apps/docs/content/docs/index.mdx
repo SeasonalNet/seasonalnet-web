@@ -1,20 +1,47 @@
 ---
-title: SeasonalNet Documentation
-description: Public-facing documentation rendered locally through Fumadocs during the first content pass.
+title: "SeasonalNet Documentation"
+description: "Public overview and publication scope for SeasonalNet documentation."
 ---
 
-## Overview
+Static reference documentation for the SeasonalNet homelab infrastructure. Maintained on `seasonal-victus` at `/home/seasonal/Documents/SeasonalNet-Documentation/`.
 
-This docs app is now rendering real MDX content through Fumadocs instead of showing raw Markdown as source.
+---
 
-## Current scope
+## Structure
 
-- Local content only for this phase.
-- Shared SeasonalNet shell still wraps the app.
-- Publish-time sync from `seasonalnet-docs` comes later.
+```
+SeasonalNet-Documentation/
+├── README.md          # This file
+├── AGENTS.md          # Agent/machine reference for this documentation set
+├── NETWORK.md         # Top-level network overview and segment index
+└── LANs/
+    ├── seasonalnet-lan-map.md     # Main LAN (192.168.1.0/24) — top-level segment
+    ├── seasonalcme-network-map.md # SeasonalCME lab (10.42.0.0/24, 10.42.2.0/24)
+    └── phonelan-map.md            # Phone-LAN (192.168.56.0/24)
+```
 
-## Next milestones
+> `VMs/` exists locally but is excluded from any repository or published documentation. It contains host-level credentials and per-VM configuration detail that must not be committed or shared.
 
-1. Wrap the docs routes more cleanly in the shared shell.
-2. Define a safe allowlist for publishable content.
-3. Add deterministic sync from the canonical docs repo.
+---
+
+## Scope
+
+This documentation covers:
+
+- Layer 2 / Layer 3 topology for all SeasonalNet network segments
+- Device inventory, static address assignments, and address band purpose
+- Routing, NAT, and services boundaries
+- Physical switch port maps where applicable
+- Known gaps and deferred cleanup items
+
+It does **not** cover:
+
+- VM-level configuration or credentials (`VMs/` — local only)
+- Application-layer configuration for hosted services
+- SeasonalWeather, SeasonalPBX, or SeasonalWeb internal architecture (maintained separately in their respective repositories)
+
+---
+
+## Long-Term Goal
+
+Publish this documentation as a rendered site at `docs.seasonalnet.org`, integrated into the existing SeasonalWeb Next.js deployment using [Fumadocs](https://fumadocs.vercel.app/). The site must conform to the uniform SeasonalNet SPA design (shared header/footer, black and white theming).

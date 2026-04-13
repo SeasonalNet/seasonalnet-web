@@ -3,7 +3,9 @@ export const PUBLIC_DOCS_SOURCE_REMOTE =
   'https://git.seasonalnet.org/Seasonal_Currency/seasonalnet-docs';
 
 // Default sibling checkout on SeasonalWeb when both repos live under /opt/git-staging/.
-export const PUBLIC_DOCS_SOURCE_DEFAULT_PATH = '../../seasonalnet-docs';
+// apps/docs -> /opt/git-staging/seasonalnet-web/apps/docs
+// sibling docs repo -> /opt/git-staging/seasonalnet-docs
+export const PUBLIC_DOCS_SOURCE_DEFAULT_PATH = '../../../seasonalnet-docs';
 
 // These paths must never be published, even if they appear in the source repo later.
 export const PUBLIC_DOCS_DENY_PREFIXES = ['VMs/'];
