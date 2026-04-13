@@ -21,7 +21,15 @@ It will host public documentation under `apps/docs` and is expected to render st
    - Prove local docs rendering before adding sync from `seasonalnet-docs`.
 
 4. Do not introduce runtime repo fetching.
-   - Docs content sync, when added later, must happen at build/deploy time.
+   - Docs content sync must happen at build/deploy time.
+
+5. Enforce the public publishing policy.
+   - Only explicitly allowlisted files from `seasonalnet-docs` may be published.
+   - `VMs/` and any non-allowlisted paths must never be synced into this app.
+
+6. Keep generated sync output deterministic.
+   - Generated content may overwrite managed docs pages, but only for files declared in the policy.
+   - Do not turn a whole repo copy into the content tree.
 
 5. Preserve SeasonalNet visual identity.
    - black-and-white only
@@ -31,15 +39,11 @@ It will host public documentation under `apps/docs` and is expected to render st
 
 ## Current phase
 
-This scaffold phase should only establish:
+This app already has:
 
 - app workspace structure
+- Fumadocs rendering with local seed content
 - shared shell integration
-- placeholder landing page
-- announcements API parity with other apps
+- a defined public publishing policy
 
-It should not yet add:
-
-- Fumadocs
-- docs repo sync
-- live deployment wiring
+The next implementation step is the build/deploy-time sync from `seasonalnet-docs`.
