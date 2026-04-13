@@ -18,9 +18,9 @@ export type Portal = {
 
 export const site = {
   name: "SeasonalNet",
-  subtitle: "docs front door",
+  subtitle: "documentation front door",
   description: "Public documentation for SeasonalNet systems and layouts.",
-  footerNote: "Scaffold phase: placeholder docs app before Fumadocs integration.",
+  footerNote: "Shared shell outside, Fumadocs inside. Public docs only.",
   portals: [
     { key: "home", title: "Home", href: "https://www.seasonalnet.org", icon: Home },
     { key: "docs", title: "Docs", href: "https://docs.seasonalnet.org", icon: BookText },
