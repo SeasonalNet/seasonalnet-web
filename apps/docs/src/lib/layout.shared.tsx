@@ -1,10 +1,15 @@
-import type { BaseLayoutProps } from 'fumadocs-ui/layouts/shared';
+import type { BaseLayoutProps } from "fumadocs-ui/layouts/shared";
 
 export function baseOptions(): BaseLayoutProps {
   return {
     nav: {
-      title: 'Documentation',
-      url: '/docs',
+      enabled: false,
+    },
+    themeSwitch: {
+      enabled: false,
+    },
+    searchToggle: {
+      enabled: false,
     },
   };
 }

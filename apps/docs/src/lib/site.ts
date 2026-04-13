@@ -20,7 +20,7 @@ export const site = {
   name: "SeasonalNet",
   subtitle: "documentation front door",
   description: "Public documentation for SeasonalNet systems and layouts.",
-  footerNote: "Shared shell outside, Fumadocs inside. Public docs only.",
+  footerNote: "Built to be fast, boring, and resilient.",
   portals: [
     { key: "home", title: "Home", href: "https://www.seasonalnet.org", icon: Home },
     { key: "docs", title: "Docs", href: "https://docs.seasonalnet.org", icon: BookText },

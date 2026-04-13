@@ -1,6 +1,7 @@
 @import "tailwindcss";
 @import "fumadocs-ui/css/neutral.css";
 @import "fumadocs-ui/css/preset.css";
+@source "../../../../packages/shell/src/**/*.{ts,tsx}";
 @config "../../tailwind.config.ts";
 
 @layer base {
@@ -55,5 +56,62 @@
 
   body {
     @apply bg-background text-foreground;
+  }
+}
+
+@layer components {
+  /*
+   * Shared shell outside, Fumadocs inside:
+   * keep the docs structure and behavior, but flatten the left rail/body surface
+   * back onto the same page background so it does not terminate abruptly before
+   * the shared footer.
+   */
+  #nd-docs-layout,
+  #nd-sidebar,
+  #nd-toc {
+    background-color: hsl(var(--background)) !important;
+  }
+
+  #nd-sidebar {
+    border-inline-end-color: hsl(var(--border)) !important;
+    box-shadow: none !important;
+  }
+
+  #nd-sidebar [data-radix-scroll-area-viewport],
+  #nd-sidebar [data-radix-scroll-area-viewport] > div,
+  #nd-docs-layout .fd-scroll-container,
+  #nd-docs-layout .fd-sidebar,
+  #nd-docs-layout .fd-sidebar-content,
+  #nd-docs-layout .fd-page,
+  #nd-docs-layout .fd-toc,
+  #nd-docs-layout .fd-toc-nav {
+    background-color: transparent !important;
+  }
+
+  #nd-docs-layout main,
+  #nd-docs-layout article {
+    background-color: transparent;
+  }
+
+  #nd-sidebar [data-active='true'] {
+    background-color: hsl(var(--accent)) !important;
+    color: hsl(var(--accent-foreground)) !important;
+  }
+
+  #nd-sidebar hr,
+  #nd-docs-layout hr,
+  #nd-toc hr {
+    border-color: hsl(var(--border)) !important;
+  }
+
+  /* Restore inline-code contrast without touching fenced code blocks. */
+  #nd-docs-layout :not(pre) > code,
+  #nd-toc :not(pre) > code {
+    background-color: hsl(var(--muted));
+    color: hsl(var(--foreground));
+    border: 1px solid hsl(var(--border));
+    border-radius: 0.45rem;
+    padding: 0.08rem 0.35rem;
+    font-weight: 500;
   }
 }
