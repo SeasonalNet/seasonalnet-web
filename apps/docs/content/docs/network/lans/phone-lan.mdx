@@ -1,0 +1,148 @@
+---
+title: "SeasonalNet Phone-LAN"
+description: "Routing, services, and attached-device map for the Phone-LAN segment."
+---
+
+**IPv4 subnet:** `192.168.56.0/24`  
+**IPv6 ULA:** `FD42:56::/64`  
+**IPv4 gateway:** `192.168.56.10` (FreePBX17 `enp0s8`)  
+**IPv6 gateway:** `FD42:56::10` (FreePBX17 `enp0s8`)  
+**Last updated:** 2026-04-12
+
+---
+
+## Address Bands
+
+| Range / Prefix | Purpose |
+|---|---|
+| `192.168.56.1 – .9` | Reserved / infrastructure headroom |
+| `192.168.56.10` | Gateway / services host (FreePBX17 `enp0s8`) |
+| `192.168.56.11 – .49` | Reserved static infrastructure / future devices |
+| `192.168.56.50 – .99` | Static or semi-static LAN devices |
+| `192.168.56.100 – .254` | DHCP pool / dynamic clients |
+| `FD42:56::/64` | Phone-LAN IPv6 ULA space |
+
+---
+
+## Infrastructure Band
+
+| IP / Prefix | Device | Interface | Notes |
+|---|---|---|---|
+| `192.168.56.10` | FreePBX17 | `enp0s8` | Phone-LAN IPv4 gateway, DNS, DHCPv4, SIP services |
+| `FD42:56::10/64` | FreePBX17 | `enp0s8` | Phone-LAN IPv6 ULA gateway |
+| `192.168.56.4` | SeasonalAP-2702E (AIR-SAP2702E-A-K9) | `BVI1` | Phone-LAN wireless AP |
+| `FD42:56::4/64` | SeasonalAP-2702E (AIR-SAP2702E-A-K9) | `BVI1` | AP IPv6 ULA |
+| `2600:1003:a012:e209:a66c:2aff:fe28:440c` | SeasonalAP-2702E (AIR-SAP2702E-A-K9) | `BVI1` | AP global IPv6 address via autoconfiguration |
+| `192.168.1.12` | FreePBX17 | `enp0s9` | Main-LAN-facing uplink address |
+| `192.168.1.184` | FreePBX17 | `enp0s9` | Additional IPv4 on main LAN |
+| `2600:1003:a012:e209:a00:27ff:fe37:5221` | FreePBX17 | `enp0s9` | Main-LAN global IPv6 address |
+
+---
+
+## Attached / Observed Clients
+
+| IP / Prefix | Device | Notes |
+|---|---|---|
+| `192.168.56.118` | Cisco IP Phone 7841 (`SEP74860B8F0B94`) | Active on Phone-LAN; seen in ARP, SIP keepalives, CDP/LLDP, and outbound NTP |
+| `FD42:56::158` | Cisco IP Phone 7841 (`SEP74860B8F0B94`) | IPv6 ULA advertised by the phone |
+| `192.168.56.181` | Cisco IP Phone SPA525G2 (`SIP4C008292D234`) | Active on Phone-LAN; seen in SIP OPTIONS / NOTIFY traffic and CDP |
+| additional clients | unmanaged Phone-LAN segment | Flat LAN behind the unmanaged desk switch; exact physical per-port order is not modeled here |
+
+---
+
+## Upstream / Adjacent Networks
+
+| Network | Relationship | Notes |
+|---|---|---|
+| `192.168.1.0/24` | Main LAN / upstream routed network | FreePBX17 exits Phone-LAN via `enp0s9`; default IPv4 route points to `192.168.1.1` |
+| main-LAN IPv6 | Upstream IPv6 path | Default IPv6 route on FreePBX17 points out `enp0s9` via a link-local next-hop |
+| `10.42.0.0/24` | SeasonalCME voice VLAN | Reached from FreePBX17 through main LAN via `192.168.1.4` |
+| `10.42.2.0/24` | SeasonalCME management VLAN | Reached from FreePBX17 through main LAN via `192.168.1.4` |
+| `10.0.2.0/24` | VirtualBox NAT network | Present on `enp0s3`; not the active default path for Phone-LAN egress |
+
+---
+
+## Routing / Services Boundary
+
+| Item | Value | Notes |
+|---|---|---|
+| Phone-LAN router | FreePBX17 | `net.ipv4.ip_forward = 1`, `net.ipv6.conf.all.forwarding = 1` |
+| IPv4 default route | `default via 192.168.1.1 dev enp0s9` | Active upstream path to main LAN / Internet |
+| IPv6 default route | `default via fe80::2641:feff:fe52:f6dd dev enp0s9` | Active upstream IPv6 path |
+| DNS service | `dnsmasq` on FreePBX17 | Listening on `192.168.56.10:53` and `FD42:56::10:53` |
+| DHCPv4 service | `dnsmasq` on FreePBX17 | Listening on UDP `67` on `enp0s8` |
+| SIP service | `asterisk` on FreePBX17 | Listening on `5060/5061`; Phone-LAN traffic to `.118` and `.181` observed |
+| IPv4 NAT | nftables masquerade | Present for `oif "enp0s9"` and also `oif "enp0s3"` |
+| IPv6 NAT66 | nftables `phone_nat66` | `FD42:56::/64` masqueraded when egressing `enp0s9` |
+
+---
+
+## Wireless Infrastructure
+
+| Item | Value | Notes |
+|---|---|---|
+| AP | SeasonalAP-2702E | Cisco AIR-SAP2702E-A-K9 |
+| AP IPv4 | `192.168.56.4` | `BVI1` |
+| AP IPv6 ULA | `FD42:56::4/64` | `BVI1` |
+| AP SSID | `SeasonalPhone` | Advertised on both radios |
+| Security | WPA2-PSK | `authentication key-management wpa version 2` |
+| 2.4 GHz channel | `2462` | Dot11Radio0 |
+| 5 GHz channel | `5825` | Dot11Radio1 |
+| AP role | `station-role root` | Standard AP role on both radios |
+| Bridge model | `bridge-group 1` | BVI1 / radio subinterfaces / Gi0.1 all tied into bridge group 1 |
+| Wireless clients at capture | none shown by `show dot11 associations all-client` | AP was up and advertising, but no currently associated wireless clients were listed in that command output |
+
+---
+## Physical Switch Port Map
+
+| TL-SF1005P Port | Connected device | Notes |
+|---|---|---|
+| `1` | Cisco IP Phone SPA525G2 | Endpoint on Phone-LAN |
+| `2` | Cisco IP Phone 7841 | Endpoint on Phone-LAN |
+| `3` | SeasonalAP-2702E | AP uplink |
+| `4` | unused | Spare port |
+| `5` | `seasonal-victus` `eno1` | Non-PoE uplink into the Phone-LAN segment |
+
+---
+
+## Topology Summary
+
+```text
+Main LAN / SeasonalNet upstream (192.168.1.0/24)
+        |
+        |  FreePBX17 enp0s9 = 192.168.1.12 / 192.168.1.184
+        |  default route -> 192.168.1.1
+        |
+FreePBX17
+  |- enp0s8 = 192.168.56.10 / FD42:56::10
+  |- DNS + DHCPv4 via dnsmasq
+  |- SIP / PBX services via Asterisk
+  `- routes / NATs Phone-LAN out enp0s9
+
+Phone-LAN (flat unmanaged LAN)
+  |- SeasonalAP-2702E = 192.168.56.4 / FD42:56::4
+  |- Cisco IP Phone 7841 = 192.168.56.118 / FD42:56::158
+  `- Cisco IP Phone SPA525G2 = 192.168.56.181
+
+Wireless side
+  `- SSID: SeasonalPhone (2.4 GHz + 5 GHz, WPA2-PSK)
+```
+
+---
+
+## Notes and Constraints
+
+- Phone-LAN is a **flat LAN**, not a VLAN-backed fabric. Physical switching is presently unmanaged, so the map records the L3/L2 segment and observed devices rather than a port-by-port switch topology.
+- The gateway is intentionally non-standard at `.10` rather than `.1`.
+- FreePBX17 still has `enp0s3` on the VirtualBox NAT network (`10.0.2.15`), and nftables still contains an IPv4 masquerade rule for `enp0s3`, but the active default route for current Phone-LAN egress is `enp0s9`.
+- The AP has both a Phone-LAN ULA (`FD42:56::4`) and a global IPv6 address obtained by autoconfiguration.
+- The capture showed Router Advertisements sourced from FreePBX17 on the Phone-LAN segment, confirming IPv6 LAN gateway behavior.
+- The capture also showed SIP keepalive / OPTIONS / NOTIFY traffic between FreePBX17 and the observed phones, plus direct NTP from client devices to upstream servers.
+
+---
+
+## Known Remaining Items
+
+- The precise unmanaged-switch port layout is not documented here because it is not observable in the same way as the Cisco switched CME fabric.
+- If you later want a richer wireless subsection, add a client inventory taken while actual wireless stations are associated to `SeasonalPhone`.
+- If desired, the dnsmasq lease / DHCP pool details can be added later as a small appendix, but they are not required for the core topology map.
