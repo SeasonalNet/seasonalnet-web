@@ -1,7 +1,9 @@
-import { BookText, FileStack, GitBranch, ShieldCheck } from "lucide-react"
+import Link from "next/link"
+import { ArrowRight, BookText, FileStack, GitBranch, ShieldCheck } from "lucide-react"
 
 import { SiteFooter } from "@/components/site-footer"
 import { Badge } from "@seasonalnet/shell/src/components/ui/badge"
+import { Button } from "@seasonalnet/shell/src/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@seasonalnet/shell/src/components/ui/card"
 import { Separator } from "@seasonalnet/shell/src/components/ui/separator"
 
@@ -36,23 +38,33 @@ export default function Page() {
           <div className="max-w-3xl">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <Badge variant="secondary" className="rounded-full">docs</Badge>
-              <Badge variant="outline" className="rounded-full">scaffold</Badge>
-              <Badge variant="outline" className="rounded-full">staging only</Badge>
+              <Badge variant="outline" className="rounded-full">fumadocs</Badge>
+              <Badge variant="outline" className="rounded-full">local content</Badge>
             </div>
 
             <h1 className="text-4xl font-semibold tracking-tight">SeasonalNet Docs</h1>
             <p className="mt-3 text-muted-foreground">
-              This workspace is the dedicated documentation frontend scaffold. It proves the app exists,
-              builds, and uses the shared SeasonalNet shell before Fumadocs and docs sync are added.
+              This workspace is the dedicated documentation frontend scaffold. It now also renders local
+              Fumadocs content under <code className="rounded bg-muted px-1 py-0.5 text-sm">/docs</code>
+              before any sync work is added.
             </p>
+
+            <div className="mt-6">
+              <Button asChild className="rounded-full">
+                <Link href="/docs">
+                  Open local docs
+                  <ArrowRight className="h-4 w-4" />
+                </Link>
+              </Button>
+            </div>
           </div>
         </CardContent>
       </Card>
 
       <div className="mt-10">
         <div>
-          <div className="text-xs text-muted-foreground">Phase 1</div>
-          <h2 className="text-2xl font-semibold tracking-tight">Scaffold status</h2>
+          <div className="text-xs text-muted-foreground">Phase 2</div>
+          <h2 className="text-2xl font-semibold tracking-tight">Local content status</h2>
         </div>
 
         <Separator className="my-6" />
