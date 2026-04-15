@@ -9,7 +9,7 @@ description: "Voice and management VLAN topology for the SeasonalCME lab."
 **Management IPv6 ULA:** `FD42:42:2::/64`  
 **Voice gateway:** `10.42.0.1` / `FD42:42::1` (SeasonalEDGE-R1 `Gi0/1`)  
 **Management gateway:** `10.42.2.1` / `FD42:42:2::1` (SeasonalEDGE-R1 `Vlan42`)  
-**Last updated:** 2026-04-12
+**Last updated:** 2026-04-15
 
 ---
 
@@ -21,7 +21,7 @@ description: "Voice and management VLAN topology for the SeasonalCME lab."
 | `VLAN 10` / `FD42:42::/64` | SeasonalCME voice IPv6 ULA | `FD42:42::1` | IPv6 ULA on the voice segment; RA/DHCPv6 served by SeasonalEDGE-R1 |
 | `VLAN 42` / `10.42.2.0/24` | SeasonalCME management network | `10.42.2.1` | Routed from SeasonalEDGE-R1 via `Vlan42`; trunked between SW1 and SW2 |
 | `VLAN 42` / `FD42:42:2::/64` | SeasonalCME management IPv6 ULA | `FD42:42:2::1` | IPv6 ULA for management on `Vlan42` |
-| `VLAN 99` | WAN / transit infrastructure VLAN | none on switches | Used as native VLAN on the SW1↔SW2 trunk and for the edge transit port on SW1/SW2 side |
+| `VLAN 99` | WAN / transit infrastructure VLAN | none on switches | Used as native VLAN on the SW1↔SW2 trunk and for the edge transit path; also suitable for select Main-LAN-addressed rack-local endpoints such as the planned R230/iDRAC |
 
 ---
 
@@ -40,6 +40,8 @@ description: "Voice and management VLAN topology for the SeasonalCME lab."
 | `10.42.0.3` | SeasonalCME-SW2 (WS-C2960X-24PS-L) | `Vlan10` | Secondary PoE switch; uplinks to SW1 via trunk |
 | `10.42.0.4` | SeasonalAP-3602i | access port on SW2 | AP on voice VLAN |
 | `192.168.1.3` | SeasonalBridge-NONROOT (AIR-AP1142N-A-K9) | `Gi1/0/1` on SW2 | Wireless bridge NONROOT; attached on VLAN 99 transit side |
+| `192.168.1.21` | SeasonalR230 *(planned/awaiting arrival)* | access VLAN 99 port *(exact port TBD)* | Planned Dell PowerEdge R230 / Proxmox host physically in CME rack, logically on Main LAN |
+| `192.168.1.5` | SeasonalR230-iDRAC *(planned/awaiting arrival)* | shared or dedicated iDRAC path on same VLAN 99 attachment | Planned out-of-band management address on Main LAN |
 
 ---
 
@@ -58,7 +60,7 @@ description: "Voice and management VLAN topology for the SeasonalCME lab."
 
 | Port | Mode / VLAN | Connected device | Notes |
 |---|---|---|---|
-| `Gi0/1 – Gi0/20` | Access VLAN 10 | SeasonalCME endpoint / phone access ports | Mixed endpoint and phone-designated ports; many presently unused |
+| `Gi0/1 – Gi0/20` | Access VLAN 10 *(current)* | SeasonalCME endpoint / phone access ports | Mixed endpoint and phone-designated ports; many presently unused; one unused access port may be repurposed to VLAN 99 for the planned R230 if needed |
 | `Gi0/4` | Access VLAN 10 | active voice/endpoint client | Connected at capture time |
 | `Gi0/21` | Access VLAN 10 | SeasonalCME-R1 `Gi0/0` | CME router uplink |
 | `Gi0/22` | Access VLAN 99 | SeasonalEDGE-R1 `Gi0/0` | WAN / transit side toward edge router main-LAN-facing interface |
@@ -138,8 +140,21 @@ SW1 (root)
 SW2 (PoE)
   |- Gi1/0/1 --> SeasonalBridge-NONROOT (VLAN 99)
   |- Gi1/0/2 --> SeasonalAP-3602i (VLAN 10)
+  |- planned access VLAN 99 port --> SeasonalR230 / iDRAC (Main-LAN addressed)
   `- Gi1/0/9+ --> phones / voice clients (VLAN 10)
 ```
+
+---
+
+## Planned Rack Compute Addition
+
+| Item | Planned value | Notes |
+|---|---|---|
+| Server | Dell PowerEdge R230 | Intended to occupy the open 5U position above SeasonalCME-R1 in the existing 8U rack |
+| Host IP | `192.168.1.21` | Main-LAN addressing carried over the CME rack VLAN 99 transit path |
+| iDRAC IP | `192.168.1.5` | Main-LAN management address; use shared LOM1 or dedicated iDRAC NIC if present |
+| Switch mode | Access VLAN 99 | Exact switch port still to be chosen during install |
+| Routing intent | Avoid `10.42.2.0/24` placement | Keeps normal host management off the 1921 NAT/routing path |
 
 ---
 
