@@ -1,33 +1,84 @@
+import type { ComponentType } from 'react';
 import Link from 'next/link';
-import { ArrowRight, BookText, FileStack, GitBranch, ShieldCheck } from 'lucide-react';
+import { ArrowRight, House, Map, Network, Phone, ShieldCheck, Workflow } from 'lucide-react';
 
 import { Badge } from '@seasonalnet/shell/src/components/ui/badge';
 import { Button } from '@seasonalnet/shell/src/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@seasonalnet/shell/src/components/ui/card';
 import { Separator } from '@seasonalnet/shell/src/components/ui/separator';
 
-const nextSteps = [
+const sections = [
   {
-    title: 'Shared shell wrapped',
-    body: 'The docs app now uses the standard SeasonalNet header, announcements rail, and footer across both the landing page and /docs routes.',
-    icon: BookText,
+    title: 'Network overview',
+    body: 'Top-level segment index, routing relationships, and public infrastructure boundaries for SeasonalNet.',
+    href: '/docs/network',
+    icon: Network,
   },
   {
-    title: 'Keep local docs small',
-    body: 'Continue proving the local docs tree before introducing publish policy and sync logic from the canonical docs repository.',
-    icon: FileStack,
+    title: 'LAN maps',
+    body: 'Detailed references for Main LAN, SeasonalCME, and Phone-LAN with addressing, topology, and device placement notes.',
+    href: '/docs/network/lans',
+    icon: Map,
   },
   {
-    title: 'Define publish rules next',
-    body: 'Write the allowlist and exclusions before any seasonalnet-docs copy or sync step is introduced.',
+    title: 'Publication scope',
+    body: 'This site publishes public reference material only. Sensitive host internals, credentials, and private operational detail are intentionally excluded.',
+    href: '/docs',
     icon: ShieldCheck,
   },
+] as const;
+
+const quickLinks = [
   {
-    title: 'Add sync after policy',
-    body: 'Only copy allowlisted docs at build or deploy time. Never fetch the docs repo per request.',
-    icon: GitBranch,
+    title: 'Main LAN',
+    body: 'Core network documentation for the main SeasonalNet segment, addressing, and device layout.',
+    href: '/docs/network/lans/main-lan',
+    icon: House,
+  },
+  {
+    title: 'SeasonalCME',
+    body: 'Routing, call control, and Cisco lab documentation for the SeasonalCME environment.',
+    href: '/docs/network/lans/seasonalcme',
+    icon: Workflow,
+  },
+  {
+    title: 'Phone-LAN',
+    body: 'Phone and voice-endpoint LAN reference for dedicated voice devices and supporting links.',
+    href: '/docs/network/lans/phone-lan',
+    icon: Phone,
   },
 ] as const;
+
+type LinkCardProps = {
+  title: string;
+  body: string;
+  href: string;
+  icon: ComponentType<{ className?: string }>;
+};
+
+function LinkCard({ title, body, href, icon: Icon }: LinkCardProps) {
+  return (
+    <Link
+      href={href}
+      className="group block rounded-2xl focus:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2"
+    >
+      <Card className="h-full rounded-2xl transition-colors hover:bg-accent/40">
+        <CardHeader className="space-y-2">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex items-center gap-2">
+              <div className="rounded-xl border bg-background p-2">
+                <Icon className="h-4 w-4" />
+              </div>
+              <CardTitle className="text-base">{title}</CardTitle>
+            </div>
+            <ArrowRight className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground transition-transform group-hover:translate-x-0.5" />
+          </div>
+          <CardDescription>{body}</CardDescription>
+        </CardHeader>
+      </Card>
+    </Link>
+  );
+}
 
 export default function Page() {
   return (
@@ -37,23 +88,25 @@ export default function Page() {
           <div className="max-w-3xl">
             <div className="mb-3 flex flex-wrap items-center gap-2">
               <Badge variant="secondary" className="rounded-full">docs</Badge>
-              <Badge variant="outline" className="rounded-full">fumadocs</Badge>
-              <Badge variant="outline" className="rounded-full">shared shell</Badge>
+              <Badge variant="outline" className="rounded-full">public reference</Badge>
+              <Badge variant="outline" className="rounded-full">network documentation</Badge>
             </div>
 
-            <h1 className="text-4xl font-semibold tracking-tight">SeasonalNet Docs</h1>
+            <h1 className="text-4xl font-semibold tracking-tight">SeasonalNet Documentation</h1>
             <p className="mt-3 text-muted-foreground">
-              This workspace is the dedicated documentation frontend. It now renders local Fumadocs content
-              under <code className="rounded bg-muted px-1 py-0.5 text-sm">/docs</code> while staying inside
-              the standard SeasonalNet shell.
+              Public reference documentation for SeasonalNet infrastructure, network topology, and LAN maps.
             </p>
 
-            <div className="mt-6">
+            <div className="mt-6 flex flex-wrap gap-3">
               <Button asChild className="rounded-full">
                 <Link href="/docs">
-                  Open local docs
+                  Browse docs
                   <ArrowRight className="h-4 w-4" />
                 </Link>
+              </Button>
+
+              <Button asChild variant="outline" className="rounded-full">
+                <Link href="/docs/network">Network overview</Link>
               </Button>
             </div>
           </div>
@@ -62,29 +115,43 @@ export default function Page() {
 
       <div className="mt-10">
         <div>
-          <div className="text-xs text-muted-foreground">Phase 3</div>
-          <h2 className="text-2xl font-semibold tracking-tight">Shared shell integration</h2>
+          <div className="text-xs text-muted-foreground">Start here</div>
+          <h2 className="text-2xl font-semibold tracking-tight">What&apos;s here</h2>
         </div>
 
         <Separator className="my-6" />
 
-        <div className="grid gap-4 md:grid-cols-2">
-          {nextSteps.map((item) => {
-            const Icon = item.icon;
-            return (
-              <Card key={item.title} className="rounded-2xl">
-                <CardHeader className="space-y-2">
-                  <div className="flex items-center gap-2">
-                    <div className="rounded-xl border bg-background p-2">
-                      <Icon className="h-4 w-4" />
-                    </div>
-                    <CardTitle className="text-base">{item.title}</CardTitle>
-                  </div>
-                  <CardDescription>{item.body}</CardDescription>
-                </CardHeader>
-              </Card>
-            );
-          })}
+        <div className="grid gap-4 md:grid-cols-3">
+          {sections.map((item) => (
+            <LinkCard
+              key={item.title}
+              title={item.title}
+              body={item.body}
+              href={item.href}
+              icon={item.icon}
+            />
+          ))}
+        </div>
+      </div>
+
+      <div className="mt-10">
+        <div>
+          <div className="text-xs text-muted-foreground">Common entry points</div>
+          <h2 className="text-2xl font-semibold tracking-tight">Quick links</h2>
+        </div>
+
+        <Separator className="my-6" />
+
+        <div className="grid gap-4 md:grid-cols-3">
+          {quickLinks.map((item) => (
+            <LinkCard
+              key={item.href}
+              title={item.title}
+              body={item.body}
+              href={item.href}
+              icon={item.icon}
+            />
+          ))}
         </div>
       </div>
     </main>
