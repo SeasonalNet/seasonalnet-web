@@ -34,6 +34,10 @@ function clamp(s: unknown, max = 800): string {
   return t.length > max ? t.slice(0, max) : t
 }
 
+function textOrEmpty(v: unknown): string {
+  return typeof v === "string" ? v.trim() : ""
+}
+
 function toIsoOrNull(v: unknown): string | null {
   if (typeof v !== "string" || v.trim().length === 0) return null
   const ms = Date.parse(v)
@@ -97,11 +101,11 @@ function normalizeAlert(raw: any): StationFeedAlert | null {
   return {
     id,
     event: clamp(raw.event ?? "Alert", 120).trim() || "Alert",
-    headline: clamp(raw.headline ?? "", 220).trim(),
+    headline: textOrEmpty(raw.headline),
     severity: clamp(raw.severity ?? "Unknown", 24).trim() || "Unknown",
     urgency: clamp(raw.urgency ?? "Unknown", 24).trim() || "Unknown",
     certainty: clamp(raw.certainty ?? "Unknown", 24).trim() || "Unknown",
-    area: clamp(raw.area ?? raw.areaDesc ?? "", 320).trim(),
+    area: textOrEmpty(raw.area ?? raw.areaDesc),
     effective: toIsoOrNull(raw.effective),
     ends: toIsoOrNull(raw.ends),
     expires: toIsoOrNull(raw.expires),
