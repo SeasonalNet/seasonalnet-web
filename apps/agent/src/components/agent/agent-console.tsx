@@ -564,7 +564,7 @@ export function AgentConsole() {
       <section className="min-h-0 overflow-hidden">
         <div className="flex h-full min-h-0 flex-col">
           <div className="border-b px-5 py-4">
-            <div className="flex items-start justify-between gap-4">
+            <div className="mx-auto flex w-full max-w-4xl items-start justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-semibold tracking-tight">Seasonal Agent</h1>
                 <p className="mt-1 text-sm text-muted-foreground">
@@ -581,14 +581,14 @@ export function AgentConsole() {
 
           <div className="min-h-0 flex-1 overflow-hidden">
             <div ref={transcriptRef} className="h-full min-h-0 overflow-y-auto px-4 py-4 md:px-5">
-              <div className="flex min-h-full w-full max-w-5xl flex-col justify-end gap-3">
+              <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col justify-end gap-3">
                 {loadingMessages ? (
                   <div className="w-full max-w-5xl rounded-xl border bg-card/60 px-4 py-6 text-sm text-muted-foreground">Loading conversation…</div>
                 ) : messages.length === 0 ? (
                   <div className="w-full max-w-5xl rounded-xl border bg-card/60 px-4 py-6 text-sm text-muted-foreground">No messages yet. Ask Seasonal Agent something operational.</div>
                 ) : (
                   messages.map((entry) => (
-                    <div key={entry.id} className="w-full max-w-5xl">
+                    <div key={entry.id} className="w-full">
                       <MessageCard message={entry} />
                     </div>
                   ))
@@ -598,7 +598,7 @@ export function AgentConsole() {
           </div>
 
           <div className="px-4 py-3 md:px-5">
-            <div className="w-full max-w-5xl rounded-xl bg-background/40 p-3">
+            <div className="mx-auto w-full max-w-4xl rounded-xl bg-background/40 p-3">
               <textarea
                 ref={textareaRef}
                 rows={1}

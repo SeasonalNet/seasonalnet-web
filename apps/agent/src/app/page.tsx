@@ -4,7 +4,7 @@ import { SiteFooter } from "@/components/site-footer"
 export default function Page() {
   return (
     <>
-      <main className="flex min-h-0 flex-1 overflow-hidden">
+      <main className="mx-auto flex min-h-0 w-full max-w-6xl flex-1 overflow-hidden px-4">
         <AgentConsole />
       </main>
       <SiteFooter />
