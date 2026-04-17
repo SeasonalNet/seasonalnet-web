@@ -1,11 +1,47 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react"
-import { Activity, Bot, LoaderCircle, MessageSquare, Plus, Send, Square, Wrench } from "lucide-react"
+import {
+  Activity,
+  Bot,
+  Check,
+  Copy,
+  Ellipsis,
+  LoaderCircle,
+  MessageSquare,
+  Plus,
+  Send,
+  Square,
+  Wrench,
+} from "lucide-react"
+import { toast } from "sonner"
 
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@seasonalnet/shell/src/components/ui/alert-dialog"
 import { Badge } from "@seasonalnet/shell/src/components/ui/badge"
 import { Button } from "@seasonalnet/shell/src/components/ui/button"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@seasonalnet/shell/src/components/ui/dropdown-menu"
 import { Separator } from "@seasonalnet/shell/src/components/ui/separator"
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@seasonalnet/shell/src/components/ui/tooltip"
 import { cn } from "@seasonalnet/shell/src/lib/utils"
 
 type SessionSummary = {
@@ -94,9 +130,7 @@ function MessageCard({ message }: { message: SessionMessage }) {
     <article
       className={cn(
         "rounded-2xl border p-4",
-        message.role === "user"
-          ? "border-foreground/15 bg-foreground text-background"
-          : "bg-card/70",
+        message.role === "user" ? "border-foreground/15 bg-foreground text-background" : "bg-card/70",
       )}
     >
       <div className="flex items-center justify-between gap-3">
@@ -141,6 +175,74 @@ function MessageCard({ message }: { message: SessionMessage }) {
   )
 }
 
+type SessionListItemProps = {
+  session: SessionSummary
+  selected: boolean
+  onSelect: (sessionId: string) => void
+  onCopy: (sessionId: string) => void
+}
+
+function SessionListItem({ session, selected, onSelect, onCopy }: SessionListItemProps) {
+  const label = session.title?.trim() || shortSessionId(session.session_id)
+
+  return (
+    <div
+      className={cn(
+        "group flex items-start gap-2 rounded-xl border px-2 py-2 transition-colors",
+        selected ? "border-foreground/20 bg-accent/60" : "bg-background/40 hover:bg-accent/30",
+      )}
+    >
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            onClick={() => onSelect(session.session_id)}
+            className="min-w-0 flex-1 rounded-lg px-1 py-0.5 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-ring/50"
+          >
+            <div className="truncate text-sm font-medium">{label}</div>
+            <div className="mt-1 text-xs text-muted-foreground">{formatDate(session.updated_at)}</div>
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="right" sideOffset={8} className="max-w-xs">
+          <div className="font-medium">{label}</div>
+          <div className="mt-1 text-[11px] opacity-80">{session.session_id}</div>
+        </TooltipContent>
+      </Tooltip>
+
+      <DropdownMenu>
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <DropdownMenuTrigger asChild>
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="mt-0.5 rounded-lg opacity-70 transition group-hover:opacity-100"
+                aria-label={`Session actions for ${label}`}
+              >
+                <Ellipsis className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+          </TooltipTrigger>
+          <TooltipContent side="right">Session actions</TooltipContent>
+        </Tooltip>
+
+        <DropdownMenuContent align="end" className="w-48 rounded-xl">
+          <DropdownMenuItem onClick={() => onSelect(session.session_id)}>
+            <Check className="h-4 w-4" />
+            Open session
+          </DropdownMenuItem>
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={() => onCopy(session.session_id)}>
+            <Copy className="h-4 w-4" />
+            Copy session ID
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </div>
+  )
+}
+
 export function AgentConsole() {
   const [sessions, setSessions] = useState<SessionSummary[]>([])
   const [selectedSessionId, setSelectedSessionId] = useState<string | null>(null)
@@ -153,89 +255,111 @@ export function AgentConsole() {
   const [statusLabel, setStatusLabel] = useState("Checking agent")
   const [healthOk, setHealthOk] = useState<boolean | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [confirmNewChatOpen, setConfirmNewChatOpen] = useState(false)
   const abortRef = useRef<AbortController | null>(null)
   const transcriptRef = useRef<HTMLDivElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
 
-  const refreshSessions = useCallback(async (preferredSessionId?: string | null) => {
-    setLoadingSessions(true)
-    try {
-      const [sessionsRes, healthRes] = await Promise.all([
-        fetch("/api/agent/sessions?limit=40", { cache: "no-store" }),
-        fetch("/api/agent/health", { cache: "no-store" }),
-      ])
-
-      const sessionsJson = (await sessionsRes.json()) as { sessions?: SessionSummary[]; error?: string }
-      const healthJson = (await healthRes.json()) as { ok?: boolean; error?: string }
-
-      if (!sessionsRes.ok) {
-        throw new Error(sessionsJson.error || "Failed to load sessions.")
-      }
-
-      setSessions(Array.isArray(sessionsJson.sessions) ? sessionsJson.sessions : [])
-      setHealthOk(Boolean(healthJson.ok))
-      setStatusLabel(healthJson.ok ? "Agent reachable" : "Agent degraded")
-
-      setSelectedSessionId((current) => {
-        if (preferredSessionId !== undefined) return preferredSessionId
-        if (current) return current
-        return sessionsJson.sessions?.[0]?.session_id || null
-      })
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load agent UI data."
-      setError(message)
-      setHealthOk(false)
-      setStatusLabel("Agent unavailable")
-    } finally {
-      setLoadingSessions(false)
-    }
+  const notifyError = useCallback((title: string, description?: string) => {
+    toast.error(title, {
+      description,
+      duration: 6000,
+    })
   }, [])
 
-  const loadMessages = useCallback(async (sessionId: string) => {
-    setLoadingMessages(true)
-    setError(null)
-    try {
-      const response = await fetch(`/api/agent/sessions/${encodeURIComponent(sessionId)}?limit=100`, {
-        cache: "no-store",
-      })
-      const json = (await response.json()) as {
-        ok?: boolean
-        messages?: Array<{
-          id?: number | string
-          role?: string
-          content?: string
-          created_at?: string
-          tool_name?: string | null
-          raw_json?: unknown
-        }>
-        error?: string
+  const refreshSessions = useCallback(
+    async (preferredSessionId?: string | null) => {
+      setLoadingSessions(true)
+      try {
+        const [sessionsRes, healthRes] = await Promise.all([
+          fetch("/api/agent/sessions?limit=40", { cache: "no-store" }),
+          fetch("/api/agent/health", { cache: "no-store" }),
+        ])
+
+        const sessionsJson = (await sessionsRes.json()) as { sessions?: SessionSummary[]; error?: string }
+        const healthJson = (await healthRes.json()) as { ok?: boolean; error?: string }
+
+        if (!sessionsRes.ok) {
+          throw new Error(sessionsJson.error || "Failed to load sessions.")
+        }
+
+        const nextSessions = Array.isArray(sessionsJson.sessions) ? sessionsJson.sessions : []
+        setSessions(nextSessions)
+        setHealthOk(Boolean(healthJson.ok))
+        setStatusLabel(healthJson.ok ? "Agent reachable" : "Agent degraded")
+
+        if (!healthJson.ok) {
+          const description = typeof healthJson.error === "string" ? healthJson.error : "Health checks did not return an OK state."
+          notifyError("Seasonal Agent is degraded.", description)
+        }
+
+        setSelectedSessionId((current) => {
+          if (preferredSessionId !== undefined) return preferredSessionId
+          if (current) return current
+          return nextSessions[0]?.session_id || null
+        })
+      } catch (err) {
+        const nextError = err instanceof Error ? err.message : "Failed to load agent UI data."
+        setError(nextError)
+        setHealthOk(false)
+        setStatusLabel("Agent unavailable")
+        notifyError("Failed to load agent UI.", nextError)
+      } finally {
+        setLoadingSessions(false)
       }
+    },
+    [notifyError],
+  )
 
-      if (!response.ok) {
-        throw new Error(json.error || "Failed to load session messages.")
+  const loadMessages = useCallback(
+    async (sessionId: string) => {
+      setLoadingMessages(true)
+      setError(null)
+      try {
+        const response = await fetch(`/api/agent/sessions/${encodeURIComponent(sessionId)}?limit=100`, {
+          cache: "no-store",
+        })
+        const json = (await response.json()) as {
+          ok?: boolean
+          messages?: Array<{
+            id?: number | string
+            role?: string
+            content?: string
+            created_at?: string
+            tool_name?: string | null
+            raw_json?: unknown
+          }>
+          error?: string
+        }
+
+        if (!response.ok) {
+          throw new Error(json.error || "Failed to load session messages.")
+        }
+
+        const nextMessages = Array.isArray(json.messages)
+          ? json.messages.map((item, index) => ({
+              id: String(item.id ?? `${sessionId}-${index}`),
+              role: (item.role === "assistant" || item.role === "tool" || item.role === "system" ? item.role : "user") as SessionMessage["role"],
+              content: typeof item.content === "string" ? item.content : "",
+              createdAt: item.created_at,
+              toolName: item.tool_name,
+              rawJson: item.raw_json,
+              thinking: extractThinking(item.raw_json),
+            }))
+          : []
+
+        setMessages(nextMessages)
+      } catch (err) {
+        const nextError = err instanceof Error ? err.message : "Failed to load messages."
+        setError(nextError)
+        setMessages([])
+        notifyError("Failed to load conversation.", nextError)
+      } finally {
+        setLoadingMessages(false)
       }
-
-      const nextMessages = Array.isArray(json.messages)
-        ? json.messages.map((item, index) => ({
-            id: String(item.id ?? `${sessionId}-${index}`),
-            role: (item.role === "assistant" || item.role === "tool" || item.role === "system" ? item.role : "user") as SessionMessage["role"],
-            content: typeof item.content === "string" ? item.content : "",
-            createdAt: item.created_at,
-            toolName: item.tool_name,
-            rawJson: item.raw_json,
-            thinking: extractThinking(item.raw_json),
-          }))
-        : []
-
-      setMessages(nextMessages)
-    } catch (err) {
-      const message = err instanceof Error ? err.message : "Failed to load messages."
-      setError(message)
-      setMessages([])
-    } finally {
-      setLoadingMessages(false)
-    }
-  }, [])
+    },
+    [notifyError],
+  )
 
   useEffect(() => {
     void refreshSessions()
@@ -271,6 +395,8 @@ export function AgentConsole() {
     return shortSessionId(selectedSessionId)
   }, [selectedSessionId])
 
+  const hasConversationState = messages.length > 0 || Boolean(message.trim())
+
   const updateMessage = useCallback((id: string, updater: (current: SessionMessage) => SessionMessage) => {
     setMessages((current) => current.map((item) => (item.id === id ? updater(item) : item)))
   }, [])
@@ -285,13 +411,36 @@ export function AgentConsole() {
     setSelectedSessionId(null)
     setMessages([])
     setError(null)
+    setConfirmNewChatOpen(false)
+    toast.success("Started a new chat.")
   }, [])
+
+  const requestNewChat = useCallback(() => {
+    if (sending || hasConversationState) {
+      setConfirmNewChatOpen(true)
+      return
+    }
+
+    handleNewChat()
+  }, [handleNewChat, hasConversationState, sending])
 
   const handleStop = useCallback(() => {
     abortRef.current?.abort()
     abortRef.current = null
     setSending(false)
+    toast.info("Stopped the active request.")
   }, [])
+
+  const copySessionId = useCallback(async (sessionId: string) => {
+    try {
+      await navigator.clipboard.writeText(sessionId)
+      toast.success("Session ID copied.", {
+        description: sessionId,
+      })
+    } catch {
+      notifyError("Failed to copy session ID.", "The browser clipboard API was unavailable.")
+    }
+  }, [notifyError])
 
   const handleSubmit = useCallback(async () => {
     const trimmed = message.trim()
@@ -443,13 +592,14 @@ export function AgentConsole() {
         }
 
         if (event.type === "turn_failed") {
-          const errorMessage = typeof payload.error === "string" ? payload.error : "Turn failed."
+          const nextError = typeof payload.error === "string" ? payload.error : "Turn failed."
           updateMessage(assistantMessageId, (current) => ({
             ...current,
-            content: errorMessage,
+            content: nextError,
             pending: false,
           }))
-          setError(errorMessage)
+          setError(nextError)
+          notifyError("Seasonal Agent failed the turn.", nextError)
         }
       }
 
@@ -491,154 +641,214 @@ export function AgentConsole() {
           pending: false,
         }))
       } else {
-        const message = err instanceof Error ? err.message : "Chat request failed."
-        setError(message)
+        const nextError = err instanceof Error ? err.message : "Chat request failed."
+        setError(nextError)
         updateMessage(assistantMessageId, (current) => ({
           ...current,
-          content: current.content || message,
+          content: current.content || nextError,
           pending: false,
         }))
+        notifyError("Chat request failed.", nextError)
       }
     } finally {
       abortRef.current = null
       setSending(false)
     }
-  }, [appendMessage, message, profileOverride, refreshSessions, selectedSessionId, sending, updateMessage])
+  }, [appendMessage, message, notifyError, profileOverride, refreshSessions, selectedSessionId, sending, updateMessage])
 
   return (
-    <div className="grid h-full min-h-0 w-full grid-cols-1 lg:grid-cols-[17rem_minmax(0,1fr)]">
-      <aside className="min-h-0 overflow-hidden border-r bg-card/20">
-        <div className="flex h-full min-h-0 flex-col">
-          <div className="border-b px-4 py-4">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-base font-semibold">Sessions</h2>
-              <Badge variant={healthOk ? "secondary" : "outline"}>{statusLabel}</Badge>
-            </div>
+    <TooltipProvider delayDuration={150}>
+      <>
+        <div className="grid h-full min-h-0 w-full grid-cols-1 lg:grid-cols-[17rem_minmax(0,1fr)]">
+          <aside className="min-h-0 overflow-hidden border-r bg-card/20">
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="px-4 py-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-base font-semibold">Sessions</h2>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant={healthOk ? "secondary" : "outline"} className="cursor-default">
+                        {statusLabel}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent side="right">
+                      {healthOk ? "The Seasonal Agent API responded to health checks." : "The Seasonal Agent API is degraded or unavailable."}
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
 
-            <Button className="mt-4 w-full rounded-xl" variant="outline" onClick={handleNewChat}>
-              <Plus className="mr-2 h-4 w-4" />
-              New chat
-            </Button>
-          </div>
-
-          <div className="border-b px-4 py-4">
-            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Profile override</label>
-            <input
-              value={profileOverride}
-              onChange={(event) => setProfileOverride(event.target.value)}
-              placeholder="homelab, seasonalnet, repo…"
-              className="mt-2 w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none transition focus:border-foreground/30"
-            />
-            <p className="mt-2 text-xs text-muted-foreground">Leave blank to use the server default profile.</p>
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-hidden px-3 py-3">
-            <div className="h-full space-y-2 overflow-y-auto pr-1">
-              {loadingSessions ? (
-                <div className="rounded-xl border bg-background/50 px-3 py-4 text-sm text-muted-foreground">Loading sessions…</div>
-              ) : sessions.length === 0 ? (
-                <div className="rounded-xl border bg-background/50 px-3 py-4 text-sm text-muted-foreground">No saved sessions yet. Start a new chat.</div>
-              ) : (
-                sessions.map((session) => (
-                  <button
-                    key={session.session_id}
-                    type="button"
-                    onClick={() => setSelectedSessionId(session.session_id)}
-                    className={cn(
-                      "w-full rounded-xl border px-3 py-2.5 text-left transition-colors",
-                      selectedSessionId === session.session_id
-                        ? "border-foreground/20 bg-accent/60"
-                        : "bg-background/40 hover:bg-accent/30",
-                    )}
-                  >
-                    <div className="text-sm font-medium">{session.title?.trim() || shortSessionId(session.session_id)}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">{formatDate(session.updated_at)}</div>
-                  </button>
-                ))
-              )}
-            </div>
-          </div>
-        </div>
-      </aside>
-
-      <section className="min-h-0 overflow-hidden">
-        <div className="flex h-full min-h-0 flex-col">
-          <div className="border-b px-5 py-4">
-            <div className="mx-auto flex w-full max-w-4xl items-start justify-between gap-4">
-              <div>
-                <h1 className="text-2xl font-semibold tracking-tight">Seasonal Agent</h1>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  One conversation canvas, one composer, and structured tool output over the local runtime API.
-                </p>
-              </div>
-
-              <div className="rounded-xl border bg-background/50 px-3 py-2 text-right">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Current session</div>
-                <div className="mt-1 text-sm font-medium">{sessionHeading}</div>
-              </div>
-            </div>
-          </div>
-
-          <div className="min-h-0 flex-1 overflow-hidden">
-            <div ref={transcriptRef} className="h-full min-h-0 overflow-y-auto px-4 py-4 md:px-5">
-              <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col justify-end gap-3">
-                {loadingMessages ? (
-                  <div className="w-full max-w-5xl rounded-xl border bg-card/60 px-4 py-6 text-sm text-muted-foreground">Loading conversation…</div>
-                ) : messages.length === 0 ? (
-                  <div className="w-full max-w-5xl rounded-xl border bg-card/60 px-4 py-6 text-sm text-muted-foreground">No messages yet. Ask Seasonal Agent something operational.</div>
-                ) : (
-                  messages.map((entry) => (
-                    <div key={entry.id} className="w-full">
-                      <MessageCard message={entry} />
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="px-4 py-3 md:px-5">
-            <div className="mx-auto w-full max-w-4xl rounded-xl bg-background/40 p-3">
-              <textarea
-                ref={textareaRef}
-                rows={1}
-                value={message}
-                onChange={(event) => setMessage(event.target.value)}
-                onKeyDown={(event) => {
-                  if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-                    event.preventDefault()
-                    void handleSubmit()
-                  }
-                }}
-                placeholder="Ask Seasonal Agent something real. Ctrl+Enter sends."
-                className="min-h-[5.5rem] max-h-56 w-full resize-none rounded-xl border bg-background px-4 py-3 text-sm outline-none transition focus:border-foreground/30"
-              />
-
-              <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                <div className="text-xs text-muted-foreground">The browser talks only to this app. The app proxies to Seasonal Agent with the server-side token.</div>
-
-                <div className="flex items-center gap-2">
-                  {sending ? (
-                    <Button type="button" variant="outline" className="rounded-xl" onClick={handleStop}>
-                      <Square className="mr-2 h-4 w-4" />
-                      Stop
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button className="mt-4 w-full rounded-xl" variant="outline" onClick={requestNewChat}>
+                      <Plus className="mr-2 h-4 w-4" />
+                      New chat
                     </Button>
-                  ) : null}
+                  </TooltipTrigger>
+                  <TooltipContent side="right">Reset the active canvas and start a fresh conversation.</TooltipContent>
+                </Tooltip>
+              </div>
 
-                  <Button type="button" className="rounded-xl" onClick={() => void handleSubmit()} disabled={!message.trim() || sending}>
-                    {sending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                    Send
-                  </Button>
+              <Separator />
+
+              <div className="px-4 py-4">
+                <div className="flex items-center gap-2">
+                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Profile override</label>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="outline" className="cursor-default text-[10px] uppercase">Optional</Badge>
+                    </TooltipTrigger>
+                    <TooltipContent side="right" className="max-w-xs">
+                      Leave blank to use the server default profile.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <input
+                  value={profileOverride}
+                  onChange={(event) => setProfileOverride(event.target.value)}
+                  placeholder="homelab, seasonalnet, repo…"
+                  className="mt-2 w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none transition focus:border-foreground/30"
+                />
+                <p className="mt-2 text-xs text-muted-foreground">Leave blank to use the server default profile.</p>
+              </div>
+
+              <Separator />
+
+              <div className="min-h-0 flex-1 overflow-hidden px-3 py-3">
+                <div className="h-full space-y-2 overflow-y-auto pr-1">
+                  {loadingSessions ? (
+                    <div className="rounded-xl border bg-background/50 px-3 py-4 text-sm text-muted-foreground">Loading sessions…</div>
+                  ) : sessions.length === 0 ? (
+                    <div className="rounded-xl border bg-background/50 px-3 py-4 text-sm text-muted-foreground">No saved sessions yet. Start a new chat.</div>
+                  ) : (
+                    sessions.map((session) => (
+                      <SessionListItem
+                        key={session.session_id}
+                        session={session}
+                        selected={selectedSessionId === session.session_id}
+                        onSelect={setSelectedSessionId}
+                        onCopy={(sessionId) => void copySessionId(sessionId)}
+                      />
+                    ))
+                  )}
+                </div>
+              </div>
+            </div>
+          </aside>
+
+          <section className="min-h-0 overflow-hidden">
+            <div className="flex h-full min-h-0 flex-col">
+              <div className="border-b px-5 py-4">
+                <div className="mx-auto flex w-full max-w-4xl items-start justify-between gap-4">
+                  <div>
+                    <h1 className="text-2xl font-semibold tracking-tight">Seasonal Agent</h1>
+                    <p className="mt-1 text-sm text-muted-foreground">
+                      One conversation canvas, one composer, and structured tool output over the local runtime API.
+                    </p>
+                  </div>
+
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div className="rounded-xl border bg-background/50 px-3 py-2 text-right">
+                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Current session</div>
+                        <div className="mt-1 text-sm font-medium">{sessionHeading}</div>
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent side="left" className="max-w-xs">
+                      {selectedSessionId || "No persisted session yet. The next turn will create one."}
+                    </TooltipContent>
+                  </Tooltip>
                 </div>
               </div>
 
-              {error ? (
-                <div className="mt-3 rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">{error}</div>
-              ) : null}
+              <div className="min-h-0 flex-1 overflow-hidden">
+                <div ref={transcriptRef} className="h-full min-h-0 overflow-y-auto px-4 py-4 md:px-5">
+                  <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col justify-end gap-3">
+                    {loadingMessages ? (
+                      <div className="w-full rounded-xl border bg-card/60 px-4 py-6 text-sm text-muted-foreground">Loading conversation…</div>
+                    ) : messages.length === 0 ? (
+                      <div className="w-full rounded-xl border bg-card/60 px-4 py-6 text-sm text-muted-foreground">No messages yet. Ask Seasonal Agent something operational.</div>
+                    ) : (
+                      messages.map((entry) => (
+                        <div key={entry.id} className="w-full">
+                          <MessageCard message={entry} />
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              <div className="px-4 py-3 md:px-5">
+                <div className="mx-auto w-full max-w-4xl rounded-xl bg-background/40 p-3">
+                  <textarea
+                    ref={textareaRef}
+                    rows={1}
+                    value={message}
+                    onChange={(event) => setMessage(event.target.value)}
+                    onKeyDown={(event) => {
+                      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+                        event.preventDefault()
+                        void handleSubmit()
+                      }
+                    }}
+                    placeholder="Ask Seasonal Agent something real. Ctrl+Enter sends."
+                    className="min-h-[5.5rem] max-h-56 w-full resize-none rounded-xl border bg-background px-4 py-3 text-sm outline-none transition focus:border-foreground/30"
+                  />
+
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+                    <div className="text-xs text-muted-foreground">The browser talks only to this app. The app proxies to Seasonal Agent with the server-side token.</div>
+
+                    <div className="flex items-center gap-2">
+                      {sending ? (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button type="button" variant="outline" className="rounded-xl" onClick={handleStop}>
+                              <Square className="mr-2 h-4 w-4" />
+                              Stop
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Abort the active streamed turn.</TooltipContent>
+                        </Tooltip>
+                      ) : null}
+
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button type="button" className="rounded-xl" onClick={() => void handleSubmit()} disabled={!message.trim() || sending}>
+                            {sending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
+                            Send
+                          </Button>
+                        </TooltipTrigger>
+                        <TooltipContent side="top">Send with the current profile override and persisted session state.</TooltipContent>
+                      </Tooltip>
+                    </div>
+                  </div>
+
+                  {error ? (
+                    <div className="mt-3 rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">{error}</div>
+                  ) : null}
+                </div>
+              </div>
             </div>
-          </div>
+          </section>
         </div>
-      </section>
-    </div>
+
+        <AlertDialog open={confirmNewChatOpen} onOpenChange={setConfirmNewChatOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Start a new chat?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This clears the active canvas and draft text in the browser. Saved sessions remain available in the rail.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+              <AlertDialogAction className="rounded-xl" onClick={handleNewChat}>
+                Start new chat
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
+      </>
+    </TooltipProvider>
   )
 }
