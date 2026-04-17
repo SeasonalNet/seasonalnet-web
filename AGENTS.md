@@ -47,6 +47,7 @@ Current apps:
 - `apps/pbx` — SeasonalPBX frontend
 - `apps/prov` — provisioning frontend
 - `apps/admin` — centralized admin/control-plane frontend
+- `apps/agent` — Seasonal Agent operator chat frontend
 
 ### Shared packages
 
@@ -59,7 +60,7 @@ Current shared package target:
 ## Hard rules
 
 1. Use canonical app directories only.
-   - Work in `apps/www`, `apps/radio`, `apps/pbx`, `apps/prov`, and `apps/admin`.
+   - Work in `apps/www`, `apps/radio`, `apps/pbx`, `apps/prov`, `apps/admin`, and `apps/agent`.
    - Do not create or commit deployment alias directories that mirror `/opt/seasonalnet/*-spa` naming shortcuts.
 
 2. Shared shell code belongs in `packages/shell`.
@@ -124,6 +125,7 @@ npm run dev --workspace @seasonalnet/radio
 npm run dev --workspace @seasonalnet/pbx
 npm run dev --workspace @seasonalnet/prov
 npm run dev --workspace @seasonalnet/admin
+npm run dev --workspace @seasonalnet/agent
 ```
 
 Build a specific app:
@@ -134,6 +136,7 @@ npm run build --workspace @seasonalnet/radio
 npm run build --workspace @seasonalnet/pbx
 npm run build --workspace @seasonalnet/prov
 npm run build --workspace @seasonalnet/admin
+npm run build --workspace @seasonalnet/agent
 ```
 
 Lint a specific app:
@@ -144,6 +147,7 @@ npm run lint --workspace @seasonalnet/radio
 npm run lint --workspace @seasonalnet/pbx
 npm run lint --workspace @seasonalnet/prov
 npm run lint --workspace @seasonalnet/admin
+npm run lint --workspace @seasonalnet/agent
 ```
 
 Run all workspace builds when broad validation is needed:

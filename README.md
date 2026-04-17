@@ -45,6 +45,7 @@ seasonalnet-web/
 ├── package-lock.json
 ├── apps/
 │   ├── admin/
+│   ├── agent/
 │   ├── pbx/
 │   ├── prov/
 │   ├── radio/
@@ -61,6 +62,7 @@ Deployable frontend applications.
 - `apps/pbx` — SeasonalPBX web frontend
 - `apps/prov` — provisioning frontend
 - `apps/admin` — centralized SeasonalNet admin front door / control-plane UI
+- `apps/agent` — Seasonal Agent operator chat frontend over the local agent API
 
 Each app is currently its own Next.js workspace package with its own local config and scripts.
 
@@ -103,6 +105,7 @@ npm run dev --workspace @seasonalnet/radio
 npm run dev --workspace @seasonalnet/pbx
 npm run dev --workspace @seasonalnet/prov
 npm run dev --workspace @seasonalnet/admin
+npm run dev --workspace @seasonalnet/agent
 ```
 
 Build an individual app:
@@ -113,6 +116,7 @@ npm run build --workspace @seasonalnet/radio
 npm run build --workspace @seasonalnet/pbx
 npm run build --workspace @seasonalnet/prov
 npm run build --workspace @seasonalnet/admin
+npm run build --workspace @seasonalnet/agent
 ```
 
 Lint an individual app:
@@ -123,6 +127,7 @@ npm run lint --workspace @seasonalnet/radio
 npm run lint --workspace @seasonalnet/pbx
 npm run lint --workspace @seasonalnet/prov
 npm run lint --workspace @seasonalnet/admin
+npm run lint --workspace @seasonalnet/agent
 ```
 
 Build all workspaces from the root when needed:
