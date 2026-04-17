@@ -42,6 +42,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from "@seasonalnet/shell/src/components/ui/tooltip"
+import { MarkdownContent } from "@seasonalnet/shell/src/components/ui/markdown-content"
 import { cn } from "@seasonalnet/shell/src/lib/utils"
 
 type SessionSummary = {
@@ -154,9 +155,11 @@ function MessageCard({ message }: { message: SessionMessage }) {
         {message.pending ? <Badge variant="secondary">Running</Badge> : null}
       </div>
 
-      <div className={cn("mt-3 whitespace-pre-wrap text-sm leading-6", message.role === "user" ? "text-background" : "text-foreground")}>
-        {message.content || (message.pending ? "Working…" : "No content.")}
-      </div>
+      <MarkdownContent
+        content={message.content || (message.pending ? "Working…" : "No content.")}
+        inverted={message.role === "user"}
+        className={cn("mt-3", message.role === "user" ? "text-background" : "text-foreground")}
+      />
 
       {message.thinking ? (
         <details className="mt-3 rounded-xl border bg-background/40 p-3 text-sm">
