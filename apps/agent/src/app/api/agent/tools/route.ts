@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 
-import { requireAuthorizedAgentSession } from "@/lib/server/agent-auth"
+import { getAgentCallerIdentity, requireAuthorizedAgentSession } from "@/lib/server/agent-auth"
 import { seasonalAgentJson } from "@/lib/server/seasonal-agent"
 
 export const runtime = "nodejs"
@@ -12,7 +12,16 @@ export async function GET(request: Request) {
   if (!session) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 })
 
   try {
-    const { ok, status, payload } = await seasonalAgentJson("/api/v1/tools", {
+    const identity = getAgentCallerIdentity(session)
+    const params = new URLSearchParams({
+      source: "seasonalnet-agent-spa",
+      transport: "web-ui",
+      user_id: identity.userId,
+      user_name: identity.userName,
+    })
+    if (identity.accessTier) params.set("access_tier", identity.accessTier)
+
+    const { ok, status, payload } = await seasonalAgentJson(`/api/v1/tools?${params.toString()}`, {
       method: "GET",
       signal: request.signal,
     })
