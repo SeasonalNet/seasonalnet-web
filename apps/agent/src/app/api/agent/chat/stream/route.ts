@@ -1,19 +1,28 @@
 import { NextResponse } from "next/server"
 
+import type { BrowserAgentChatRequest } from "@/lib/agent/chat-types"
+import { buildTrustedAgentChatPayload } from "@/lib/server/agent-caller-context"
+import { requireAuthorizedAgentSession } from "@/lib/server/agent-auth"
 import { seasonalAgentBaseUrl, seasonalAgentHeaders } from "@/lib/server/seasonal-agent"
 
 export const runtime = "nodejs"
 
 export async function POST(request: Request) {
+  const authResult = await requireAuthorizedAgentSession()
+  if (authResult.response) return authResult.response
+  const session = authResult.session
+  if (!session) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 })
+
   try {
-    const body = await request.text()
+    const body = (await request.json()) as BrowserAgentChatRequest
+    const trustedBody = buildTrustedAgentChatPayload(session, body)
     const upstream = await fetch(`${seasonalAgentBaseUrl()}/api/v1/chat/stream`, {
       method: "POST",
       headers: seasonalAgentHeaders({
-        "Content-Type": request.headers.get("content-type") || "application/json",
+        "Content-Type": "application/json",
         Accept: "text/event-stream",
       }),
-      body,
+      body: JSON.stringify(trustedBody),
       cache: "no-store",
       signal: request.signal,
     })
