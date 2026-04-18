@@ -1,4 +1,3 @@
-"use client"
 
 import { BrandMark } from "./brand-mark"
 import {
@@ -48,7 +47,7 @@ export function ShellHeader({ site, rightSlot }: ShellHeaderProps) {
 
         <div className="ml-3 min-w-0 flex-1 overflow-hidden">
           <div className="flex min-w-0 flex-1 items-center justify-center overflow-x-auto overscroll-x-contain touch-pan-x [-webkit-overflow-scrolling:touch] sm:justify-start">
-            <NavigationMenu className="w-max justify-start">
+            <NavigationMenu className="w-max justify-start" viewport={false}>
               <NavigationMenuList className="flex w-max min-w-max flex-nowrap items-center justify-start gap-1 overflow-x-auto overscroll-x-contain touch-pan-x md:flex-wrap md:overflow-visible">
                 {site.portals.map((p) => {
                   const Icon = p.icon

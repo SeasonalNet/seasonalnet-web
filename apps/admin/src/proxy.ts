@@ -1,4 +1,4 @@
-import { auth } from "@/auth"
+import { auth, isAuthorizedSession } from "@/auth"
 import { NextResponse } from "next/server"
 
 function isStaticAsset(pathname: string) {
@@ -36,6 +36,13 @@ export default auth((req) => {
   if (!req.auth) {
     const loginUrl = new URL("/login", nextUrl)
     loginUrl.searchParams.set("next", pathname)
+    return NextResponse.redirect(loginUrl)
+  }
+
+  if (!isAuthorizedSession(req.auth as never)) {
+    const loginUrl = new URL("/login", nextUrl)
+    loginUrl.searchParams.set("next", pathname)
+    loginUrl.searchParams.set("error", "forbidden")
     return NextResponse.redirect(loginUrl)
   }
 

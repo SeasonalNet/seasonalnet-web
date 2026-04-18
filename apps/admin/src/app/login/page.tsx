@@ -1,4 +1,5 @@
-import { signIn } from "@/auth"
+import { auth, isAuthorizedSession, sessionDisplayName, signIn } from "@/auth"
+import { redirect } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
 import { SiteFooter } from "@/components/site-footer"
 
@@ -10,6 +11,11 @@ export default async function LoginPage({ searchParams }: Props) {
   const params = (await searchParams) ?? {}
   const next = params.next && params.next.startsWith("/") ? params.next : "/"
   const error = params.error
+  const session = await auth()
+
+  if (isAuthorizedSession(session)) {
+    redirect(next)
+  }
 
   return (
     <main className="mx-auto max-w-6xl px-4 pb-10">
@@ -28,7 +34,13 @@ export default async function LoginPage({ searchParams }: Props) {
             Sign in through SeasonalNet Auth to continue.
           </p>
 
-          {error ? (
+          {error === "forbidden" ? (
+            <div className="mt-4 rounded-xl border px-4 py-3 text-sm text-muted-foreground">
+              Signed in as {sessionDisplayName(session)}, but this account is not authorized for the SeasonalNet Admin surface.
+            </div>
+          ) : null}
+
+          {error && error !== "forbidden" ? (
             <div className="mt-4 rounded-xl border px-4 py-3 text-sm text-muted-foreground">
               Sign-in hit an auth configuration error. Check the app logs, then try again.
             </div>
