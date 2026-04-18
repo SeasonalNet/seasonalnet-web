@@ -24,6 +24,25 @@ export function seasonalAgentHeaders(init?: HeadersInit) {
   return headers
 }
 
+async function readSeasonalAgentPayload(response: Response) {
+  const contentType = response.headers.get("content-type") || ""
+  const rawBody = await response.text()
+
+  if (!contentType.includes("application/json")) {
+    return rawBody
+  }
+
+  if (!rawBody.trim()) {
+    return { ok: response.ok, status: response.status, error: "Empty JSON response." }
+  }
+
+  try {
+    return JSON.parse(rawBody) as unknown
+  } catch {
+    return { ok: response.ok, status: response.status, error: "Invalid JSON response.", raw_body: rawBody }
+  }
+}
+
 export async function seasonalAgentJson(path: string, init: RequestInit = {}) {
   const response = await fetch(`${BASE_URL}${path}`, {
     ...init,
@@ -31,9 +50,7 @@ export async function seasonalAgentJson(path: string, init: RequestInit = {}) {
     cache: "no-store",
   })
 
-  const contentType = response.headers.get("content-type") || ""
-  const isJson = contentType.includes("application/json")
-  const payload = isJson ? await response.json() : await response.text()
+  const payload = await readSeasonalAgentPayload(response)
 
   return {
     ok: response.ok,

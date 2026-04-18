@@ -148,6 +148,20 @@ function extractThinking(rawJson: unknown) {
   return typeof message?.thinking === "string" && message.thinking.trim() ? message.thinking : null
 }
 
+async function parseJsonResponse<T>(response: Response, fallbackError: string): Promise<T> {
+  const rawBody = await response.text()
+
+  if (!rawBody.trim()) {
+    return { error: fallbackError } as T
+  }
+
+  try {
+    return JSON.parse(rawBody) as T
+  } catch {
+    return { error: fallbackError } as T
+  }
+}
+
 function messageIcon(role: SessionMessage["role"]) {
   switch (role) {
     case "assistant":
@@ -488,8 +502,13 @@ export function AgentConsole() {
           fetch("/api/agent/health", { cache: "no-store" }),
         ])
 
-        const sessionsJson = (await sessionsRes.json()) as { sessions?: SessionSummary[]; error?: string }
-        const healthJson = (await healthRes.json()) as { ok?: boolean; error?: string }
+        const [sessionsJson, healthJson] = await Promise.all([
+          parseJsonResponse<{ sessions?: SessionSummary[]; error?: string }>(
+            sessionsRes,
+            "Failed to load sessions.",
+          ),
+          parseJsonResponse<{ ok?: boolean; error?: string }>(healthRes, "Failed to load health status."),
+        ])
 
         if (!sessionsRes.ok) {
           throw new Error(sessionsJson.error || "Failed to load sessions.")
@@ -534,7 +553,7 @@ export function AgentConsole() {
         const response = await fetch(`/api/agent/sessions/${encodeURIComponent(sessionId)}?limit=100`, {
           cache: "no-store",
         })
-        const json = (await response.json()) as {
+        const json = await parseJsonResponse<{
           ok?: boolean
           messages?: Array<{
             id?: number | string
@@ -545,7 +564,7 @@ export function AgentConsole() {
             raw_json?: unknown
           }>
           error?: string
-        }
+        }>(response, "Failed to load session messages.")
 
         if (!response.ok) {
           throw new Error(json.error || "Failed to load session messages.")
@@ -580,7 +599,7 @@ export function AgentConsole() {
     setLoadingTools(true)
     try {
       const response = await fetch("/api/agent/tools", { cache: "no-store" })
-      const json = (await response.json()) as ToolsResponse
+      const json = await parseJsonResponse<ToolsResponse>(response, "Failed to load tool metadata.")
       if (!response.ok) {
         throw new Error(json.error || "Failed to load tool metadata.")
       }
@@ -744,7 +763,7 @@ export function AgentConsole() {
       })
 
       if (!response.ok) {
-        const failure = await response.json().catch(() => ({ error: "Stream request failed." }))
+        const failure = await parseJsonResponse<{ error?: string }>(response, "Stream request failed.")
         throw new Error(typeof failure.error === "string" ? failure.error : "Stream request failed.")
       }
 
@@ -755,12 +774,14 @@ export function AgentConsole() {
       const decoder = new TextDecoder()
       const reader = response.body.getReader()
       let buffer = ""
+      let completedSessionId = selectedSessionId
 
       const processEvent = (event: AgentStreamEvent) => {
         const payload = event.payload || {}
 
         if (event.type === "turn_started") {
           const sessionId = typeof payload.session_id === "string" ? payload.session_id : event.session_id
+          completedSessionId = sessionId
           setSelectedSessionId(sessionId)
           return
         }
@@ -845,10 +866,8 @@ export function AgentConsole() {
             pending: false,
           }))
           if (typeof result?.session_id === "string") {
+            completedSessionId = result.session_id
             setSelectedSessionId(result.session_id)
-            void refreshSessions(result.session_id)
-          } else {
-            void refreshSessions()
           }
           return
         }
@@ -895,6 +914,8 @@ export function AgentConsole() {
           }
         }
       }
+
+      await refreshSessions(completedSessionId)
     } catch (err) {
       if (controller.signal.aborted) {
         updateMessage(assistantMessageId, (current) => ({
