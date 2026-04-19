@@ -19,9 +19,12 @@ import {
 import { toast } from "sonner"
 
 import type {
+  AgentActiveTurn,
   AgentExecutionMode,
+  AgentStreamEvent,
   AgentToolDescriptor,
   AgentTurnFlags,
+  AgentTurnSnapshot,
 } from "@/lib/agent/chat-types"
 import {
   AlertDialog,
@@ -61,6 +64,7 @@ type SessionSummary = {
 
 type SessionMessage = {
   id: string
+  turnId?: string
   role: "user" | "assistant" | "tool" | "system"
   content: string
   createdAt?: string
@@ -69,14 +73,6 @@ type SessionMessage = {
   thinking?: string | null
   pending?: boolean
   streamKey?: string
-}
-
-type AgentStreamEvent = {
-  type: string
-  sequence: number
-  created_at: string
-  session_id: string
-  payload: Record<string, unknown>
 }
 
 type TurnResultPayload = {
@@ -88,6 +84,46 @@ type TurnResultPayload = {
 type ToolsResponse = {
   tools?: AgentToolDescriptor[]
   error?: string
+}
+
+type SessionDetailResponse = {
+  ok?: boolean
+  messages?: Array<{
+    id?: number | string
+    role?: string
+    content?: string
+    created_at?: string
+    tool_name?: string | null
+    raw_json?: unknown
+  }>
+  active_turn?: AgentActiveTurn | null
+  error?: string
+}
+
+type ActiveTurnResponse = {
+  ok?: boolean
+  session_id?: string
+  active_turn?: AgentActiveTurn | null
+  error?: string
+}
+
+type TurnSnapshotResponse = {
+  ok?: boolean
+  turn_id?: string
+  snapshot?: AgentTurnSnapshot | null
+  error?: string
+}
+
+type TurnEventsResponse = {
+  ok?: boolean
+  turn_id?: string
+  events?: AgentStreamEvent[]
+  error?: string
+}
+
+type RecoveryLoadOptions = {
+  recoveryTurnId?: string | null
+  silent?: boolean
 }
 
 const EXECUTION_MODE_OPTIONS: Array<{
@@ -116,6 +152,8 @@ const EXECUTION_MODE_OPTIONS: Array<{
     description: "Keep this turn explanatory unless the runtime forces a tool.",
   },
 ]
+
+const SELECTED_SESSION_STORAGE_KEY = "seasonalnet-agent:selected-session-id"
 
 function shortSessionId(sessionId: string) {
   return sessionId.length <= 18 ? sessionId : `${sessionId.slice(0, 8)}…${sessionId.slice(-6)}`
@@ -174,6 +212,317 @@ function messageIcon(role: SessionMessage["role"]) {
     default:
       return MessageSquare
   }
+}
+
+function readStoredSelectedSessionId() {
+  if (typeof window === "undefined") return null
+  try {
+    return window.sessionStorage.getItem(SELECTED_SESSION_STORAGE_KEY)
+  } catch {
+    return null
+  }
+}
+
+function writeStoredSelectedSessionId(sessionId: string | null) {
+  if (typeof window === "undefined") return
+  try {
+    if (!sessionId) window.sessionStorage.removeItem(SELECTED_SESSION_STORAGE_KEY)
+    else window.sessionStorage.setItem(SELECTED_SESSION_STORAGE_KEY, sessionId)
+  } catch {
+    // ignore storage failures
+  }
+}
+
+function turnAssistantMessageId(turnId: string) {
+  return `turn:${turnId}:assistant`
+}
+
+function turnToolMessageId(turnId: string, roundIndex: number, callIndex: number) {
+  return `turn:${turnId}:tool:${roundIndex}:${callIndex}`
+}
+
+function turnToolStreamKey(turnId: string, roundIndex: number, callIndex: number) {
+  return `${turnId}:${roundIndex}:${callIndex}`
+}
+
+function normalizeRole(value: string | undefined): SessionMessage["role"] {
+  return value === "assistant" || value === "tool" || value === "system" ? value : "user"
+}
+
+function parsePersistedMessages(sessionId: string, payload: SessionDetailResponse) {
+  return Array.isArray(payload.messages)
+    ? payload.messages.map((item, index) => ({
+        id: String(item.id ?? `${sessionId}-${index}`),
+        role: normalizeRole(item.role),
+        content: typeof item.content === "string" ? item.content : "",
+        createdAt: item.created_at,
+        toolName: item.tool_name,
+        rawJson: item.raw_json,
+        thinking: extractThinking(item.raw_json),
+      }))
+    : []
+}
+
+function sortMessages(messages: SessionMessage[]) {
+  return [...messages].sort((left, right) => {
+    const leftTime = left.createdAt ? Date.parse(left.createdAt) : Number.POSITIVE_INFINITY
+    const rightTime = right.createdAt ? Date.parse(right.createdAt) : Number.POSITIVE_INFINITY
+    if (Number.isFinite(leftTime) && Number.isFinite(rightTime) && leftTime !== rightTime) {
+      return leftTime - rightTime
+    }
+    return left.id.localeCompare(right.id)
+  })
+}
+
+function upsertMessage(messages: SessionMessage[], entry: SessionMessage) {
+  const index = messages.findIndex((item) => item.id === entry.id)
+  if (index === -1) return [...messages, entry]
+  const next = [...messages]
+  next[index] = {
+    ...next[index],
+    ...entry,
+    rawJson: entry.rawJson === undefined ? next[index].rawJson : entry.rawJson,
+    thinking: entry.thinking === undefined ? next[index].thinking : entry.thinking,
+  }
+  return next
+}
+
+function updateMessageById(
+  messages: SessionMessage[],
+  id: string,
+  updater: (current: SessionMessage) => SessionMessage,
+) {
+  const index = messages.findIndex((item) => item.id === id)
+  if (index === -1) return messages
+  const next = [...messages]
+  next[index] = updater(next[index])
+  return next
+}
+
+function ensureAssistantMessage(
+  messages: SessionMessage[],
+  turnId: string,
+  createdAt?: string,
+  pending = true,
+) {
+  return upsertMessage(messages, {
+    id: turnAssistantMessageId(turnId),
+    turnId,
+    role: "assistant",
+    content: "",
+    createdAt,
+    thinking: null,
+    pending,
+  })
+}
+
+function compactToolSnapshotResult(entry: Record<string, unknown>) {
+  const resultOk = entry.result_ok
+  if (typeof resultOk === "boolean") {
+    return resultOk ? "Tool call completed." : "Tool call finished with an unsuccessful result."
+  }
+  return entry.type === "tool_call_completed" ? "Tool call completed." : "Running tool call."
+}
+
+function applyToolSnapshotEvent(
+  messages: SessionMessage[],
+  turnId: string,
+  entry: Record<string, unknown>,
+): SessionMessage[] {
+  const roundIndex = typeof entry.round_index === "number" ? entry.round_index : 0
+  const callIndex = typeof entry.call_index === "number" ? entry.call_index : 0
+  const id = turnToolMessageId(turnId, roundIndex, callIndex)
+  return upsertMessage(messages, {
+    id,
+    turnId,
+    role: "tool",
+    content: compactToolSnapshotResult(entry),
+    createdAt: typeof entry.created_at === "string" ? entry.created_at : undefined,
+    toolName: typeof entry.tool_name === "string" ? entry.tool_name : "tool",
+    rawJson: {
+      arguments: typeof entry.arguments === "object" && entry.arguments ? entry.arguments : {},
+      result_ok: entry.result_ok,
+      source: entry.source,
+      recovered: true,
+    },
+    pending: entry.type !== "tool_call_completed",
+    streamKey: turnToolStreamKey(turnId, roundIndex, callIndex),
+  })
+}
+
+function applyReplayEvent(
+  messages: SessionMessage[],
+  event: AgentStreamEvent,
+  fallbackTurnId: string,
+): SessionMessage[] {
+  const turnId = event.turn_id || fallbackTurnId
+  const payload = event.payload || {}
+  const assistantId = turnAssistantMessageId(turnId)
+
+  if (event.type === "turn_started") {
+    return ensureAssistantMessage(messages, turnId, event.created_at, true)
+  }
+
+  if (event.type === "thinking_delta") {
+    const delta = typeof payload.delta === "string" ? payload.delta : ""
+    if (!delta) return messages
+    const next = ensureAssistantMessage(messages, turnId, event.created_at, true)
+    return updateMessageById(next, assistantId, (current) => ({
+      ...current,
+      thinking: `${current.thinking || ""}${delta}`,
+      pending: true,
+    }))
+  }
+
+  if (event.type === "assistant_delta") {
+    const delta = typeof payload.delta === "string" ? payload.delta : ""
+    if (!delta) return messages
+    const next = ensureAssistantMessage(messages, turnId, event.created_at, true)
+    return updateMessageById(next, assistantId, (current) => ({
+      ...current,
+      content: `${current.content}${delta}`,
+      pending: true,
+    }))
+  }
+
+  if (event.type === "assistant_reset") {
+    const next = ensureAssistantMessage(messages, turnId, event.created_at, true)
+    return updateMessageById(next, assistantId, (current) => ({
+      ...current,
+      content: "",
+      thinking: null,
+      pending: true,
+    }))
+  }
+
+  if (event.type === "tool_call_started") {
+    const roundIndex = typeof payload.round_index === "number" ? payload.round_index : 0
+    const callIndex = typeof payload.call_index === "number" ? payload.call_index : 0
+    return upsertMessage(messages, {
+      id: turnToolMessageId(turnId, roundIndex, callIndex),
+      turnId,
+      role: "tool",
+      content: "Running tool call.",
+      createdAt: event.created_at,
+      toolName: typeof payload.tool_name === "string" ? payload.tool_name : "tool",
+      rawJson: { arguments: payload.arguments || {} },
+      pending: true,
+      streamKey: turnToolStreamKey(turnId, roundIndex, callIndex),
+    })
+  }
+
+  if (event.type === "tool_call_completed") {
+    const roundIndex = typeof payload.round_index === "number" ? payload.round_index : 0
+    const callIndex = typeof payload.call_index === "number" ? payload.call_index : 0
+    return upsertMessage(messages, {
+      id: turnToolMessageId(turnId, roundIndex, callIndex),
+      turnId,
+      role: "tool",
+      content: typeof payload.content === "string" ? payload.content : "Tool call completed.",
+      createdAt: event.created_at,
+      toolName: typeof payload.tool_name === "string" ? payload.tool_name : "tool",
+      rawJson: {
+        arguments: payload.arguments || {},
+        result: payload.result || {},
+      },
+      pending: false,
+      streamKey: turnToolStreamKey(turnId, roundIndex, callIndex),
+    })
+  }
+
+  if (event.type === "turn_completed") {
+    const result = payload.result as TurnResultPayload | undefined
+    const next = ensureAssistantMessage(messages, turnId, event.created_at, false)
+    return updateMessageById(next, assistantId, (current) => ({
+      ...current,
+      content: typeof result?.assistant_message === "string" ? result.assistant_message : current.content,
+      thinking: typeof result?.thinking === "string" ? result.thinking : current.thinking,
+      pending: false,
+    }))
+  }
+
+  if (event.type === "turn_failed" || event.type === "turn_aborted") {
+    const next = ensureAssistantMessage(messages, turnId, event.created_at, false)
+    return updateMessageById(next, assistantId, (current) => ({
+      ...current,
+      content: current.content || (typeof payload.error === "string" ? payload.error : "Turn ended early."),
+      pending: false,
+    }))
+  }
+
+  return messages
+}
+
+function buildRecoveredMessages(
+  baseMessages: SessionMessage[],
+  turnId: string,
+  snapshot: AgentTurnSnapshot,
+  replayEvents: AgentStreamEvent[],
+) {
+  let nextMessages = baseMessages.filter(
+    (item) => item.turnId !== turnId && !(item.streamKey && item.streamKey.startsWith(`${turnId}:`)),
+  )
+
+  const snapshotToolEvents = Array.isArray(snapshot.tool_state_json?.events)
+    ? [...snapshot.tool_state_json.events].sort((left, right) => {
+        const leftSeq = typeof left.sequence === "number" ? left.sequence : 0
+        const rightSeq = typeof right.sequence === "number" ? right.sequence : 0
+        return leftSeq - rightSeq
+      })
+    : []
+
+  for (const entry of snapshotToolEvents) {
+    nextMessages = applyToolSnapshotEvent(nextMessages, turnId, entry)
+  }
+
+  if (
+    snapshot.assistant_content ||
+    snapshot.thinking_content ||
+    snapshotToolEvents.length > 0 ||
+    replayEvents.length > 0
+  ) {
+    nextMessages = upsertMessage(nextMessages, {
+      id: turnAssistantMessageId(turnId),
+      turnId,
+      role: "assistant",
+      content: snapshot.assistant_content || "",
+      createdAt: snapshot.updated_at || undefined,
+      thinking: snapshot.thinking_content || null,
+      pending: true,
+    })
+  }
+
+  for (const event of replayEvents) {
+    nextMessages = applyReplayEvent(nextMessages, event, turnId)
+  }
+
+  return sortMessages(nextMessages)
+}
+
+function inferTurnStatus(activeTurn: AgentActiveTurn | null, replayEvents: AgentStreamEvent[]) {
+  if (activeTurn?.status) return activeTurn.status
+  for (let index = replayEvents.length - 1; index >= 0; index -= 1) {
+    const type = replayEvents[index]?.type
+    if (type === "turn_completed") return "completed"
+    if (type === "turn_failed") return "failed"
+    if (type === "turn_aborted") return "aborted"
+  }
+  return null
+}
+
+function turnStatusLabel(status: string | null | undefined) {
+  if (!status) return null
+  if (status === "queued") return "Queued"
+  if (status === "running") return "Running"
+  if (status === "completed") return "Completed"
+  if (status === "failed") return "Failed"
+  if (status === "aborted") return "Aborted"
+  return status
+}
+
+function turnStatusVariant(status: string | null | undefined): "secondary" | "outline" {
+  if (status === "running") return "secondary"
+  return "outline"
 }
 
 function MessageCard({ message }: { message: SessionMessage }) {
@@ -482,9 +831,13 @@ export function AgentConsole() {
   })
   const [availableTools, setAvailableTools] = useState<AgentToolDescriptor[]>([])
   const [loadingTools, setLoadingTools] = useState(true)
+  const [activeTurn, setActiveTurn] = useState<AgentActiveTurn | null>(null)
+  const [reconnecting, setReconnecting] = useState(false)
+  const [recoveryNotice, setRecoveryNotice] = useState<string | null>(null)
   const abortRef = useRef<AbortController | null>(null)
   const transcriptRef = useRef<HTMLDivElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
+  const pollingRef = useRef<number | null>(null)
 
   const notifyError = useCallback((title: string, description?: string) => {
     toast.error(title, {
@@ -527,9 +880,12 @@ export function AgentConsole() {
           notifyError("Seasonal Agent is degraded.", description)
         }
 
+        const storedSessionId = readStoredSelectedSessionId()
         setSelectedSessionId((current) => {
-          if (preferredSessionId !== undefined) return preferredSessionId
-          if (current) return current
+          const requested = preferredSessionId !== undefined ? preferredSessionId : current || storedSessionId
+          if (requested && nextSessions.some((session) => session.session_id === requested)) {
+            return requested
+          }
           return nextSessions[0]?.session_id || null
         })
       } catch (err) {
@@ -540,56 +896,6 @@ export function AgentConsole() {
         notifyError("Failed to load agent UI.", nextError)
       } finally {
         setLoadingSessions(false)
-      }
-    },
-    [notifyError],
-  )
-
-  const loadMessages = useCallback(
-    async (sessionId: string) => {
-      setLoadingMessages(true)
-      setError(null)
-      try {
-        const response = await fetch(`/api/agent/sessions/${encodeURIComponent(sessionId)}?limit=100`, {
-          cache: "no-store",
-        })
-        const json = await parseJsonResponse<{
-          ok?: boolean
-          messages?: Array<{
-            id?: number | string
-            role?: string
-            content?: string
-            created_at?: string
-            tool_name?: string | null
-            raw_json?: unknown
-          }>
-          error?: string
-        }>(response, "Failed to load session messages.")
-
-        if (!response.ok) {
-          throw new Error(json.error || "Failed to load session messages.")
-        }
-
-        const nextMessages = Array.isArray(json.messages)
-          ? json.messages.map((item, index) => ({
-              id: String(item.id ?? `${sessionId}-${index}`),
-              role: (item.role === "assistant" || item.role === "tool" || item.role === "system" ? item.role : "user") as SessionMessage["role"],
-              content: typeof item.content === "string" ? item.content : "",
-              createdAt: item.created_at,
-              toolName: item.tool_name,
-              rawJson: item.raw_json,
-              thinking: extractThinking(item.raw_json),
-            }))
-          : []
-
-        setMessages(nextMessages)
-      } catch (err) {
-        const nextError = err instanceof Error ? err.message : "Failed to load messages."
-        setError(nextError)
-        setMessages([])
-        notifyError("Failed to load conversation.", nextError)
-      } finally {
-        setLoadingMessages(false)
       }
     },
     [notifyError],
@@ -613,19 +919,133 @@ export function AgentConsole() {
     }
   }, [notifyError])
 
+  const loadSessionState = useCallback(
+    async (sessionId: string, options: RecoveryLoadOptions = {}) => {
+      if (!options.silent) setLoadingMessages(true)
+      setError(null)
+      try {
+        const [sessionRes, activeTurnRes] = await Promise.all([
+          fetch(`/api/agent/sessions/${encodeURIComponent(sessionId)}?limit=100`, { cache: "no-store" }),
+          fetch(`/api/agent/sessions/${encodeURIComponent(sessionId)}/active-turn`, { cache: "no-store" }),
+        ])
+
+        const [sessionJson, activeTurnJson] = await Promise.all([
+          parseJsonResponse<SessionDetailResponse>(sessionRes, "Failed to load session messages."),
+          parseJsonResponse<ActiveTurnResponse>(activeTurnRes, "Failed to load active turn metadata."),
+        ])
+
+        if (!sessionRes.ok) {
+          throw new Error(sessionJson.error || "Failed to load session messages.")
+        }
+        const persistedMessages = parsePersistedMessages(sessionId, sessionJson)
+        const upstreamActiveTurn = activeTurnRes.ok
+          ? activeTurnJson.active_turn || sessionJson.active_turn || null
+          : activeTurnRes.status === 404
+            ? sessionJson.active_turn || null
+            : (() => {
+                throw new Error(activeTurnJson.error || "Failed to load active turn metadata.")
+              })()
+        const recoveryTurnId = upstreamActiveTurn?.turn_id || options.recoveryTurnId || null
+
+        if (!recoveryTurnId) {
+          setMessages(sortMessages(persistedMessages))
+          setActiveTurn(null)
+          setReconnecting(false)
+          setRecoveryNotice(null)
+          return
+        }
+
+        setReconnecting(Boolean(!sending))
+
+        const snapshotRes = await fetch(
+          `/api/agent/turns/${encodeURIComponent(recoveryTurnId)}/snapshot?session_id=${encodeURIComponent(sessionId)}`,
+          { cache: "no-store" },
+        )
+        const snapshotJson = await parseJsonResponse<TurnSnapshotResponse>(snapshotRes, "Failed to load durable turn snapshot.")
+
+        if (!snapshotRes.ok) {
+          if (snapshotRes.status === 404) {
+            setMessages(sortMessages(persistedMessages))
+            setActiveTurn(upstreamActiveTurn)
+            setReconnecting(Boolean(upstreamActiveTurn && !sending))
+            setRecoveryNotice(upstreamActiveTurn ? "Active turn metadata was present, but no durable snapshot was available yet." : null)
+            return
+          }
+          throw new Error(snapshotJson.error || "Failed to load durable turn snapshot.")
+        }
+
+        const snapshot = snapshotJson.snapshot
+        if (!snapshot) {
+          setMessages(sortMessages(persistedMessages))
+          setActiveTurn(upstreamActiveTurn)
+          setReconnecting(Boolean(upstreamActiveTurn && !sending))
+          return
+        }
+
+        const eventsRes = await fetch(
+          `/api/agent/turns/${encodeURIComponent(recoveryTurnId)}/events?session_id=${encodeURIComponent(sessionId)}&after_sequence=${encodeURIComponent(String(snapshot.last_sequence || 0))}`,
+          { cache: "no-store" },
+        )
+        const eventsJson = await parseJsonResponse<TurnEventsResponse>(eventsRes, "Failed to replay missed turn events.")
+        if (!eventsRes.ok) {
+          throw new Error(eventsJson.error || "Failed to replay missed turn events.")
+        }
+
+        const replayEvents = Array.isArray(eventsJson.events) ? eventsJson.events : []
+        const rebuiltMessages = buildRecoveredMessages(persistedMessages, recoveryTurnId, snapshot, replayEvents)
+        const inferredStatus = inferTurnStatus(upstreamActiveTurn, replayEvents)
+        const nextTurn = upstreamActiveTurn
+          ? upstreamActiveTurn
+          : {
+              turn_id: recoveryTurnId,
+              session_id: sessionId,
+              status: inferredStatus || "aborted",
+              updated_at: snapshot.updated_at,
+              snapshot_last_sequence: snapshot.last_sequence,
+            }
+
+        setMessages(rebuiltMessages)
+        setActiveTurn(nextTurn)
+        setReconnecting(Boolean(nextTurn.status === "queued" || nextTurn.status === "running") && !sending)
+        setRecoveryNotice(
+          nextTurn.status === "queued" || nextTurn.status === "running"
+            ? "Recovered the latest durable turn state and will keep checking for updates."
+            : "Recovered the latest durable turn state after the stream was interrupted.",
+        )
+      } catch (err) {
+        const nextError = err instanceof Error ? err.message : "Failed to load messages."
+        setError(nextError)
+        setMessages([])
+        setActiveTurn(null)
+        setReconnecting(false)
+        notifyError("Failed to load conversation.", nextError)
+      } finally {
+        if (!options.silent) setLoadingMessages(false)
+      }
+    },
+    [notifyError, sending],
+  )
+
   useEffect(() => {
     void refreshSessions()
     void loadTools()
   }, [loadTools, refreshSessions])
 
   useEffect(() => {
+    writeStoredSelectedSessionId(selectedSessionId)
+  }, [selectedSessionId])
+
+  useEffect(() => {
     if (!selectedSessionId) {
       setMessages([])
+      setActiveTurn(null)
+      setReconnecting(false)
+      setRecoveryNotice(null)
       return
     }
 
-    void loadMessages(selectedSessionId)
-  }, [loadMessages, selectedSessionId])
+    void loadSessionState(selectedSessionId)
+  }, [loadSessionState, selectedSessionId])
 
   useEffect(() => {
     const el = transcriptRef.current
@@ -650,6 +1070,37 @@ export function AgentConsole() {
     }
   }, [message])
 
+  useEffect(() => {
+    if (pollingRef.current !== null) {
+      window.clearInterval(pollingRef.current)
+      pollingRef.current = null
+    }
+
+    if (
+      typeof window === "undefined" ||
+      sending ||
+      !selectedSessionId ||
+      !activeTurn ||
+      (activeTurn.status !== "queued" && activeTurn.status !== "running")
+    ) {
+      return
+    }
+
+    pollingRef.current = window.setInterval(() => {
+      void loadSessionState(selectedSessionId, {
+        recoveryTurnId: activeTurn.turn_id,
+        silent: true,
+      })
+    }, 1500)
+
+    return () => {
+      if (pollingRef.current !== null) {
+        window.clearInterval(pollingRef.current)
+        pollingRef.current = null
+      }
+    }
+  }, [activeTurn, loadSessionState, selectedSessionId, sending])
+
   const sessionHeading = useMemo(() => {
     if (!selectedSessionId) return "New chat"
     return shortSessionId(selectedSessionId)
@@ -659,7 +1110,7 @@ export function AgentConsole() {
   const confirmedToolCount = turnFlags.confirmedTools?.length || 0
 
   const updateMessage = useCallback((id: string, updater: (current: SessionMessage) => SessionMessage) => {
-    setMessages((current) => current.map((item) => (item.id === id ? updater(item) : item)))
+    setMessages((current) => updateMessageById(current, id, updater))
   }, [])
 
   const appendMessage = useCallback((entry: SessionMessage) => {
@@ -675,6 +1126,9 @@ export function AgentConsole() {
     abortRef.current = null
     setSelectedSessionId(null)
     setMessages([])
+    setActiveTurn(null)
+    setReconnecting(false)
+    setRecoveryNotice(null)
     setError(null)
     setConfirmNewChatOpen(false)
     toast.success("Started a new chat.")
@@ -716,6 +1170,8 @@ export function AgentConsole() {
 
     setError(null)
     setSending(true)
+    setReconnecting(false)
+    setRecoveryNotice(null)
 
     const controller = new AbortController()
     abortRef.current = controller
@@ -775,14 +1231,36 @@ export function AgentConsole() {
       const reader = response.body.getReader()
       let buffer = ""
       let completedSessionId = selectedSessionId
+      let streamTurnId: string | null = null
+      let sawTerminalEvent = false
 
       const processEvent = (event: AgentStreamEvent) => {
         const payload = event.payload || {}
+        if (event.turn_id) streamTurnId = event.turn_id
+
+        if (typeof event.sequence === "number" && streamTurnId) {
+          setActiveTurn((current) =>
+            current && current.turn_id === streamTurnId
+              ? { ...current, snapshot_last_sequence: event.sequence, updated_at: event.created_at }
+              : current,
+          )
+        }
 
         if (event.type === "turn_started") {
           const sessionId = typeof payload.session_id === "string" ? payload.session_id : event.session_id
           completedSessionId = sessionId
           setSelectedSessionId(sessionId)
+          if (streamTurnId) {
+            setActiveTurn({
+              turn_id: streamTurnId,
+              session_id: sessionId,
+              status: "running",
+              profile_id: typeof payload.profile_id === "string" ? payload.profile_id : profileOverride.trim() || null,
+              started_at: event.created_at,
+              updated_at: event.created_at,
+              snapshot_last_sequence: event.sequence,
+            })
+          }
           return
         }
 
@@ -818,16 +1296,16 @@ export function AgentConsole() {
         if (event.type === "tool_call_started") {
           const roundIndex = typeof payload.round_index === "number" ? payload.round_index : 0
           const callIndex = typeof payload.call_index === "number" ? payload.call_index : 0
-          const streamKey = `${roundIndex}:${callIndex}`
           appendMessage({
             id: `tool-${crypto.randomUUID()}`,
+            turnId: streamTurnId || undefined,
             role: "tool",
             content: "Running tool call.",
             createdAt: event.created_at,
             toolName: typeof payload.tool_name === "string" ? payload.tool_name : "tool",
             rawJson: { arguments: payload.arguments || {} },
             pending: true,
-            streamKey,
+            streamKey: streamTurnId ? turnToolStreamKey(streamTurnId, roundIndex, callIndex) : `${roundIndex}:${callIndex}`,
           })
           return
         }
@@ -835,7 +1313,7 @@ export function AgentConsole() {
         if (event.type === "tool_call_completed") {
           const roundIndex = typeof payload.round_index === "number" ? payload.round_index : 0
           const callIndex = typeof payload.call_index === "number" ? payload.call_index : 0
-          const streamKey = `${roundIndex}:${callIndex}`
+          const streamKey = streamTurnId ? turnToolStreamKey(streamTurnId, roundIndex, callIndex) : `${roundIndex}:${callIndex}`
           setMessages((current) =>
             current.map((item) =>
               item.streamKey === streamKey
@@ -855,6 +1333,7 @@ export function AgentConsole() {
         }
 
         if (event.type === "turn_completed") {
+          sawTerminalEvent = true
           const result = payload.result as TurnResultPayload | undefined
           updateMessage(assistantMessageId, (current) => ({
             ...current,
@@ -869,18 +1348,41 @@ export function AgentConsole() {
             completedSessionId = result.session_id
             setSelectedSessionId(result.session_id)
           }
+          if (streamTurnId) {
+            setActiveTurn((current) =>
+              current && current.turn_id === streamTurnId
+                ? { ...current, status: "completed", completed_at: event.created_at, updated_at: event.created_at }
+                : current,
+            )
+          }
           return
         }
 
-        if (event.type === "turn_failed") {
+        if (event.type === "turn_failed" || event.type === "turn_aborted") {
+          sawTerminalEvent = true
           const nextError = typeof payload.error === "string" ? payload.error : "Turn failed."
           updateMessage(assistantMessageId, (current) => ({
             ...current,
-            content: nextError,
+            content: current.content || nextError,
             pending: false,
           }))
-          setError(nextError)
-          notifyError("Seasonal Agent failed the turn.", nextError)
+          if (event.type === "turn_failed") {
+            setError(nextError)
+            notifyError("Seasonal Agent failed the turn.", nextError)
+          }
+          if (streamTurnId) {
+            setActiveTurn((current) =>
+              current && current.turn_id === streamTurnId
+                ? {
+                    ...current,
+                    status: event.type === "turn_aborted" ? "aborted" : "failed",
+                    error_message: nextError,
+                    completed_at: event.created_at,
+                    updated_at: event.created_at,
+                  }
+                : current,
+            )
+          }
         }
       }
 
@@ -916,7 +1418,22 @@ export function AgentConsole() {
       }
 
       await refreshSessions(completedSessionId)
+      if (completedSessionId) {
+        await loadSessionState(completedSessionId, {
+          recoveryTurnId: !sawTerminalEvent ? streamTurnId : undefined,
+          silent: true,
+        })
+      }
+
+      if (!sawTerminalEvent && streamTurnId && completedSessionId) {
+        toast.info("Recovered the latest durable turn state.", {
+          description: "The live stream ended early, but the backend snapshot was restored.",
+        })
+      }
     } catch (err) {
+      const nextError = err instanceof Error ? err.message : "Chat request failed."
+      const recoverySessionId = selectedSessionId
+
       if (controller.signal.aborted) {
         updateMessage(assistantMessageId, (current) => ({
           ...current,
@@ -924,7 +1441,6 @@ export function AgentConsole() {
           pending: false,
         }))
       } else {
-        const nextError = err instanceof Error ? err.message : "Chat request failed."
         setError(nextError)
         updateMessage(assistantMessageId, (current) => ({
           ...current,
@@ -933,11 +1449,29 @@ export function AgentConsole() {
         }))
         notifyError("Chat request failed.", nextError)
       }
+
+      if (recoverySessionId) {
+        await refreshSessions(recoverySessionId)
+        await loadSessionState(recoverySessionId, { silent: true })
+      }
     } finally {
       abortRef.current = null
       setSending(false)
     }
-  }, [appendMessage, message, notifyError, profileOverride, refreshSessions, selectedSessionId, sending, turnFlags, updateMessage])
+  }, [
+    appendMessage,
+    loadSessionState,
+    message,
+    notifyError,
+    profileOverride,
+    refreshSessions,
+    selectedSessionId,
+    sending,
+    turnFlags,
+    updateMessage,
+  ])
+
+  const currentTurnStatus = turnStatusLabel(activeTurn?.status)
 
   return (
     <TooltipProvider delayDuration={150}>
@@ -1031,6 +1565,15 @@ export function AgentConsole() {
                     <p className="mt-1 text-sm text-muted-foreground">
                       One conversation canvas, one composer, and structured tool output over the local runtime API.
                     </p>
+                    <div className="mt-3 flex flex-wrap items-center gap-2">
+                      {currentTurnStatus ? (
+                        <Badge variant={turnStatusVariant(activeTurn?.status)}>{currentTurnStatus}</Badge>
+                      ) : null}
+                      {reconnecting ? <Badge variant="outline">Reconnecting…</Badge> : null}
+                      {activeTurn?.turn_id ? (
+                        <Badge variant="outline">turn:{shortSessionId(activeTurn.turn_id)}</Badge>
+                      ) : null}
+                    </div>
                   </div>
 
                   <Tooltip>
@@ -1050,6 +1593,11 @@ export function AgentConsole() {
               <div className="min-h-0 flex-1 overflow-hidden">
                 <div ref={transcriptRef} className="h-full min-h-0 overflow-y-auto px-4 py-4 md:px-5">
                   <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col justify-end gap-3">
+                    {recoveryNotice ? (
+                      <div className="w-full rounded-xl border bg-card/60 px-4 py-3 text-sm text-muted-foreground">
+                        {recoveryNotice}
+                      </div>
+                    ) : null}
                     {loadingMessages ? (
                       <div className="w-full rounded-xl border bg-card/60 px-4 py-6 text-sm text-muted-foreground">Loading conversation…</div>
                     ) : messages.length === 0 ? (
@@ -1149,24 +1697,24 @@ export function AgentConsole() {
           </section>
         </div>
 
-<AlertDialog open={confirmNewChatOpen} onOpenChange={setConfirmNewChatOpen}>
-  {confirmNewChatOpen ? (
-    <AlertDialogContent>
-      <AlertDialogHeader>
-        <AlertDialogTitle>Start a new chat?</AlertDialogTitle>
-        <AlertDialogDescription>
-          This clears the active canvas and draft text in the browser. Saved sessions remain available in the rail.
-        </AlertDialogDescription>
-      </AlertDialogHeader>
-      <AlertDialogFooter>
-        <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
-        <AlertDialogAction className="rounded-xl" onClick={handleNewChat}>
-          Start new chat
-        </AlertDialogAction>
-      </AlertDialogFooter>
-    </AlertDialogContent>
-  ) : null}
-</AlertDialog>
+        <AlertDialog open={confirmNewChatOpen} onOpenChange={setConfirmNewChatOpen}>
+          {confirmNewChatOpen ? (
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Start a new chat?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This clears the active canvas and draft text in the browser. Saved sessions remain available in the rail.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel className="rounded-xl">Cancel</AlertDialogCancel>
+                <AlertDialogAction className="rounded-xl" onClick={handleNewChat}>
+                  Start new chat
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          ) : null}
+        </AlertDialog>
       </>
     </TooltipProvider>
   )
