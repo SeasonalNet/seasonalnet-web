@@ -41,7 +41,6 @@ export async function POST(request: Request) {
     const headers = new Headers()
     headers.set("Content-Type", "text/event-stream; charset=utf-8")
     headers.set("Cache-Control", "no-cache, no-transform")
-    headers.set("Connection", "keep-alive")
     headers.set("X-Accel-Buffering", "no")
 
     return new Response(upstream.body, {

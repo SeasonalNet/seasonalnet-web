@@ -126,6 +126,11 @@ type RecoveryLoadOptions = {
   silent?: boolean
 }
 
+type RefreshSessionsOptions = {
+  preferredSessionId?: string | null
+  includeHealth?: boolean
+}
+
 const EXECUTION_MODE_OPTIONS: Array<{
   value: AgentExecutionMode
   label: string
@@ -198,6 +203,54 @@ async function parseJsonResponse<T>(response: Response, fallbackError: string): 
   } catch {
     return { error: fallbackError } as T
   }
+}
+
+function parseSseEvent(rawEvent: string) {
+  const lines = rawEvent.split(/\r?\n/)
+  const dataLines: string[] = []
+
+  for (const line of lines) {
+    if (line.startsWith("data:")) {
+      dataLines.push(line.slice(5).trimStart())
+    }
+  }
+
+  if (!dataLines.length) return null
+
+  try {
+    return JSON.parse(dataLines.join("\n")) as AgentStreamEvent
+  } catch {
+    return null
+  }
+}
+
+function consumeSseBuffer(
+  input: string,
+  processEvent: (event: AgentStreamEvent) => void,
+  options: { flushRemainder?: boolean } = {},
+) {
+  let buffer = input
+
+  while (true) {
+    const marker = /\r?\n\r?\n/.exec(buffer)
+    if (!marker || marker.index === undefined) break
+
+    const rawEvent = buffer.slice(0, marker.index)
+    buffer = buffer.slice(marker.index + marker[0].length)
+
+    const event = parseSseEvent(rawEvent)
+    if (event) processEvent(event)
+  }
+
+  if (options.flushRemainder && buffer.trim()) {
+    const event = parseSseEvent(buffer)
+    if (event) {
+      processEvent(event)
+      return ""
+    }
+  }
+
+  return buffer
 }
 
 function messageIcon(role: SessionMessage["role"]) {
@@ -847,21 +900,14 @@ export function AgentConsole() {
   }, [])
 
   const refreshSessions = useCallback(
-    async (preferredSessionId?: string | null) => {
+    async ({ preferredSessionId, includeHealth = true }: RefreshSessionsOptions = {}) => {
       setLoadingSessions(true)
       try {
-        const [sessionsRes, healthRes] = await Promise.all([
-          fetch("/api/agent/sessions?limit=40", { cache: "no-store" }),
-          fetch("/api/agent/health", { cache: "no-store" }),
-        ])
-
-        const [sessionsJson, healthJson] = await Promise.all([
-          parseJsonResponse<{ sessions?: SessionSummary[]; error?: string }>(
-            sessionsRes,
-            "Failed to load sessions.",
-          ),
-          parseJsonResponse<{ ok?: boolean; error?: string }>(healthRes, "Failed to load health status."),
-        ])
+        const sessionsRes = await fetch("/api/agent/sessions?limit=40", { cache: "no-store" })
+        const sessionsJson = await parseJsonResponse<{ sessions?: SessionSummary[]; error?: string }>(
+          sessionsRes,
+          "Failed to load sessions.",
+        )
 
         if (!sessionsRes.ok) {
           throw new Error(sessionsJson.error || "Failed to load sessions.")
@@ -869,15 +915,25 @@ export function AgentConsole() {
 
         const nextSessions = Array.isArray(sessionsJson.sessions) ? sessionsJson.sessions : []
         setSessions(nextSessions)
-        setHealthOk(Boolean(healthJson.ok))
-        setStatusLabel(healthJson.ok ? "Agent reachable" : "Agent degraded")
 
-        if (!healthJson.ok) {
-          const description =
-            typeof healthJson.error === "string"
-              ? healthJson.error
-              : "Health checks did not return an OK state."
-          notifyError("Seasonal Agent is degraded.", description)
+        if (includeHealth) {
+          const healthRes = await fetch("/api/agent/health", { cache: "no-store" })
+          const healthJson = await parseJsonResponse<{ ok?: boolean; error?: string }>(
+            healthRes,
+            "Failed to load health status.",
+          )
+          const isHealthy = healthRes.ok && Boolean(healthJson.ok)
+
+          setHealthOk(isHealthy)
+          setStatusLabel(isHealthy ? "Agent reachable" : "Agent degraded")
+
+          if (!isHealthy) {
+            const description =
+              typeof healthJson.error === "string"
+                ? healthJson.error
+                : "Health checks did not return an OK state."
+            notifyError("Seasonal Agent is degraded.", description)
+          }
         }
 
         const storedSessionId = readStoredSelectedSessionId()
@@ -1388,44 +1444,27 @@ export function AgentConsole() {
 
       while (true) {
         const { done, value } = await reader.read()
-        if (done) break
-        buffer += decoder.decode(value, { stream: true })
-
-        while (true) {
-          const markerIndex = buffer.indexOf("\n\n")
-          if (markerIndex === -1) break
-
-          const rawEvent = buffer.slice(0, markerIndex)
-          buffer = buffer.slice(markerIndex + 2)
-
-          const lines = rawEvent.split(/\r?\n/)
-          const dataLines: string[] = []
-
-          for (const line of lines) {
-            if (line.startsWith("data:")) {
-              dataLines.push(line.slice(5).trimStart())
-            }
-          }
-
-          if (!dataLines.length) continue
-
-          try {
-            processEvent(JSON.parse(dataLines.join("\n")) as AgentStreamEvent)
-          } catch {
-            // ignore malformed chunks from an already failed stream
-          }
+        if (done) {
+          buffer += decoder.decode()
+          break
         }
+
+        buffer += decoder.decode(value, { stream: true })
+        buffer = consumeSseBuffer(buffer, processEvent)
       }
 
-      await refreshSessions(completedSessionId)
-      if (completedSessionId) {
-        await loadSessionState(completedSessionId, {
-          recoveryTurnId: !sawTerminalEvent ? streamTurnId : undefined,
-          silent: true,
-        })
-      }
+      buffer = consumeSseBuffer(buffer, processEvent, { flushRemainder: true })
+
+      await refreshSessions({
+        preferredSessionId: completedSessionId,
+        includeHealth: false,
+      })
 
       if (!sawTerminalEvent && streamTurnId && completedSessionId) {
+        await loadSessionState(completedSessionId, {
+          recoveryTurnId: streamTurnId,
+          silent: true,
+        })
         toast.info("Recovered the latest durable turn state.", {
           description: "The live stream ended early, but the backend snapshot was restored.",
         })
@@ -1451,7 +1490,10 @@ export function AgentConsole() {
       }
 
       if (recoverySessionId) {
-        await refreshSessions(recoverySessionId)
+        await refreshSessions({
+          preferredSessionId: recoverySessionId,
+          includeHealth: false,
+        })
         await loadSessionState(recoverySessionId, { silent: true })
       }
     } finally {
