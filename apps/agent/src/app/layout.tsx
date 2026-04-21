@@ -23,9 +23,9 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" suppressHydrationWarning>
-      <body className="h-dvh overflow-hidden bg-background text-foreground antialiased transition-colors duration-300">
+      <body className="min-h-dvh overflow-x-hidden bg-background text-foreground antialiased transition-colors duration-300">
         <ThemeProvider>
-          <div className="flex h-dvh flex-col overflow-hidden">
+          <div className="flex min-h-dvh flex-col lg:h-dvh lg:overflow-hidden">
             <SiteHeader />
             {children}
             <Toaster position="top-right" richColors />

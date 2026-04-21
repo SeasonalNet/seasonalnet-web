@@ -4,7 +4,7 @@ import { site } from "@/lib/site"
 
 export function SiteFooter() {
   return (
-    <div className="shrink-0">
+    <div className="hidden shrink-0 lg:block">
       <ShellFooter site={site} />
     </div>
   )

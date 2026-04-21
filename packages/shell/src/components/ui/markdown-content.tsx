@@ -60,6 +60,26 @@ function isProbablyExternalHref(href?: string) {
   return Boolean(href && /^(?:https?:)?\/\//i.test(href))
 }
 
+function normalizeLiteralAngleTagsSegment(value: string) {
+  return value.replace(/(<\/?[A-Za-z][A-Za-z0-9:_/-]*>)/g, "`$1`")
+}
+
+function normalizeLiteralAngleTags(content: string) {
+  const fencePattern = /(```[\s\S]*?```)/g
+
+  return content
+    .split(fencePattern)
+    .map((block) => {
+      if (block.startsWith("```")) return block
+
+      return block
+        .split(/(`[^`]*`)/g)
+        .map((segment) => (segment.startsWith("`") ? segment : normalizeLiteralAngleTagsSegment(segment)))
+        .join("")
+    })
+    .join("")
+}
+
 function PlainCodeBlock({ code, inverted }: { code: string; inverted?: boolean }) {
   return (
     <pre
@@ -211,11 +231,12 @@ function createMarkdownComponents(inverted?: boolean): Components {
 
 export function MarkdownContent({ content, className, inverted }: MarkdownContentProps) {
   const components = useMemo(() => createMarkdownComponents(inverted), [inverted])
+  const normalizedContent = useMemo(() => normalizeLiteralAngleTags(content), [content])
 
   return (
     <div className={cn("text-sm leading-6", className)}>
       <ReactMarkdown remarkPlugins={[remarkGfm]} skipHtml components={components}>
-        {content}
+        {normalizedContent}
       </ReactMarkdown>
     </div>
   )

@@ -1,17 +1,20 @@
 "use client"
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react"
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
 import {
   Activity,
   Bot,
   Check,
-  Command,
+  ChevronDown,
   Copy,
   Ellipsis,
   LoaderCircle,
   MessageSquare,
+  PanelLeft,
   Plus,
   Send,
+  Settings2,
   Square,
   Wrench,
   X,
@@ -38,6 +41,16 @@ import {
 } from "@seasonalnet/shell/src/components/ui/alert-dialog"
 import { Badge } from "@seasonalnet/shell/src/components/ui/badge"
 import { Button } from "@seasonalnet/shell/src/components/ui/button"
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@seasonalnet/shell/src/components/ui/collapsible"
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandSeparator,
+} from "@seasonalnet/shell/src/components/ui/command"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -45,8 +58,13 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@seasonalnet/shell/src/components/ui/dropdown-menu"
+import { Input } from "@seasonalnet/shell/src/components/ui/input"
+import { Label } from "@seasonalnet/shell/src/components/ui/label"
 import { MarkdownContent } from "@seasonalnet/shell/src/components/ui/markdown-content"
-import { Separator } from "@seasonalnet/shell/src/components/ui/separator"
+import { Popover, PopoverContent, PopoverTrigger } from "@seasonalnet/shell/src/components/ui/popover"
+import { ScrollArea } from "@seasonalnet/shell/src/components/ui/scroll-area"
+import { Sheet, SheetContent } from "@seasonalnet/shell/src/components/ui/sheet"
+import { Textarea } from "@seasonalnet/shell/src/components/ui/textarea"
 import {
   Tooltip,
   TooltipContent,
@@ -130,6 +148,14 @@ type RefreshSessionsOptions = {
   preferredSessionId?: string | null
   includeHealth?: boolean
 }
+
+const TARGET_HINT_PRESETS = [
+  { value: "seasonalnet", label: "SeasonalNet" },
+  { value: "homelab", label: "Homelab" },
+  { value: "repo", label: "Repo" },
+  { value: "seasonalweather", label: "SeasonalWeather" },
+  { value: "seasonal-agent", label: "Seasonal Agent" },
+] as const
 
 const EXECUTION_MODE_OPTIONS: Array<{
   value: AgentExecutionMode
@@ -578,22 +604,86 @@ function turnStatusVariant(status: string | null | undefined): "secondary" | "ou
   return "outline"
 }
 
+function useMediaQuery(query: string) {
+  const [matches, setMatches] = useState(false)
+
+  useEffect(() => {
+    if (typeof window === "undefined") return
+
+    const media = window.matchMedia(query)
+    const handleChange = () => setMatches(media.matches)
+    handleChange()
+
+    media.addEventListener("change", handleChange)
+    return () => media.removeEventListener("change", handleChange)
+  }, [query])
+
+  return matches
+}
+
+function MessageDisclosure({
+  title,
+  children,
+  inverted = false,
+}: {
+  title: string
+  children: ReactNode
+  inverted?: boolean
+}) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <Collapsible open={open} onOpenChange={setOpen}>
+      <CollapsibleTrigger asChild>
+        <button
+          type="button"
+          className={cn(
+            "mt-3 flex w-full items-center justify-between rounded-xl border px-3 py-2 text-left text-sm transition hover:bg-accent/40",
+            inverted ? "border-background/15 bg-background/5 text-background/85" : "bg-background/40 text-foreground",
+          )}
+        >
+          <span className="font-medium">{title}</span>
+          <ChevronDown className={cn("h-4 w-4 transition-transform", open ? "rotate-180" : "rotate-0")} />
+        </button>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <div
+          className={cn(
+            "mt-2 rounded-xl border p-3 text-xs",
+            inverted ? "border-background/15 bg-background/5 text-background/75" : "bg-background/40 text-muted-foreground",
+          )}
+        >
+          {children}
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
+  )
+}
+
 function MessageCard({ message }: { message: SessionMessage }) {
   const Icon = messageIcon(message.role)
   const roleLabel = message.role === "tool" ? message.toolName || "tool" : message.role
+  const reduceMotion = useReducedMotion()
 
   return (
-    <article
+    <motion.article
+      layout
+      initial={{ opacity: 0, y: reduceMotion ? 0 : 8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: reduceMotion ? 0 : -4 }}
+      transition={{ duration: 0.16, ease: "easeOut" }}
       className={cn(
-        "rounded-2xl border p-4",
-        message.role === "user" ? "border-foreground/15 bg-foreground text-background" : "bg-card/70",
+        "rounded-3xl border p-4 shadow-[0_1px_0_rgba(255,255,255,0.02)]",
+        message.role === "user"
+          ? "border-foreground/15 bg-foreground text-background"
+          : "bg-card/70 backdrop-blur-sm",
       )}
     >
       <div className="flex items-center justify-between gap-3">
-        <div className="flex min-w-0 items-center gap-2">
+        <div className="flex min-w-0 items-center gap-3">
           <div
             className={cn(
-              "flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border",
+              "flex h-9 w-9 shrink-0 items-center justify-center rounded-2xl border",
               message.role === "user" ? "border-background/20 bg-background/5" : "bg-background/50",
             )}
           >
@@ -617,19 +707,17 @@ function MessageCard({ message }: { message: SessionMessage }) {
       />
 
       {message.thinking ? (
-        <details className="mt-3 rounded-xl border bg-background/40 p-3 text-sm">
-          <summary className="cursor-pointer select-none font-medium">Thinking</summary>
-          <pre className="mt-3 whitespace-pre-wrap text-xs text-muted-foreground">{message.thinking}</pre>
-        </details>
+        <MessageDisclosure title="Thinking" inverted={message.role === "user"}>
+          <pre className="whitespace-pre-wrap">{message.thinking}</pre>
+        </MessageDisclosure>
       ) : null}
 
       {message.rawJson ? (
-        <details className="mt-3 rounded-xl border bg-background/40 p-3 text-sm">
-          <summary className="cursor-pointer select-none font-medium">Details</summary>
-          <pre className="mt-3 overflow-x-auto whitespace-pre-wrap text-xs text-muted-foreground">{prettyJson(message.rawJson)}</pre>
-        </details>
+        <MessageDisclosure title="Details" inverted={message.role === "user"}>
+          <pre className="overflow-x-auto whitespace-pre-wrap">{prettyJson(message.rawJson)}</pre>
+        </MessageDisclosure>
       ) : null}
-    </article>
+    </motion.article>
   )
 }
 
@@ -644,77 +732,71 @@ function SessionListItem({ session, selected, onSelect, onCopy }: SessionListIte
   const label = session.title?.trim() || shortSessionId(session.session_id)
 
   return (
-    <div
-      className={cn(
-        "group flex items-start gap-2 rounded-xl border px-2 py-2 transition-colors",
-        selected ? "border-foreground/20 bg-accent/60" : "bg-background/40 hover:bg-accent/30",
-      )}
-    >
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            onClick={() => onSelect(session.session_id)}
-            className="min-w-0 flex-1 rounded-lg px-1 py-0.5 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-ring/50"
-          >
-            <div className="truncate text-sm font-medium">{label}</div>
-            <div className="mt-1 text-xs text-muted-foreground">{formatDate(session.updated_at)}</div>
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="right" sideOffset={8} className="max-w-xs">
-          <div className="font-medium">{label}</div>
-          <div className="mt-1 text-[11px] opacity-80">{session.session_id}</div>
-        </TooltipContent>
-      </Tooltip>
-
-      <DropdownMenu>
+    <motion.div layout className="group">
+      <div
+        className={cn(
+          "flex items-start gap-1.5 rounded-2xl border px-2.5 py-2.5 transition-colors",
+          selected ? "border-foreground/20 bg-accent/60" : "bg-background/40 hover:bg-accent/30",
+        )}
+      >
         <Tooltip>
           <TooltipTrigger asChild>
-            <DropdownMenuTrigger asChild>
-              <Button
-                type="button"
-                variant="ghost"
-                size="icon-sm"
-                className="mt-0.5 rounded-lg opacity-70 transition group-hover:opacity-100"
-                aria-label={`Session actions for ${label}`}
-              >
-                <Ellipsis className="h-4 w-4" />
-              </Button>
-            </DropdownMenuTrigger>
+            <button
+              type="button"
+              onClick={() => onSelect(session.session_id)}
+              className="min-w-0 flex-1 rounded-xl px-2.5 py-1.5 text-left outline-none transition focus-visible:ring-2 focus-visible:ring-ring/50"
+            >
+              <div className="truncate text-sm font-medium">{label}</div>
+              <div className="mt-1 text-xs text-muted-foreground">{formatDate(session.updated_at)}</div>
+            </button>
           </TooltipTrigger>
-          <TooltipContent side="right">Session actions</TooltipContent>
+          <TooltipContent side="right" sideOffset={8} className="max-w-xs">
+            <div className="font-medium">{label}</div>
+            <div className="mt-1 text-[11px] opacity-80">{session.session_id}</div>
+          </TooltipContent>
         </Tooltip>
 
-        <DropdownMenuContent align="end" className="w-48 rounded-xl">
-          <DropdownMenuItem onClick={() => onSelect(session.session_id)}>
-            <Check className="h-4 w-4" />
-            Open session
-          </DropdownMenuItem>
-          <DropdownMenuSeparator />
-          <DropdownMenuItem onClick={() => onCopy(session.session_id)}>
-            <Copy className="h-4 w-4" />
-            Copy session ID
-          </DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </div>
+        <DropdownMenu>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <DropdownMenuTrigger asChild>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon-sm"
+                  className="rounded-xl opacity-70 transition group-hover:opacity-100"
+                  aria-label={`Session actions for ${label}`}
+                >
+                  <Ellipsis className="h-4 w-4" />
+                </Button>
+              </DropdownMenuTrigger>
+            </TooltipTrigger>
+            <TooltipContent side="right">Session actions</TooltipContent>
+          </Tooltip>
+
+          <DropdownMenuContent align="end" className="w-48 rounded-xl">
+            <DropdownMenuItem onClick={() => onSelect(session.session_id)}>
+              <Check className="h-4 w-4" />
+              Open session
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => onCopy(session.session_id)}>
+              <Copy className="h-4 w-4" />
+              Copy session ID
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+    </motion.div>
   )
 }
 
-function TurnFlagsSummary({
-  flags,
-  toolCount,
-  onClear,
-}: {
-  flags: AgentTurnFlags
-  toolCount: number
-  onClear: () => void
-}) {
-  const hasFlags = Boolean(flags.target || flags.executionMode || (flags.confirmedTools?.length || 0) > 0)
+function TurnFlagsSummary({ flags, toolCount, onClear }: { flags: AgentTurnFlags; toolCount: number; onClear: () => void }) {
+  const hasFlags = Boolean(flags.target || flags.executionMode || toolCount > 0)
   if (!hasFlags) return null
 
   return (
-    <div className="mt-3 flex flex-wrap items-center gap-2 rounded-xl border bg-card/40 px-3 py-2 text-xs text-muted-foreground">
+    <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border bg-card/40 px-3 py-2 text-xs text-muted-foreground">
       <Badge variant="secondary">Turn flags</Badge>
       {flags.target ? <Badge variant="outline">target:{flags.target}</Badge> : null}
       {flags.executionMode ? <Badge variant="outline">mode:{flags.executionMode}</Badge> : null}
@@ -722,7 +804,7 @@ function TurnFlagsSummary({
       <button
         type="button"
         onClick={onClear}
-        className="ml-auto inline-flex items-center gap-1 rounded-md px-1.5 py-1 hover:bg-accent"
+        className="ml-auto inline-flex items-center gap-1 rounded-md px-1.5 py-1 transition hover:bg-accent"
       >
         <X className="h-3 w-3" />
         Clear
@@ -731,134 +813,325 @@ function TurnFlagsSummary({
   )
 }
 
-function TurnFlagsPanel({
+function TurnFlagsMenu({
   flags,
   tools,
   loadingTools,
   onChange,
-  onClose,
   onClear,
+  onDone,
+  fullHeight = false,
 }: {
   flags: AgentTurnFlags
   tools: AgentToolDescriptor[]
   loadingTools: boolean
   onChange: (next: AgentTurnFlags) => void
-  onClose: () => void
   onClear: () => void
+  onDone: () => void
+  fullHeight?: boolean
 }) {
+  const [commandQuery, setCommandQuery] = useState("")
+  const confirmedTools = flags.confirmedTools ?? []
+  const hasFlags = Boolean(flags.target || flags.executionMode || confirmedTools.length > 0)
+  const trimmedCommandQuery = commandQuery.trim()
+  const hasCustomTargetProposal = Boolean(
+    trimmedCommandQuery && !TARGET_HINT_PRESETS.some((preset) => preset.value.toLowerCase() === trimmedCommandQuery.toLowerCase()),
+  )
+
   const toggleTool = (toolName: string) => {
-    const current = new Set(flags.confirmedTools ?? [])
+    const current = new Set(confirmedTools)
     if (current.has(toolName)) current.delete(toolName)
     else current.add(toolName)
     onChange({ ...flags, confirmedTools: [...current] })
   }
 
   return (
-    <div className="mb-3 rounded-2xl border bg-card/60 p-3">
-      <div className="flex items-start justify-between gap-3">
-        <div>
-          <div className="text-sm font-medium">Slash-style turn flags</div>
-          <p className="mt-1 text-xs text-muted-foreground">
-            Confirm a target, execution mode, or safe tool subset before this turn is proxied upstream.
-          </p>
-        </div>
+    <div className={cn("flex min-h-0 flex-col", fullHeight && "h-full")}>
+      <div className="border-b px-4 py-4 sm:px-5">
+        <div className="flex items-start justify-between gap-3 pr-8">
+          <div>
+            <div className="text-sm font-medium">Turn flags</div>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Search targets, execution modes, and the exposed tool subset before this turn is proxied upstream.
+            </p>
+          </div>
 
-        <div className="flex items-center gap-2">
-          <Button type="button" variant="ghost" size="sm" className="rounded-lg" onClick={onClear}>
-            Clear
-          </Button>
-          <Button type="button" variant="outline" size="sm" className="rounded-lg" onClick={onClose}>
-            Done
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              className="rounded-xl"
+              onClick={() => {
+                onClear()
+                setCommandQuery("")
+              }}
+              disabled={!hasFlags}
+            >
+              Clear
+            </Button>
+            <Button type="button" variant="outline" size="sm" className="rounded-xl" onClick={onDone}>
+              Done
+            </Button>
+          </div>
         </div>
       </div>
 
-      <div className="mt-3 grid gap-3 lg:grid-cols-[minmax(0,14rem)_minmax(0,1fr)]">
-        <div className="space-y-3 rounded-xl border bg-background/50 p-3">
-          <div>
-            <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Target hint</label>
-            <input
-              value={flags.target || ""}
-              onChange={(event) => onChange({ ...flags, target: event.target.value })}
-              placeholder="seasonalweather, git repo, host…"
-              className="mt-2 w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none transition focus:border-foreground/30"
-            />
-          </div>
+      <div className="min-h-0 flex-1 px-4 pb-4 pt-4 sm:px-5 sm:pb-5">
+        <Command className="overflow-hidden rounded-2xl border bg-background/60">
+          <CommandInput
+            value={commandQuery}
+            onValueChange={setCommandQuery}
+            placeholder="Search targets, modes, and tools…"
+          />
+          <CommandList className={cn(fullHeight ? "max-h-[65vh]" : "max-h-[26rem]")}>
+            <CommandEmpty>No matching targets, modes, or tools.</CommandEmpty>
 
-          <div>
-            <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Execution mode</div>
-            <div className="mt-2 space-y-2">
+            <CommandGroup heading="Quick actions">
+              <CommandItem
+                value="finish turn flags"
+                onSelect={() => {
+                  setCommandQuery("")
+                  onDone()
+                }}
+              >
+                <Check className="h-4 w-4" />
+                <span>Done</span>
+              </CommandItem>
+              <CommandItem
+                value="clear turn flags"
+                onSelect={() => {
+                  onClear()
+                  setCommandQuery("")
+                }}
+                disabled={!hasFlags}
+              >
+                <X className="h-4 w-4" />
+                <span>Clear all turn flags</span>
+              </CommandItem>
+            </CommandGroup>
+
+            <CommandSeparator />
+
+            <CommandGroup heading="Target hint">
+              {hasCustomTargetProposal ? (
+                <CommandItem
+                  value={`use target ${trimmedCommandQuery}`}
+                  keywords={[trimmedCommandQuery, "target", "hint"]}
+                  onSelect={() => {
+                    onChange({ ...flags, target: trimmedCommandQuery })
+                    setCommandQuery("")
+                  }}
+                  className="items-start"
+                >
+                  <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border bg-background" />
+                  <div className="min-w-0">
+                    <div className="text-sm font-medium">Use “{trimmedCommandQuery}” as the target hint</div>
+                    <div className="mt-1 text-xs text-muted-foreground">Custom freeform target</div>
+                  </div>
+                </CommandItem>
+              ) : null}
+
+              {TARGET_HINT_PRESETS.map((preset) => {
+                const active = (flags.target || "").trim().toLowerCase() === preset.value.toLowerCase()
+                return (
+                  <CommandItem
+                    key={preset.value}
+                    value={`${preset.label} ${preset.value} target hint`}
+                    keywords={[preset.value, preset.label, "target", "hint"]}
+                    onSelect={() => {
+                      onChange({ ...flags, target: active ? "" : preset.value })
+                      setCommandQuery("")
+                    }}
+                    className="items-start"
+                  >
+                    <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border bg-background">
+                      {active ? <Check className="h-3 w-3" /> : null}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="text-sm font-medium">{preset.label}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">{preset.value}</div>
+                    </div>
+                  </CommandItem>
+                )
+              })}
+            </CommandGroup>
+
+            <CommandSeparator />
+
+            <CommandGroup heading="Execution mode">
               {EXECUTION_MODE_OPTIONS.map((option) => {
                 const active = flags.executionMode === option.value
                 return (
-                  <button
+                  <CommandItem
                     key={option.value}
-                    type="button"
-                    onClick={() =>
-                      onChange({
-                        ...flags,
-                        executionMode: active ? "" : option.value,
-                      })
-                    }
-                    className={cn(
-                      "w-full rounded-xl border px-3 py-2 text-left transition",
-                      active ? "border-foreground/30 bg-accent/60" : "bg-background hover:bg-accent/30",
-                    )}
+                    value={`${option.label} ${option.description} ${option.value}`}
+                    keywords={[option.value, option.label, option.description, "execution mode"]}
+                    onSelect={() => {
+                      onChange({ ...flags, executionMode: active ? "" : option.value })
+                      setCommandQuery("")
+                    }}
+                    className="items-start"
                   >
-                    <div className="text-sm font-medium">{option.label}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">{option.description}</div>
-                  </button>
-                )
-              })}
-            </div>
-          </div>
-        </div>
-
-        <div className="rounded-xl border bg-background/50 p-3">
-          <div className="flex items-center justify-between gap-3">
-            <div>
-              <div className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Operator-confirmed tools</div>
-              <p className="mt-1 text-xs text-muted-foreground">
-                Selected tools remain available for this turn. Unselected tools are not exposed from the web confirmation layer.
-              </p>
-            </div>
-            <Badge variant="outline">{flags.confirmedTools?.length || 0} selected</Badge>
-          </div>
-
-          <div className="mt-3 max-h-64 space-y-2 overflow-y-auto pr-1">
-            {loadingTools ? (
-              <div className="rounded-xl border px-3 py-4 text-sm text-muted-foreground">Loading tools…</div>
-            ) : tools.length === 0 ? (
-              <div className="rounded-xl border px-3 py-4 text-sm text-muted-foreground">No tool metadata was returned by Seasonal Agent.</div>
-            ) : (
-              tools.map((tool) => {
-                const active = (flags.confirmedTools ?? []).includes(tool.name)
-                return (
-                  <button
-                    key={tool.name}
-                    type="button"
-                    onClick={() => toggleTool(tool.name)}
-                    className={cn(
-                      "flex w-full items-start gap-3 rounded-xl border px-3 py-3 text-left transition",
-                      active ? "border-foreground/30 bg-accent/60" : "bg-background hover:bg-accent/30",
-                    )}
-                  >
-                    <div className="mt-0.5 flex h-5 w-5 items-center justify-center rounded-md border bg-background">
-                      {active ? <Check className="h-3.5 w-3.5" /> : null}
+                    <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border bg-background">
+                      {active ? <Check className="h-3 w-3" /> : null}
                     </div>
                     <div className="min-w-0">
-                      <div className="text-sm font-medium">{tool.name}</div>
-                      <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">
-                        {tool.description || "No description returned by the runtime."}
-                      </div>
+                      <div className="text-sm font-medium">{option.label}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">{option.description}</div>
                     </div>
-                  </button>
+                  </CommandItem>
                 )
-              })
-            )}
-          </div>
+              })}
+            </CommandGroup>
+
+            <CommandSeparator />
+
+            <CommandGroup heading="Operator-confirmed tools">
+              {loadingTools ? (
+                <CommandItem value="loading tools" disabled>
+                  <LoaderCircle className="h-4 w-4 animate-spin" />
+                  <span>Loading tool metadata…</span>
+                </CommandItem>
+              ) : tools.length === 0 ? (
+                <CommandItem value="no tools available" disabled>
+                  <Wrench className="h-4 w-4" />
+                  <span>No tool metadata was returned by Seasonal Agent.</span>
+                </CommandItem>
+              ) : (
+                tools.map((tool) => {
+                  const active = confirmedTools.includes(tool.name)
+                  return (
+                    <CommandItem
+                      key={tool.name}
+                      value={`${tool.name} ${tool.description || ""}`}
+                      keywords={[tool.name, tool.description || "", "tool"]}
+                      onSelect={() => {
+                        toggleTool(tool.name)
+                        setCommandQuery("")
+                      }}
+                      className="items-start"
+                    >
+                      <div className="mt-0.5 flex h-4 w-4 shrink-0 items-center justify-center rounded-sm border bg-background">
+                        {active ? <Check className="h-3 w-3" /> : null}
+                      </div>
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium">{tool.name}</div>
+                        <div className="mt-1 line-clamp-2 text-xs text-muted-foreground">
+                          {tool.description || "No description returned by the runtime."}
+                        </div>
+                      </div>
+                    </CommandItem>
+                  )
+                })
+              )}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+
+        <div className="mt-3 flex flex-wrap items-center gap-2 rounded-2xl border bg-background/40 px-3 py-2 text-xs text-muted-foreground">
+          <span className="font-medium text-foreground">Current</span>
+          {flags.target ? <Badge variant="outline">target:{flags.target}</Badge> : null}
+          {flags.executionMode ? <Badge variant="outline">mode:{flags.executionMode}</Badge> : null}
+          {confirmedTools.length > 0 ? <Badge variant="outline">tools:{confirmedTools.length}</Badge> : null}
+          {!hasFlags ? <span>No turn flags selected.</span> : null}
         </div>
       </div>
+    </div>
+  )
+}
+
+type SessionRailContentProps = {
+  healthOk: boolean | null
+  statusLabel: string
+  loadingSessions: boolean
+  sessions: SessionSummary[]
+  selectedSessionId: string | null
+  profileOverride: string
+  onProfileOverrideChange: (value: string) => void
+  onRequestNewChat: () => void
+  onSelectSession: (sessionId: string) => void
+  onCopySessionId: (sessionId: string) => void
+}
+
+function SessionRailContent({
+  healthOk,
+  statusLabel,
+  loadingSessions,
+  sessions,
+  selectedSessionId,
+  profileOverride,
+  onProfileOverrideChange,
+  onRequestNewChat,
+  onSelectSession,
+  onCopySessionId,
+}: SessionRailContentProps) {
+  return (
+    <div className="flex h-full min-h-0 flex-col">
+      <div className="space-y-4 border-b px-4 py-4">
+        <div className="flex items-center justify-between gap-3">
+          <h2 className="text-base font-semibold">Sessions</h2>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge variant={healthOk ? "secondary" : "outline"} className="cursor-default">
+                {statusLabel}
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent side="right">
+              {healthOk
+                ? "The Seasonal Agent API responded to health checks."
+                : "The Seasonal Agent API is degraded or unavailable."}
+            </TooltipContent>
+          </Tooltip>
+        </div>
+
+        <Button className="w-full rounded-2xl" variant="outline" onClick={onRequestNewChat}>
+          <Plus className="mr-2 h-4 w-4" />
+          New chat
+        </Button>
+      </div>
+
+      <div className="space-y-2 border-b px-4 py-4">
+        <div className="flex items-center gap-2">
+          <Label>Profile override</Label>
+          <Tooltip>
+            <TooltipTrigger asChild>
+              <Badge variant="outline" className="cursor-default text-[10px] uppercase">
+                Optional
+              </Badge>
+            </TooltipTrigger>
+            <TooltipContent side="right" className="max-w-xs">
+              Leave blank to use the server default profile.
+            </TooltipContent>
+          </Tooltip>
+        </div>
+        <Input
+          value={profileOverride}
+          onChange={(event) => onProfileOverrideChange(event.target.value)}
+          placeholder="homelab, seasonalnet, repo…"
+        />
+        <p className="text-xs text-muted-foreground">Leave blank to use the server default profile.</p>
+      </div>
+
+      <ScrollArea className="min-h-0 flex-1 px-4 py-3">
+        <div className="space-y-2">
+          {loadingSessions ? (
+            <div className="rounded-2xl border bg-background/50 px-3 py-4 text-sm text-muted-foreground">Loading sessions…</div>
+          ) : sessions.length === 0 ? (
+            <div className="rounded-2xl border bg-background/50 px-3 py-4 text-sm text-muted-foreground">No saved sessions yet. Start a new chat.</div>
+          ) : (
+            sessions.map((session) => (
+              <SessionListItem
+                key={session.session_id}
+                session={session}
+                selected={selectedSessionId === session.session_id}
+                onSelect={onSelectSession}
+                onCopy={onCopySessionId}
+              />
+            ))
+          )}
+        </div>
+      </ScrollArea>
     </div>
   )
 }
@@ -876,6 +1149,7 @@ export function AgentConsole() {
   const [healthOk, setHealthOk] = useState<boolean | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [confirmNewChatOpen, setConfirmNewChatOpen] = useState(false)
+  const [sessionsSheetOpen, setSessionsSheetOpen] = useState(false)
   const [turnFlagsOpen, setTurnFlagsOpen] = useState(false)
   const [turnFlags, setTurnFlags] = useState<AgentTurnFlags>({
     target: "",
@@ -891,6 +1165,7 @@ export function AgentConsole() {
   const transcriptRef = useRef<HTMLDivElement | null>(null)
   const textareaRef = useRef<HTMLTextAreaElement | null>(null)
   const pollingRef = useRef<number | null>(null)
+  const isDesktop = useMediaQuery("(min-width: 1024px)")
 
   const notifyError = useCallback((title: string, description?: string) => {
     toast.error(title, {
@@ -1104,6 +1379,12 @@ export function AgentConsole() {
   }, [loadSessionState, selectedSessionId])
 
   useEffect(() => {
+    if (isDesktop) {
+      setSessionsSheetOpen(false)
+    }
+  }, [isDesktop])
+
+  useEffect(() => {
     const el = transcriptRef.current
     if (!el) return
     el.scrollTop = el.scrollHeight
@@ -1122,6 +1403,7 @@ export function AgentConsole() {
   useEffect(() => {
     if (message.trim() === "/") {
       setMessage("")
+      setTurnFlagsOpen(false)
       setTurnFlagsOpen(true)
     }
   }, [message])
@@ -1250,6 +1532,7 @@ export function AgentConsole() {
       pending: true,
     })
     setMessage("")
+    setTurnFlagsOpen(false)
 
     try {
       const webContext: AgentTurnFlags | undefined =
@@ -1518,226 +1801,267 @@ export function AgentConsole() {
   return (
     <TooltipProvider delayDuration={150}>
       <>
-        <div className="grid h-full min-h-0 w-full grid-cols-1 lg:grid-cols-[17rem_minmax(0,1fr)]">
-          <aside className="min-h-0 overflow-hidden border-r bg-card/20">
-            <div className="flex h-full min-h-0 flex-col">
-              <div className="px-4 py-4">
-                <div className="flex items-center justify-between gap-3">
-                  <h2 className="text-base font-semibold">Sessions</h2>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge variant={healthOk ? "secondary" : "outline"} className="cursor-default">
-                        {statusLabel}
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent side="right">
-                      {healthOk
-                        ? "The Seasonal Agent API responded to health checks."
-                        : "The Seasonal Agent API is degraded or unavailable."}
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <Button className="mt-4 w-full rounded-xl" variant="outline" onClick={requestNewChat}>
-                      <Plus className="mr-2 h-4 w-4" />
-                      New chat
-                    </Button>
-                  </TooltipTrigger>
-                  <TooltipContent side="right">Reset the active canvas and start a fresh conversation.</TooltipContent>
-                </Tooltip>
-              </div>
-
-              <Separator />
-
-              <div className="px-4 py-4">
-                <div className="flex items-center gap-2">
-                  <label className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Profile override</label>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Badge variant="outline" className="cursor-default text-[10px] uppercase">
-                        Optional
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent side="right" className="max-w-xs">
-                      Leave blank to use the server default profile.
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
-                <input
-                  value={profileOverride}
-                  onChange={(event) => setProfileOverride(event.target.value)}
-                  placeholder="homelab, seasonalnet, repo…"
-                  className="mt-2 w-full rounded-xl border bg-background px-3 py-2 text-sm outline-none transition focus:border-foreground/30"
-                />
-                <p className="mt-2 text-xs text-muted-foreground">Leave blank to use the server default profile.</p>
-              </div>
-
-              <Separator />
-
-              <div className="min-h-0 flex-1 overflow-hidden px-3 py-3">
-                <div className="h-full space-y-2 overflow-y-auto pr-1">
-                  {loadingSessions ? (
-                    <div className="rounded-xl border bg-background/50 px-3 py-4 text-sm text-muted-foreground">Loading sessions…</div>
-                  ) : sessions.length === 0 ? (
-                    <div className="rounded-xl border bg-background/50 px-3 py-4 text-sm text-muted-foreground">No saved sessions yet. Start a new chat.</div>
-                  ) : (
-                    sessions.map((session) => (
-                      <SessionListItem
-                        key={session.session_id}
-                        session={session}
-                        selected={selectedSessionId === session.session_id}
-                        onSelect={setSelectedSessionId}
-                        onCopy={(sessionId) => void copySessionId(sessionId)}
-                      />
-                    ))
-                  )}
-                </div>
-              </div>
-            </div>
+        <div className="flex h-full min-h-0 w-full flex-col gap-3 lg:grid lg:grid-cols-[16.5rem_minmax(0,1fr)] lg:gap-4">
+          <aside className="hidden min-h-0 overflow-hidden rounded-[1.75rem] border bg-card/20 lg:flex">
+            <SessionRailContent
+              healthOk={healthOk}
+              statusLabel={statusLabel}
+              loadingSessions={loadingSessions}
+              sessions={sessions}
+              selectedSessionId={selectedSessionId}
+              profileOverride={profileOverride}
+              onProfileOverrideChange={setProfileOverride}
+              onRequestNewChat={requestNewChat}
+              onSelectSession={setSelectedSessionId}
+              onCopySessionId={(sessionId) => void copySessionId(sessionId)}
+            />
           </aside>
 
-          <section className="min-h-0 overflow-hidden">
-            <div className="flex h-full min-h-0 flex-col">
-              <div className="border-b px-5 py-4">
-                <div className="mx-auto flex w-full max-w-4xl items-start justify-between gap-4">
-                  <div>
-                    <h1 className="text-2xl font-semibold tracking-tight">Seasonal Agent</h1>
-                    <p className="mt-1 text-sm text-muted-foreground">
-                      One conversation canvas, one composer, and structured tool output over the local runtime API.
-                    </p>
-                    <div className="mt-3 flex flex-wrap items-center gap-2">
-                      {currentTurnStatus ? (
-                        <Badge variant={turnStatusVariant(activeTurn?.status)}>{currentTurnStatus}</Badge>
-                      ) : null}
-                      {reconnecting ? <Badge variant="outline">Reconnecting…</Badge> : null}
-                      {activeTurn?.turn_id ? (
-                        <Badge variant="outline">turn:{shortSessionId(activeTurn.turn_id)}</Badge>
-                      ) : null}
-                    </div>
-                  </div>
-
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <div className="rounded-xl border bg-background/50 px-3 py-2 text-right">
-                        <div className="text-[11px] uppercase tracking-wide text-muted-foreground">Current session</div>
-                        <div className="mt-1 text-sm font-medium">{sessionHeading}</div>
+          <section className="min-h-0 overflow-hidden rounded-[1.75rem] border bg-card/20 shadow-[0_1px_0_rgba(255,255,255,0.02)]">
+            <div className="flex h-full min-h-0 flex-col overflow-hidden">
+              <div className="border-b px-4 py-4 md:px-5">
+                <div className="mx-auto flex w-full max-w-4xl flex-col gap-4">
+                  <div className="flex flex-col gap-4 md:flex-row md:items-start md:justify-between">
+                    <div>
+                      <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">Seasonal Agent</h1>
+                      <p className="mt-1 max-w-2xl text-sm text-muted-foreground sm:text-base">
+                        One conversation canvas, one composer, and structured tool output over the local runtime API.
+                      </p>
+                      <div className="mt-3 flex flex-wrap items-center gap-2">
+                        <Badge variant={healthOk ? "secondary" : "outline"}>{statusLabel}</Badge>
+                        {currentTurnStatus ? (
+                          <Badge variant={turnStatusVariant(activeTurn?.status)}>{currentTurnStatus}</Badge>
+                        ) : null}
+                        {reconnecting ? <Badge variant="outline">Reconnecting…</Badge> : null}
+                        {activeTurn?.turn_id ? <Badge variant="outline">turn:{shortSessionId(activeTurn.turn_id)}</Badge> : null}
+                        {profileOverride.trim() ? <Badge variant="outline">profile:{profileOverride.trim()}</Badge> : null}
                       </div>
-                    </TooltipTrigger>
-                    <TooltipContent side="left" className="max-w-xs">
-                      {selectedSessionId || "No persisted session yet. The next turn will create one."}
-                    </TooltipContent>
-                  </Tooltip>
+                    </div>
+
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <div className="rounded-2xl border bg-background/50 px-4 py-3 text-left md:min-w-[12rem] md:text-right">
+                          <div className="text-[11px] uppercase tracking-[0.2em] text-muted-foreground">Current session</div>
+                          <div className="mt-1 text-sm font-medium sm:text-base">{sessionHeading}</div>
+                        </div>
+                      </TooltipTrigger>
+                      <TooltipContent side="left" className="max-w-xs">
+                        {selectedSessionId || "No persisted session yet. The next turn will create one."}
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                 </div>
               </div>
 
               <div className="min-h-0 flex-1 overflow-hidden">
-                <div ref={transcriptRef} className="h-full min-h-0 overflow-y-auto px-4 py-4 md:px-5">
+                <div ref={transcriptRef} className="h-full min-h-0 overflow-y-auto px-3 py-4 sm:px-4 md:px-5">
                   <div className="mx-auto flex min-h-full w-full max-w-4xl flex-col justify-end gap-3">
-                    {recoveryNotice ? (
-                      <div className="w-full rounded-xl border bg-card/60 px-4 py-3 text-sm text-muted-foreground">
-                        {recoveryNotice}
-                      </div>
-                    ) : null}
+                    <AnimatePresence initial={false}>
+                      {recoveryNotice ? (
+                        <motion.div
+                          key="recovery-notice"
+                          initial={{ opacity: 0, y: 6 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          exit={{ opacity: 0, y: -4 }}
+                          className="w-full rounded-2xl border bg-card/60 px-4 py-3 text-sm text-muted-foreground"
+                        >
+                          {recoveryNotice}
+                        </motion.div>
+                      ) : null}
+                    </AnimatePresence>
+
                     {loadingMessages ? (
-                      <div className="w-full rounded-xl border bg-card/60 px-4 py-6 text-sm text-muted-foreground">Loading conversation…</div>
+                      <div className="w-full rounded-2xl border bg-card/60 px-4 py-6 text-sm text-muted-foreground">Loading conversation…</div>
                     ) : messages.length === 0 ? (
-                      <div className="w-full rounded-xl border bg-card/60 px-4 py-6 text-sm text-muted-foreground">No messages yet. Ask Seasonal Agent something operational.</div>
+                      <div className="w-full rounded-2xl border bg-card/60 px-4 py-6 text-sm text-muted-foreground">
+                        No messages yet. Ask Seasonal Agent something operational.
+                      </div>
                     ) : (
-                      messages.map((entry) => (
-                        <div key={entry.id} className="w-full">
-                          <MessageCard message={entry} />
-                        </div>
-                      ))
+                      <AnimatePresence initial={false}>
+                        {messages.map((entry: SessionMessage) => (
+                          <div key={entry.id} className="w-full">
+                            <MessageCard message={entry} />
+                          </div>
+                        ))}
+                      </AnimatePresence>
                     )}
                   </div>
                 </div>
               </div>
 
-              <div className="px-4 py-3 md:px-5">
-                <div className="mx-auto w-full max-w-4xl rounded-xl bg-background/40 p-3">
-                  {turnFlagsOpen ? (
-                    <TurnFlagsPanel
-                      flags={turnFlags}
-                      tools={availableTools}
-                      loadingTools={loadingTools}
-                      onChange={setTurnFlags}
-                      onClose={() => setTurnFlagsOpen(false)}
-                      onClear={clearTurnFlags}
-                    />
-                  ) : null}
-
-                  <textarea
-                    ref={textareaRef}
-                    rows={1}
-                    value={message}
-                    onChange={(event) => setMessage(event.target.value)}
-                    onKeyDown={(event) => {
-                      if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
-                        event.preventDefault()
-                        void handleSubmit()
-                      }
-                    }}
-                    placeholder="Ask Seasonal Agent something real. Type / to open turn flags. Ctrl+Enter sends."
-                    className="min-h-[5.5rem] max-h-56 w-full resize-none rounded-xl border bg-background px-4 py-3 text-sm outline-none transition focus:border-foreground/30"
-                  />
-
+              <div className="border-t bg-background/80 px-3 py-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] backdrop-blur md:px-4 lg:px-5">
+                <div className="mx-auto w-full max-w-4xl">
                   <TurnFlagsSummary flags={turnFlags} toolCount={confirmedToolCount} onClear={clearTurnFlags} />
 
-                  <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
-                    <div className="text-xs text-muted-foreground">
-                      The browser talks only to this app. The app derives caller identity from Authentik, proxies to Seasonal Agent with the server-side token, and scopes sessions per signed-in operator.
-                    </div>
+                  <div className="mt-3">
+                    <div className="relative overflow-hidden rounded-2xl border bg-background/50 shadow-[0_1px_0_rgba(255,255,255,0.02)]">
+                      <Textarea
+                        ref={textareaRef}
+                        rows={1}
+                        value={message}
+                        onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setMessage(event.target.value)}
+                        onKeyDown={(event: React.KeyboardEvent<HTMLTextAreaElement>) => {
+                          if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
+                            event.preventDefault()
+                            void handleSubmit()
+                          }
+                        }}
+                        placeholder="Ask Seasonal Agent something real. Type / to open turn flags. Ctrl+Enter sends."
+                        className="min-h-[6.25rem] max-h-56 resize-none border-0 bg-transparent pb-16 pl-4 pr-40 pt-4 shadow-none focus-visible:ring-0 focus-visible:ring-offset-0 md:pr-40 lg:pb-14 lg:pr-32"
+                      />
 
-                    <div className="flex items-center gap-2">
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            type="button"
-                            variant="outline"
-                            className="rounded-xl"
-                            onClick={() => setTurnFlagsOpen((current) => !current)}
-                          >
-                            <Command className="mr-2 h-4 w-4" />
-                            Turn flags
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">Open the slash-style turn flag menu above the composer.</TooltipContent>
-                      </Tooltip>
-
-                      {sending ? (
+                      <div className="absolute bottom-3 right-3 flex items-center gap-2">
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Button type="button" variant="outline" className="rounded-xl" onClick={handleStop}>
-                              <Square className="mr-2 h-4 w-4" />
-                              Stop
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon-sm"
+                              className="rounded-xl lg:hidden"
+                              aria-label="Sessions"
+                              onClick={() => setSessionsSheetOpen(true)}
+                            >
+                              <PanelLeft className="h-4 w-4" />
                             </Button>
                           </TooltipTrigger>
-                          <TooltipContent side="top">Abort the active streamed turn.</TooltipContent>
+                          <TooltipContent side="top">Sessions</TooltipContent>
                         </Tooltip>
-                      ) : null}
 
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button type="button" className="rounded-xl" onClick={() => void handleSubmit()} disabled={!message.trim() || sending}>
-                            {sending ? <LoaderCircle className="mr-2 h-4 w-4 animate-spin" /> : <Send className="mr-2 h-4 w-4" />}
-                            Send
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">Send with the current profile override, turn flags, and persisted per-user session state.</TooltipContent>
-                      </Tooltip>
+                        <Popover open={isDesktop ? turnFlagsOpen : false} onOpenChange={isDesktop ? setTurnFlagsOpen : undefined}>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  type="button"
+                                  variant="outline"
+                                  size="icon-sm"
+                                  className="hidden rounded-xl lg:inline-flex"
+                                  aria-label="Turn flags"
+                                >
+                                  <Settings2 className="h-4 w-4" />
+                                </Button>
+                              </PopoverTrigger>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Turn flags</TooltipContent>
+                          </Tooltip>
+                          <PopoverContent align="end" className="hidden w-[min(36rem,calc(100vw-2rem))] overflow-hidden p-0 lg:block">
+                            <TurnFlagsMenu
+                              flags={turnFlags}
+                              tools={availableTools}
+                              loadingTools={loadingTools}
+                              onChange={setTurnFlags}
+                              onClear={clearTurnFlags}
+                              onDone={() => setTurnFlagsOpen(false)}
+                            />
+                          </PopoverContent>
+                        </Popover>
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="icon-sm"
+                              className="rounded-xl lg:hidden"
+                              aria-label="Turn flags"
+                              onClick={() => setTurnFlagsOpen(true)}
+                            >
+                              <Settings2 className="h-4 w-4" />
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">Turn flags</TooltipContent>
+                        </Tooltip>
+
+                        {sending ? (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="icon-sm"
+                                className="rounded-xl"
+                                aria-label="Stop"
+                                onClick={handleStop}
+                              >
+                                <Square className="h-4 w-4" />
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent side="top">Stop</TooltipContent>
+                          </Tooltip>
+                        ) : null}
+
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Button
+                              type="button"
+                              size="icon-sm"
+                              className="rounded-xl"
+                              aria-label="Send"
+                              onClick={() => void handleSubmit()}
+                              disabled={!message.trim() || sending}
+                            >
+                              {sending ? <LoaderCircle className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
+                            </Button>
+                          </TooltipTrigger>
+                          <TooltipContent side="top">
+                            Send with the current profile override, turn flags, and persisted per-user session state.
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
                     </div>
                   </div>
 
+                  <div className="mt-3 text-xs text-muted-foreground">
+                    The browser talks only to this app. The app derives caller identity from Authentik, proxies to Seasonal Agent with the server-side token, and scopes sessions per signed-in operator.
+                  </div>
+
                   {error ? (
-                    <div className="mt-3 rounded-xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">{error}</div>
+                    <div className="mt-3 rounded-2xl border border-destructive/30 bg-destructive/5 px-3 py-2 text-sm text-destructive">
+                      {error}
+                    </div>
                   ) : null}
                 </div>
               </div>
             </div>
           </section>
         </div>
+
+        <Sheet open={sessionsSheetOpen} onOpenChange={setSessionsSheetOpen}>
+          <SheetContent side="left" className="w-[min(22rem,100vw)] p-0">
+            <SessionRailContent
+              healthOk={healthOk}
+              statusLabel={statusLabel}
+              loadingSessions={loadingSessions}
+              sessions={sessions}
+              selectedSessionId={selectedSessionId}
+              profileOverride={profileOverride}
+              onProfileOverrideChange={setProfileOverride}
+              onRequestNewChat={() => {
+                setSessionsSheetOpen(false)
+                requestNewChat()
+              }}
+              onSelectSession={(sessionId) => {
+                setSelectedSessionId(sessionId)
+                setSessionsSheetOpen(false)
+              }}
+              onCopySessionId={(sessionId) => void copySessionId(sessionId)}
+            />
+          </SheetContent>
+        </Sheet>
+
+        <Sheet open={!isDesktop && turnFlagsOpen} onOpenChange={(open: boolean) => setTurnFlagsOpen(open)}>
+          <SheetContent side="bottom" className="p-0">
+            <TurnFlagsMenu
+              flags={turnFlags}
+              tools={availableTools}
+              loadingTools={loadingTools}
+              onChange={setTurnFlags}
+              onClear={clearTurnFlags}
+              onDone={() => setTurnFlagsOpen(false)}
+              fullHeight
+            />
+          </SheetContent>
+        </Sheet>
 
         <AlertDialog open={confirmNewChatOpen} onOpenChange={setConfirmNewChatOpen}>
           {confirmNewChatOpen ? (
