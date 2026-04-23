@@ -1515,12 +1515,37 @@ export function AgentConsole() {
     handleNewChat()
   }, [handleNewChat, hasConversationState, sending])
 
-  const handleStop = useCallback(() => {
+  const handleStop = useCallback(async () => {
+    const turnId = activeTurn?.turn_id
+    const isCancellable = turnId && ["queued", "running"].includes(String(activeTurn?.status || ""))
+
+    if (isCancellable) {
+      try {
+        const cancelUrl = new URL(`/api/agent/turns/${encodeURIComponent(turnId)}/cancel`, window.location.origin)
+        if (selectedSessionId) {
+          cancelUrl.searchParams.set("session_id", selectedSessionId)
+        }
+        const response = await fetch(`${cancelUrl.pathname}${cancelUrl.search}`, {
+          method: "POST",
+        })
+        const payload = await parseJsonResponse<{ error?: string }>(response, "Failed to cancel the active turn.")
+        if (!response.ok) {
+          throw new Error(typeof payload.error === "string" ? payload.error : "Failed to cancel the active turn.")
+        }
+        toast.info("Cancellation requested for the active turn.")
+        return
+      } catch (err) {
+        const nextError = err instanceof Error ? err.message : "Failed to cancel the active turn."
+        notifyError("Failed to cancel the active turn.", nextError)
+        return
+      }
+    }
+
     abortRef.current?.abort()
     abortRef.current = null
     setSending(false)
-    toast.info("Stopped the active request.")
-  }, [])
+    toast.info("Detached from the active stream. The turn will keep running in the backend.")
+  }, [activeTurn, notifyError, selectedSessionId])
 
   const copySessionId = useCallback(
     async (sessionId: string) => {
