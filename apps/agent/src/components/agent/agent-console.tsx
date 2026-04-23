@@ -115,6 +115,7 @@ type SessionDetailResponse = {
     raw_json?: unknown
   }>
   active_turn?: AgentActiveTurn | null
+  recoverable_turn?: AgentActiveTurn | null
   error?: string
 }
 
@@ -122,6 +123,13 @@ type ActiveTurnResponse = {
   ok?: boolean
   session_id?: string
   active_turn?: AgentActiveTurn | null
+  error?: string
+}
+
+type RecoverableTurnResponse = {
+  ok?: boolean
+  session_id?: string
+  recoverable_turn?: AgentActiveTurn | null
   error?: string
 }
 
@@ -1255,14 +1263,16 @@ export function AgentConsole() {
       if (!options.silent) setLoadingMessages(true)
       setError(null)
       try {
-        const [sessionRes, activeTurnRes] = await Promise.all([
+        const [sessionRes, activeTurnRes, recoverableTurnRes] = await Promise.all([
           fetch(`/api/agent/sessions/${encodeURIComponent(sessionId)}?limit=100`, { cache: "no-store" }),
           fetch(`/api/agent/sessions/${encodeURIComponent(sessionId)}/active-turn`, { cache: "no-store" }),
+          fetch(`/api/agent/sessions/${encodeURIComponent(sessionId)}/recoverable-turn`, { cache: "no-store" }),
         ])
 
-        const [sessionJson, activeTurnJson] = await Promise.all([
+        const [sessionJson, activeTurnJson, recoverableTurnJson] = await Promise.all([
           parseJsonResponse<SessionDetailResponse>(sessionRes, "Failed to load session messages."),
           parseJsonResponse<ActiveTurnResponse>(activeTurnRes, "Failed to load active turn metadata."),
+          parseJsonResponse<RecoverableTurnResponse>(recoverableTurnRes, "Failed to load recoverable turn metadata."),
         ])
 
         if (!sessionRes.ok) {
@@ -1276,7 +1286,15 @@ export function AgentConsole() {
             : (() => {
                 throw new Error(activeTurnJson.error || "Failed to load active turn metadata.")
               })()
-        const recoveryTurnId = upstreamActiveTurn?.turn_id || options.recoveryTurnId || null
+        const upstreamRecoverableTurn = recoverableTurnRes.ok
+          ? recoverableTurnJson.recoverable_turn || sessionJson.recoverable_turn || null
+          : recoverableTurnRes.status === 404
+            ? sessionJson.recoverable_turn || null
+            : (() => {
+                throw new Error(recoverableTurnJson.error || "Failed to load recoverable turn metadata.")
+              })()
+        const upstreamRecoveryTurn = upstreamActiveTurn || upstreamRecoverableTurn
+        const recoveryTurnId = upstreamRecoveryTurn?.turn_id || options.recoveryTurnId || null
 
         if (!recoveryTurnId) {
           setMessages(sortMessages(persistedMessages))
@@ -1297,9 +1315,19 @@ export function AgentConsole() {
         if (!snapshotRes.ok) {
           if (snapshotRes.status === 404) {
             setMessages(sortMessages(persistedMessages))
-            setActiveTurn(upstreamActiveTurn)
-            setReconnecting(Boolean(upstreamActiveTurn && !sending))
-            setRecoveryNotice(upstreamActiveTurn ? "Active turn metadata was present, but no durable snapshot was available yet." : null)
+            setActiveTurn(upstreamRecoveryTurn)
+            setReconnecting(
+              Boolean(
+                upstreamRecoveryTurn &&
+                  (upstreamRecoveryTurn.status === "queued" || upstreamRecoveryTurn.status === "running") &&
+                  !sending,
+              ),
+            )
+            setRecoveryNotice(
+              upstreamRecoveryTurn
+                ? "Turn metadata was present, but no durable snapshot was available yet."
+                : null,
+            )
             return
           }
           throw new Error(snapshotJson.error || "Failed to load durable turn snapshot.")
@@ -1308,8 +1336,14 @@ export function AgentConsole() {
         const snapshot = snapshotJson.snapshot
         if (!snapshot) {
           setMessages(sortMessages(persistedMessages))
-          setActiveTurn(upstreamActiveTurn)
-          setReconnecting(Boolean(upstreamActiveTurn && !sending))
+          setActiveTurn(upstreamRecoveryTurn)
+          setReconnecting(
+            Boolean(
+              upstreamRecoveryTurn &&
+                (upstreamRecoveryTurn.status === "queued" || upstreamRecoveryTurn.status === "running") &&
+                !sending,
+            ),
+          )
           return
         }
 
@@ -1324,9 +1358,9 @@ export function AgentConsole() {
 
         const replayEvents = Array.isArray(eventsJson.events) ? eventsJson.events : []
         const rebuiltMessages = buildRecoveredMessages(persistedMessages, recoveryTurnId, snapshot, replayEvents)
-        const inferredStatus = inferTurnStatus(upstreamActiveTurn, replayEvents)
-        const nextTurn = upstreamActiveTurn
-          ? upstreamActiveTurn
+        const inferredStatus = inferTurnStatus(upstreamRecoveryTurn, replayEvents)
+        const nextTurn = upstreamRecoveryTurn
+          ? upstreamRecoveryTurn
           : {
               turn_id: recoveryTurnId,
               session_id: sessionId,
@@ -1341,7 +1375,7 @@ export function AgentConsole() {
         setRecoveryNotice(
           nextTurn.status === "queued" || nextTurn.status === "running"
             ? "Recovered the latest durable turn state and will keep checking for updates."
-            : "Recovered the latest durable turn state after the stream was interrupted.",
+            : "Recovered the latest durable state for a recently interrupted turn.",
         )
       } catch (err) {
         const nextError = err instanceof Error ? err.message : "Failed to load messages."

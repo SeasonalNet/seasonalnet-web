@@ -46,6 +46,8 @@ export type AgentActiveTurn = {
   error_code?: string | null
   error_message?: string | null
   snapshot_last_sequence?: number | null
+  has_snapshot?: boolean | null
+  has_events?: boolean | null
 }
 
 export type AgentTurnSnapshot = {
