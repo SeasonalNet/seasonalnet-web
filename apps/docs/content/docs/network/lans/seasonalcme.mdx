@@ -9,7 +9,7 @@ description: "Voice and management VLAN topology for the SeasonalCME lab."
 **Management IPv6 ULA:** `FD42:42:2::/64`  
 **Voice gateway:** `10.42.0.1` / `FD42:42::1` (SeasonalEDGE-R1 `Gi0/1`)  
 **Management gateway:** `10.42.2.1` / `FD42:42:2::1` (SeasonalEDGE-R1 `Vlan42`)  
-**Last updated:** 2026-04-15
+**Last updated:** 2026-04-21
 
 ---
 
@@ -22,6 +22,35 @@ description: "Voice and management VLAN topology for the SeasonalCME lab."
 | `VLAN 42` / `10.42.2.0/24` | SeasonalCME management network | `10.42.2.1` | Routed from SeasonalEDGE-R1 via `Vlan42`; trunked between SW1 and SW2 |
 | `VLAN 42` / `FD42:42:2::/64` | SeasonalCME management IPv6 ULA | `FD42:42:2::1` | IPv6 ULA for management on `Vlan42` |
 | `VLAN 99` | WAN / transit infrastructure VLAN | none on switches | Used as native VLAN on the SW1↔SW2 trunk and for the edge transit path; also suitable for select Main-LAN-addressed rack-local endpoints such as the planned R230/iDRAC |
+
+---
+
+## Address Bands
+
+### Voice VLAN 10 (`10.42.0.0/24`)
+
+| Range | Purpose |
+|---|---|
+| `.1` | Gateway |
+| `.2 – .9` | Network infrastructure |
+| `.10 – .19` | Core voice infrastructure |
+| `.20 – .49` | Reserved static voice devices / important endpoints |
+| `.50 – .99` | Static or semi-static lab endpoints |
+| `.100 – .254` | DHCP pool / dynamic clients |
+
+Current fixed assignments on VLAN 10 already align with this banding: `10.42.0.1` (SeasonalEDGE-R1), `10.42.0.2` (SeasonalCME-SW1), `10.42.0.3` (SeasonalCME-SW2), `10.42.0.4` (SeasonalAP-3602i), and `10.42.0.10` (SeasonalCME-R1).
+
+### Management VLAN 42 (`10.42.2.0/24`)
+
+| Range | Purpose |
+|---|---|
+| `.1` | Gateway |
+| `.2 – .19` | Static management infrastructure |
+| `.20 – .49` | Reserved static managed devices |
+| `.50 – .99` | Static management expansion / headroom |
+| `.100 – .254` | Reserved for future DHCP if ever needed |
+
+`10.42.2.0/24` is presently best treated as reserved static management space. VLAN 42 is already routed and trunked, but the documented switch management addresses are still on `Vlan10`; move management-plane addresses there only as a deliberate follow-up migration.
 
 ---
 
