@@ -34,3 +34,16 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+
+## SeasonalWeather endpoints
+
+The radio app reads SeasonalWeather server-side endpoints for station-handled alerts, Icecast metadata, and Liquidsoap now-playing metadata. Defaults target the SeasonalWeather host on the SeasonalNet main LAN. Override these with environment variables in production rather than editing source constants.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `SEASONALWEATHER_HOST` | `192.168.1.10` | Shared host used by the default URLs. |
+| `SEASONALWEATHER_API_BASE_URL` | `http://$SEASONALWEATHER_HOST` | Base URL for the SeasonalWeather station API. |
+| `SEASONALWEATHER_HANDLED_ALERTS_URL` | `$SEASONALWEATHER_API_BASE_URL/api/station/handled-alerts.json` | Full station-handled alerts feed URL. |
+| `SEASONALWEATHER_ICECAST_STATUS_URL` | `http://$SEASONALWEATHER_HOST:8000/status-json.xsl` | Icecast status fallback metadata. |
+| `SEASONALWEATHER_NOWPLAYING_URL` | `http://$SEASONALWEATHER_HOST:7099/nowplaying` | Liquidsoap IP-RDS / now-playing metadata. |

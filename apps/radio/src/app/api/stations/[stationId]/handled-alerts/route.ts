@@ -157,7 +157,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ stationId: str
 
   const headers: Record<string, string> = {
     Accept: "application/json",
-    "User-Agent": "(seasonalnet.org, info@seasonalnet.org)",
+    "User-Agent": "SeasonalNet/2.0 (seasonal@seasonalnet.org)",
   }
 
   if (feedCfg.bearerTokenEnv) {
