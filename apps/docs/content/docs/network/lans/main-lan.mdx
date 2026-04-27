@@ -5,7 +5,7 @@ description: "Address bands, infrastructure inventory, and routing notes for the
 
 **Subnet:** `192.168.1.0/24`  
 **Gateway:** `192.168.1.1` (Verizon WNC-CR200A)  
-**Last updated:** 2026-04-23
+**Last updated:** 2026-04-26
 
 ---
 
@@ -29,7 +29,7 @@ description: "Address bands, infrastructure inventory, and routing notes for the
 | `192.168.1.2` | SeasonalBRIDGE-ROOT (AIR-AP1142N-A-K9) | Wireless bridge ROOT to SeasonalCME LAN |
 | `192.168.1.3` | SeasonalBRIDGE-NONROOT (AIR-AP1142N-A-K9) | Wireless bridge NONROOT, connects to SeasonalCME SW2 Gi1/0/1 |
 | `192.168.1.4` | SeasonalEDGE-R1 (Cisco 1921) | SeasonalCME lab edge router, Gi0/0 WAN uplink |
-| `192.168.1.5` | SeasonalR230-iDRAC *(planned/awaiting arrival)* | Planned iDRAC static on Main LAN via CME rack VLAN 99 transit path |
+| `192.168.1.5` | SeasonalR230-iDRAC | iDRAC static on Main LAN via CME rack VLAN 99 transit path |
 
 ---
 
@@ -58,7 +58,7 @@ All VMs hosted on `seasonal-victus` (VirtualBox). Static IPs configured in `/etc
 | IP | Device | Notes |
 |---|---|---|
 | `192.168.1.20` | seasonal-victus (Victus by HP Gaming Laptop 15-fa1xxx) | VM hypervisor; seasonal-agent host |
-| `192.168.1.21` | SeasonalR230 *(planned/awaiting arrival)* | Planned Dell PowerEdge R230 / Proxmox host on Main LAN via CME rack VLAN 99 transit path |
+| `192.168.1.21` | SeasonalR230 | Dell PowerEdge R230 / Proxmox host on Main LAN via CME rack VLAN 99 transit path |
 
 ---
 
@@ -102,6 +102,6 @@ All VMs hosted on `seasonal-victus` (VirtualBox). Static IPs configured in `/etc
 ## Known Remaining Items
 
 - `seasonal-teal-laptop` is dynamic (`.240` area) — candidate for `.20–.49` static band
-- Planned CME-rack Dell PowerEdge R230 uses Main-LAN addressing over VLAN 99 transit rather than sitting behind `10.42.2.0/24` on SeasonalEDGE-R1
+- CME-rack Dell PowerEdge R230 uses Main-LAN addressing over VLAN 99 transit rather than sitting behind `10.42.2.0/24` on SeasonalEDGE-R1
 - SeasonalBRIDGE-NONROOT BVI1 still has stale `ipv6 address dhcp` / `ipv6 address autoconfig` — clean up via console next opportunity
 - Phone-LAN gateway is non-standard (`.10` over `.1`) — non-urgent
