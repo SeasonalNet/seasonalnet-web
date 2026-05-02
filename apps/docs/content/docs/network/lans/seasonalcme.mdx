@@ -175,18 +175,6 @@ SW2 (PoE)
 
 ---
 
-## Planned Rack Compute Addition
-
-| Item | Planned value | Notes |
-|---|---|---|
-| Server | Dell PowerEdge R230 | Intended to occupy the open 5U position above SeasonalCME-R1 in the existing 8U rack |
-| Host IP | `192.168.1.21` | Main-LAN addressing carried over the CME rack VLAN 99 transit path |
-| iDRAC IP | `192.168.1.5` | Main-LAN management address; use shared LOM1 or dedicated iDRAC NIC if present |
-| Switch mode | Access VLAN 99 | Exact switch port still to be chosen during install |
-| Routing intent | Avoid `10.42.2.0/24` placement | Keeps normal host management off the 1921 NAT/routing path |
-
----
-
 ## Known Remaining Items
 
 - `SeasonalCME-SW1 Gi0/24` has a stale interface description. CDP shows it is connected to **SeasonalEDGE-R1 `Gi0/1`**, but the description still references **SeasonalCME-R1**.
