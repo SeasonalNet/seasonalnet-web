@@ -17,13 +17,15 @@ It is the canonical source workspace for SeasonalNet web applications and shared
 
 This repository is **not automatically the live web root**.
 
-On SeasonalWeb, the currently served frontend deployments may still live under `/opt/seasonalnet/` in directories such as:
+On SeasonalWeb, the currently served frontend deployments may still live under `/opt/seasonalnet/` in directories or short-path aliases such as:
 
 - `www-spa`
 - `radio-spa`
 - `pbx-spa`
 - `prov-spa`
 - `admin-spa`
+- `agent-spa`
+- `docs-spa`
 - other existing deployment-prefixed variants already present on the system
 
 When working in `/opt/git-staging/seasonalnet-web` or another clone of this repository:
@@ -48,6 +50,7 @@ Current apps:
 - `apps/prov` — provisioning frontend
 - `apps/admin` — centralized admin/control-plane frontend
 - `apps/agent` — Seasonal Agent operator chat frontend
+- `apps/docs` — dedicated SeasonalNet documentation frontend backed by allowlisted public docs sync
 
 ### Shared packages
 
@@ -55,16 +58,16 @@ Current apps:
 
 Current shared package target:
 
-- `packages/shell` — canonical home for shared shell, layout, and reused UI building blocks
+- `packages/shell` — canonical home for shared shell, layout, theme, authz, markdown, and reused UI building blocks
 
 ## Hard rules
 
 1. Use canonical app directories only.
-   - Work in `apps/www`, `apps/radio`, `apps/pbx`, `apps/prov`, `apps/admin`, and `apps/agent`.
+   - Work in `apps/www`, `apps/radio`, `apps/pbx`, `apps/prov`, `apps/admin`, `apps/agent`, and `apps/docs`.
    - Do not create or commit deployment alias directories that mirror `/opt/seasonalnet/*-spa` naming shortcuts.
 
 2. Shared shell code belongs in `packages/shell`.
-   - Do not copy-and-paste the same header, footer, layout, or shared card primitives across apps when a shared extraction is practical.
+   - Do not copy-and-paste the same header, footer, layout, theme, authz, markdown, or shared card primitives across apps when a shared extraction is practical.
    - Prefer consolidation over parallel drift.
 
 3. Do not commit runtime junk.
@@ -82,9 +85,11 @@ Current shared package target:
    - Avoid verbose explanatory copy where short summaries are sufficient.
    - Favor UI that communicates system state and available actions directly.
 
-6. Keep docs content out of this repo unless it is frontend glue.
-   - Dedicated documentation content belongs in `seasonalnet-docs`.
-   - Monorepo-specific operational docs and codebase guidance do belong here.
+6. Keep docs content out of this repo unless it is frontend glue or managed sync output.
+   - Dedicated documentation source content belongs in `seasonalnet-docs`.
+   - Monorepo-specific operational docs, docs-app glue, publishing policy enforcement, and deterministic synced public docs output may belong here.
+   - Runtime fetching from `seasonalnet-docs` is not allowed; docs sync must happen at build/deploy time.
+   - Only explicitly allowlisted public docs paths may be synced into `apps/docs`.
 
 7. Respect the staging-versus-live split.
    - A successful local build is validation, not deployment.
@@ -103,11 +108,12 @@ The admin surface should read like a control plane, not a blog or marketing site
 ## Expected workflow for agents
 
 1. Read this file before making repository changes.
-2. Inspect the current app/package structure before introducing new files.
-3. Make the minimum coherent set of source changes.
-4. Reuse or extract shared shell/UI code instead of cloning it.
-5. Validate the affected workspace(s) with build or lint commands when practical.
-6. Summarize exactly what changed and what still remains manual, especially around deployment.
+2. If working under a subdirectory with its own `AGENTS.md`, read that file too and follow the more specific guidance.
+3. Inspect the current app/package structure before introducing new files.
+4. Make the minimum coherent set of source changes.
+5. Reuse or extract shared shell/UI code instead of cloning it.
+6. Validate the affected workspace(s) with build or lint commands when practical.
+7. Summarize exactly what changed and what still remains manual, especially around deployment.
 
 ## Commands
 
@@ -126,6 +132,7 @@ npm run dev --workspace @seasonalnet/pbx
 npm run dev --workspace @seasonalnet/prov
 npm run dev --workspace @seasonalnet/admin
 npm run dev --workspace @seasonalnet/agent
+npm run dev --workspace @seasonalnet/docs
 ```
 
 Build a specific app:
@@ -137,6 +144,13 @@ npm run build --workspace @seasonalnet/pbx
 npm run build --workspace @seasonalnet/prov
 npm run build --workspace @seasonalnet/admin
 npm run build --workspace @seasonalnet/agent
+npm run build --workspace @seasonalnet/docs
+```
+
+Build the public docs app with its build-time docs sync first:
+
+```bash
+npm run build:public --workspace @seasonalnet/docs
 ```
 
 Lint a specific app:
@@ -148,19 +162,22 @@ npm run lint --workspace @seasonalnet/pbx
 npm run lint --workspace @seasonalnet/prov
 npm run lint --workspace @seasonalnet/admin
 npm run lint --workspace @seasonalnet/agent
+npm run lint --workspace @seasonalnet/docs
 ```
 
 Run all workspace builds when broad validation is needed:
 
 ```bash
-npm run build --workspaces
+npm run build --workspaces --if-present
 ```
 
 Run all workspace lint jobs when broad validation is needed:
 
 ```bash
-npm run lint --workspaces
+npm run lint --workspaces --if-present
 ```
+
+`--if-present` is intentional because the workspace set includes shared packages such as `packages/shell` that may not define app-style `build` or `lint` scripts.
 
 ## Change preferences
 

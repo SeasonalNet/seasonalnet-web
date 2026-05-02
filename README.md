@@ -2,22 +2,24 @@
 
 SeasonalNet frontend monorepo for the public site family and related web front ends.
 
-This repository is the source-of-truth workspace for the Next.js applications that back the SeasonalNet web stack. It exists to consolidate frontend code that had previously lived as separately deployed SPA trees, make shared shell and UI extraction practical, and give the project a clean place to evolve the public and operator-facing web surfaces together.
+This repository is the source-of-truth workspace for the Next.js applications that back the SeasonalNet web stack. It consolidates frontend code that had previously lived as separately deployed SPA trees, keeps shared shell and UI code in one place, and gives the project a clean place to evolve the public, documentation, and operator-facing web surfaces together.
 
 ## What this repository is
 
-This repository is a **development and staging monorepo**, not the currently served document root on SeasonalWeb.
+This repository is a **development and staging monorepo**, not necessarily the currently served document root on SeasonalWeb.
 
-At the time of initialization, the live web roots still exist separately under `/opt/seasonalnet/` as deployment directories such as:
+The live web roots may still exist separately under `/opt/seasonalnet/` as deployment directories or short-path aliases such as:
 
 - `www-spa`
 - `radio-spa`
 - `pbx-spa`
 - `prov-spa`
 - `admin-spa`
+- `agent-spa`
+- `docs-spa`
 - legacy or alternate deployment-prefixed variants already present on the host
 
-The canonical source tree for ongoing work should live here under `/opt/git-staging/seasonalnet-web` (or an equivalent clone elsewhere). Building in this repository is primarily for:
+The canonical source tree for ongoing work should live here under `/opt/git-staging/seasonalnet-web` or an equivalent clone elsewhere. Building in this repository is primarily for:
 
 - compile validation
 - linting and dependency sanity checks
@@ -32,6 +34,7 @@ A successful build here does **not** by itself deploy or replace the live sites.
 - Keep all SeasonalNet frontend apps in one workspace.
 - Reduce shell and layout duplication across apps.
 - Establish a canonical place for shared frontend code.
+- Keep the dedicated docs frontend wired to public documentation policy without storing the source docs repo here.
 - Make cross-app refactors practical.
 - Preserve the existing SeasonalNet front-door presentation while the internals are modernized.
 
@@ -46,6 +49,7 @@ seasonalnet-web/
 ├── apps/
 │   ├── admin/
 │   ├── agent/
+│   ├── docs/
 │   ├── pbx/
 │   ├── prov/
 │   ├── radio/
@@ -55,6 +59,7 @@ seasonalnet-web/
 ```
 
 ### `apps/`
+
 Deployable frontend applications.
 
 - `apps/www` — main public SeasonalNet web front door
@@ -63,19 +68,21 @@ Deployable frontend applications.
 - `apps/prov` — provisioning frontend
 - `apps/admin` — centralized SeasonalNet admin front door / control-plane UI
 - `apps/agent` — Seasonal Agent operator chat frontend over the local agent API
+- `apps/docs` — dedicated SeasonalNet documentation frontend backed by allowlisted public docs sync
 
 Each app is currently its own Next.js workspace package with its own local config and scripts.
 
 ### `packages/`
+
 Shared code intended for reuse across multiple apps.
 
-- `packages/shell` — shared SeasonalNet shell/layout/components package target
+- `packages/shell` — shared SeasonalNet shell, layout, theme, authorization, markdown, and reused UI building blocks
 
-The package area is intentionally minimal right now. The repo was imported first so the live SPAs had a source-controlled home; extraction of duplicated shell code is expected to follow.
+The package area is now the active home for shared front-door shell work. New shared header, footer, layout, theme, authz, markdown, and reusable UI code should continue moving into `packages/shell` instead of being copied across app workspaces.
 
 ## Technology snapshot
 
-Current workspace characteristics at import time:
+Current workspace characteristics:
 
 - npm workspaces at the repository root
 - Next.js 16 application packages
@@ -85,7 +92,9 @@ Current workspace characteristics at import time:
 - shadcn-oriented component setup in the app workspaces
 - Framer Motion and Lucide where used
 - Leaflet present in the radio app
-- NextAuth present in the admin app
+- Fumadocs present in the docs app
+- NextAuth/Auth.js present in the admin and agent apps
+- shared shell code in `packages/shell`
 
 The root `package.json` is intentionally small and currently defines workspace membership rather than a large orchestration layer.
 
@@ -106,6 +115,7 @@ npm run dev --workspace @seasonalnet/pbx
 npm run dev --workspace @seasonalnet/prov
 npm run dev --workspace @seasonalnet/admin
 npm run dev --workspace @seasonalnet/agent
+npm run dev --workspace @seasonalnet/docs
 ```
 
 Build an individual app:
@@ -117,6 +127,13 @@ npm run build --workspace @seasonalnet/pbx
 npm run build --workspace @seasonalnet/prov
 npm run build --workspace @seasonalnet/admin
 npm run build --workspace @seasonalnet/agent
+npm run build --workspace @seasonalnet/docs
+```
+
+Build the public docs app with its build-time docs sync first:
+
+```bash
+npm run build:public --workspace @seasonalnet/docs
 ```
 
 Lint an individual app:
@@ -128,27 +145,31 @@ npm run lint --workspace @seasonalnet/pbx
 npm run lint --workspace @seasonalnet/prov
 npm run lint --workspace @seasonalnet/admin
 npm run lint --workspace @seasonalnet/agent
+npm run lint --workspace @seasonalnet/docs
 ```
 
-Build all workspaces from the root when needed:
+Build all workspaces from the root when broad validation is needed:
 
 ```bash
-npm run build --workspaces
+npm run build --workspaces --if-present
 ```
 
-Lint all workspaces from the root when needed:
+Lint all workspaces from the root when broad validation is needed:
 
 ```bash
-npm run lint --workspaces
+npm run lint --workspaces --if-present
 ```
+
+`--if-present` is intentional because the workspace set includes shared packages such as `packages/shell` that may not define app-style `build` or `lint` scripts.
 
 ## Expected workflow
 
 1. Make changes in this repository, not in the live deployment directories.
 2. Validate the affected app locally or on the staging host.
 3. Keep shared shell/layout work moving toward `packages/shell` instead of copying between apps.
-4. Commit reviewed changes to Forgejo from this canonical monorepo.
-5. Promote to the live `/opt/seasonalnet/*` deployment trees as an explicit deployment action.
+4. Keep docs content changes in `seasonalnet-docs`; keep docs frontend glue and publishing policy enforcement here.
+5. Commit reviewed changes to Forgejo from this canonical monorepo.
+6. Promote to the live `/opt/seasonalnet/*` deployment trees as an explicit deployment action.
 
 ## Design and UI conventions
 
@@ -174,7 +195,9 @@ For admin and other operator surfaces, group actions by SoA where appropriate:
 
 This repository is for frontend application code and the operational docs needed to work on that codebase.
 
-Documentation **content** for the dedicated docs experience should live in the separate `seasonalnet-docs` repository. Only docs-app glue, frontend integration code, or monorepo-specific operational documentation belongs here.
+Documentation **content** for the dedicated docs experience should live in the separate `seasonalnet-docs` repository. Only docs-app glue, build-time sync code, frontend integration code, publishing policy enforcement, or monorepo-specific operational documentation belongs here.
+
+The docs app may generate and overwrite managed synced content during explicit sync/build workflows, but only for allowlisted public documentation paths.
 
 ## Repository hygiene
 
@@ -191,15 +214,16 @@ Keep the source layout canonical. The monorepo should reflect actual application
 
 ## Current state and near-term direction
 
-This repository is still in an early consolidation phase.
+This repository is past the first-pass import stage and is now the active source home for the SeasonalNet frontend family.
 
-Near-term priorities are expected to include:
+Current operating direction includes:
 
-- replacing placeholder app READMEs inherited from scaffolding
-- extracting shared shell code into `packages/shell`
+- keeping all app workspaces, including docs, represented in root guidance
+- continuing shared shell consolidation in `packages/shell`
 - reducing duplicated config where practical
+- keeping docs publication allowlisted and build-time synced
 - tightening root-level developer ergonomics over time
-- documenting deployment and cutover flow once the monorepo becomes the normal operating path
+- documenting deployment and cutover flow as the monorepo remains the normal operating path
 
 ## Commit guidance
 
@@ -216,3 +240,4 @@ Examples:
 
 - `AGENTS.md` for agent-focused repository rules and workflow constraints
 - individual `apps/*/README.md` files for app-specific notes as they are expanded
+- `apps/docs/PUBLISHING.md` for the public documentation publishing policy
