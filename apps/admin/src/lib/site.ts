@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react"
 import {
   Activity,
+  BookText,
   GitBranch,
   Home,
   KeyRound,
@@ -23,6 +24,7 @@ export const site = {
   footerNote: "Built to be fast, boring, and resilient.",
   portals: [
     { key: "home", title: "Home", href: "https://www.seasonalnet.org", icon: Home },
+    { key: "docs", title: "Docs", href: "https://docs.seasonalnet.org", icon: BookText },
     { key: "pbx", title: "PBX", href: "https://pbx.seasonalnet.org", icon: Phone },
     { key: "radio", title: "Radio", href: "https://radio.seasonalnet.org", icon: Radio },
     { key: "status", title: "Status", href: "https://status.seasonalnet.org", icon: Activity },

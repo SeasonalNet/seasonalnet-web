@@ -1,6 +1,7 @@
 import type { LucideIcon } from "lucide-react"
 import {
   Home,
+  BookText,
   Phone,
   Radio,
   Activity,
@@ -34,6 +35,14 @@ export const site = {
       description: "SeasonalNet homepage / directory view.",
       href: "https://www.seasonalnet.org/",
       icon: Home,
+      external: true,
+    },
+    {
+      key: "docs",
+      title: "Docs",
+      description: "Public SeasonalNet infrastructure reference.",
+      href: "https://docs.seasonalnet.org/",
+      icon: BookText,
       external: true,
     },
     {
