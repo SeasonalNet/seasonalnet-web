@@ -37,8 +37,6 @@ Main LAN (192.168.1.0/24)
             `-- Phone-LAN (192.168.56.0/24)
 ```
 
-**Planned addition:** a Dell PowerEdge R230 in the SeasonalCME rack will remain logically on Main LAN by using the existing VLAN 99 transit path, with host `192.168.1.21` and iDRAC `192.168.1.5`, instead of being placed behind SeasonalEDGE-R1 on `10.42.2.0/24`.
-
 ---
 
 ## Internet Exposure (Port Forwards on WNC-CR200A)
@@ -56,8 +54,10 @@ Main LAN (192.168.1.0/24)
 
 ## DNS / DHCP
 
+Cloudflare remains authoritative public DNS for `seasonalnet.org`. SeasonalDNS is for internal LAN recursion/local records only.
+
 | Segment | DNS | DHCP |
 |---|---|---|
-| Main LAN | ISP / `192.168.1.1` | Verizon WNC-CR200A |
+| Main LAN | SeasonalDNS / Technitium (`192.168.1.14`) for internal DNS; WNC-CR200A (`192.168.1.1`) remains DHCP/default gateway | Verizon WNC-CR200A |
 | SeasonalCME | SeasonalEDGE-R1 (OSPF 42 domain) | SeasonalEDGE-R1 |
 | Phone-LAN | `dnsmasq` on FreePBX17 (`192.168.56.10`) | `dnsmasq` on FreePBX17 |

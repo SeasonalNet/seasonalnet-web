@@ -5,7 +5,7 @@ description: "Address bands, infrastructure inventory, and routing notes for the
 
 **Subnet:** `192.168.1.0/24`  
 **Gateway:** `192.168.1.1` (Verizon WNC-CR200A)  
-**Last updated:** 2026-04-26
+**Last updated:** 2026-05-03
 
 ---
 
@@ -47,7 +47,8 @@ All VMs hosted on `seasonal-victus` (VirtualBox). Static IPs configured in `/etc
 | `192.168.1.11` | SeasonalUtilities | `enp0s8` | Uptime Kuma (`status.seasonalnet.org`) |
 | `192.168.1.12` | FreePBX17 | `enp0s9` | FreePBX / Asterisk SIP PBX. Also has `enp0s3` (VBox NAT, `10.0.2.15`) and `enp0s8` (Phone-LAN, `192.168.56.10`) |
 | `192.168.1.13` | SeasonalMail | `enp0s8` | `mailcow` powered mail server (`mail.seasonalnet.org`) |
-| `192.168.1.14 – .19` | *(reserved for future VMs)* | | |
+| `192.168.1.14` | SeasonalDNS | `enp0s8` | Internal Technitium DNS resolver / local DNS management; not public authoritative DNS for `seasonalnet.org` |
+| `192.168.1.15 – .19` | *(reserved for future VMs)* | | |
 
 
 
@@ -78,6 +79,15 @@ All VMs hosted on `seasonal-victus` (VirtualBox). Static IPs configured in `/etc
 | `10.42.0.0/24` | SeasonalCME VOICE VLAN (VLAN 10) | `10.42.0.1` (SeasonalEDGE-R1 Gi0/1) |
 | `10.42.2.0/24` | SeasonalCME MGMT VLAN (VLAN 42) | `10.42.2.1` (SeasonalEDGE-R1 Vlan42) |
 | `192.168.56.0/24` | Phone-LAN (FreePBX17 + IP phones desk LAN) | `192.168.56.10` (FreePBX17) |
+
+---
+
+## DNS Boundary
+
+| Role | System | Notes |
+|---|---|---|
+| Main-LAN DHCP / default resolver advertised by router | Verizon WNC-CR200A (`192.168.1.1`) | Existing gateway/DHCP source; may still answer local DHCP lease names |
+| Internal DNS service | SeasonalDNS (`192.168.1.14`) | Technitium DNS Server for internal recursive/local DNS. Static IP is configured in-guest. This VM is **not** public authoritative DNS for `seasonalnet.org`; Cloudflare remains authoritative public DNS. |
 
 ---
 
