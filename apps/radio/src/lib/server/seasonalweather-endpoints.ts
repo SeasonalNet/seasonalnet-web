@@ -21,7 +21,7 @@ function seasonalWeatherApiBaseUrl(): string {
 export function seasonalWeatherHandledAlertsUrl(): string {
   return (
     cleanEnv(process.env.SEASONALWEATHER_HANDLED_ALERTS_URL) ??
-    `${seasonalWeatherApiBaseUrl()}/api/station/handled-alerts.json`
+    `${seasonalWeatherApiBaseUrl()}/api/v1/handled-alerts`
   )
 }
 
