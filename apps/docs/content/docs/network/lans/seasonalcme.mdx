@@ -9,7 +9,7 @@ description: "Voice and management VLAN topology for the SeasonalCME lab."
 **Management IPv6 ULA:** `FD42:42:2::/64`  
 **Voice gateway:** `10.42.0.1` / `FD42:42::1` (SeasonalEDGE-R1 `Gi0/1`)  
 **Management gateway:** `10.42.2.1` / `FD42:42:2::1` (SeasonalEDGE-R1 `Vlan42`)  
-**Last updated:** 2026-05-02
+**Last updated:** 2026-05-08
 
 ---
 
@@ -21,7 +21,7 @@ description: "Voice and management VLAN topology for the SeasonalCME lab."
 | `VLAN 10` / `FD42:42::/64` | SeasonalCME voice IPv6 ULA | `FD42:42::1` | IPv6 ULA on the voice segment; RA/DHCPv6 served by SeasonalEDGE-R1 |
 | `VLAN 42` / `10.42.2.0/24` | SeasonalCME management network | `10.42.2.1` | Routed from SeasonalEDGE-R1 via `Vlan42`; trunked between SW1 and SW2 |
 | `VLAN 42` / `FD42:42:2::/64` | SeasonalCME management IPv6 ULA | `FD42:42:2::1` | IPv6 ULA for management on `Vlan42` |
-| `VLAN 99` | WAN / transit infrastructure VLAN | none on switches | Used as native VLAN on the SW1↔SW2 trunk and for the edge transit path; also suitable for select Main-LAN-addressed rack-local endpoints such as the R230 with iDRAC 8 |
+| `VLAN 99` | WAN / transit infrastructure VLAN | none on switches | Used as native VLAN on the SW1↔SW2 trunk and for the edge transit path; also suitable for select Main-LAN-addressed rack-local endpoints such as the R230 and planned R340 with iDRAC |
 
 ---
 
@@ -71,6 +71,8 @@ Current fixed assignments on VLAN 10 already align with this banding: `10.42.0.1
 | `192.168.1.3` | SeasonalBridge-NONROOT (AIR-AP1142N-A-K9) | `Gi1/0/1` on SW2 | Wireless bridge NONROOT; attached on VLAN 99 transit side |
 | `192.168.1.21` | SeasonalR230 | access VLAN 99 port `Gi1/0/12` | Dell PowerEdge R230 / Proxmox host physically in CME rack, logically on Main LAN |
 | `192.168.1.5` | SeasonalR230-iDRAC | `Gi1/0/13` | out-of-band management address on Main LAN |
+| `192.168.1.22` | SeasonalR340 | planned access VLAN 99 port | Dell PowerEdge R340 / onsite backup storage host, logically on Main LAN |
+| `192.168.1.23` | SeasonalR340-iDRAC | planned access VLAN 99 port | out-of-band management address on Main LAN |
 
 ---
 
@@ -108,8 +110,11 @@ Current fixed assignments on VLAN 10 already align with this banding: `10.42.0.1
 | `Gi1/0/9` | Access VLAN 10 | Cisco CP-8841 | Connected at capture time |
 | `Gi1/0/10` | Access VLAN 10 | connected client | Connected at capture time |
 | `Gi1/0/11` | Access VLAN 10 | connected client | Connected at capture time (`100 Mbps`) |
-| `Gi1/0/12` | Access VLAN 10 | connected client | Connected at capture time |
-| `Gi1/0/13 – Gi1/0/23` | Access VLAN 10 | voice / endpoint access | Presently unused at capture time |
+| `Gi1/0/12` | Access VLAN 99 | SeasonalR230 | Dell PowerEdge R230 / Proxmox host Main-LAN attachment |
+| `Gi1/0/13` | Access VLAN 99 | SeasonalR230-iDRAC | Dell PowerEdge R230 out-of-band management |
+| `Gi1/0/14` | Planned access VLAN 99 | SeasonalR340 | Recommended R340 host / backup-storage attachment |
+| `Gi1/0/15` | Planned access VLAN 99 | SeasonalR340-iDRAC | Recommended R340 out-of-band management attachment |
+| `Gi1/0/16 – Gi1/0/23` | Access VLAN 10 | voice / endpoint access | Presently unused at capture time |
 | `Gi1/0/24` | 802.1Q trunk, native VLAN 99 | SeasonalCME-SW1 `Gi0/23` | Allows VLANs `10,42,99` |
 
 ---
@@ -169,7 +174,9 @@ SW1 (root)
 SW2 (PoE)
   |- Gi1/0/1 --> SeasonalBridge-NONROOT (VLAN 99)
   |- Gi1/0/2 --> SeasonalAP-3602i (VLAN 10)
-  |- planned access VLAN 99 port --> SeasonalR230 / iDRAC (Main-LAN addressed)
+  |- Gi1/0/12 --> SeasonalR230 = 192.168.1.21 (VLAN 99 / Main-LAN addressed)
+  |- Gi1/0/13 --> SeasonalR230-iDRAC = 192.168.1.5 (VLAN 99 / Main-LAN addressed)
+  |- planned VLAN 99 ports --> SeasonalR340 = 192.168.1.22 and SeasonalR340-iDRAC = 192.168.1.23
   `- Gi1/0/9+ --> phones / voice clients (VLAN 10)
 ```
 
@@ -181,3 +188,4 @@ SW2 (PoE)
 - `SeasonalCME-SW1 Gi0/22` and `SeasonalEDGE-R1 Gi0/0` form the VLAN 99 transit-side relationship seen in CDP; this is distinct from the voice-side `Gi0/24` ↔ `Gi0/1` link.
 - `VLAN 42` is present and trunked between SW1 and SW2, but no switch SVI for VLAN 42 was shown on the 2960-X switches in the captured output; management addresses shown on the switches are on `Vlan10`.
 - `SeasonalBridge-NONROOT` remains part of the broader SeasonalNet bridge path back toward main LAN, but from the CME side it is attached on SW2 `Gi1/0/1` in VLAN 99.
+- Confirm SeasonalR340's final SW2 access ports during installation. Current recommended plan is the next two rack-local VLAN 99 access ports after R230: one for the host NIC and one for iDRAC.

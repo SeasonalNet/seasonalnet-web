@@ -5,7 +5,7 @@ description: "Address bands, infrastructure inventory, and routing notes for the
 
 **Subnet:** `192.168.1.0/24`  
 **Gateway:** `192.168.1.1` (Verizon WNC-CR200A)  
-**Last updated:** 2026-05-03
+**Last updated:** 2026-05-08
 
 ---
 
@@ -16,7 +16,7 @@ description: "Address bands, infrastructure inventory, and routing notes for the
 | `.1` | Gateway (Verizon WNC-CR200A) |
 | `.2 – .5` | Network infrastructure (static, assigned on-device) |
 | `.6 – .19` | Servers & VMs (static, assigned in-guest) |
-| `.20 – .49` | Reserved / Assigned static non-server devices (Hypervisors, important machines, etc.) |
+| `.20 – .49` | Reserved / assigned static physical hosts, hypervisors, storage hosts, BMC/OOB management interfaces such as iDRAC/iLO/IPMI, and important machines |
 | `.50 – .99` | Static non-server devices (IoT, printers, etc.) |
 | `.100 – .254` | DHCP pool (dynamic clients) |
 
@@ -60,6 +60,8 @@ All VMs hosted on `seasonal-victus` (VirtualBox). Static IPs configured in `/etc
 |---|---|---|
 | `192.168.1.20` | seasonal-victus (Victus by HP Gaming Laptop 15-fa1xxx) | VM hypervisor; seasonal-agent host |
 | `192.168.1.21` | SeasonalR230 | Dell PowerEdge R230 / Proxmox host on Main LAN via CME rack VLAN 99 transit path |
+| `192.168.1.22` | SeasonalR340 | Dell PowerEdge R340 / onsite backup storage host; primary host/PBS address |
+| `192.168.1.23` | SeasonalR340-iDRAC | Dell PowerEdge R340 out-of-band management on Main LAN via CME rack VLAN 99 transit path |
 
 ---
 
@@ -88,6 +90,7 @@ All VMs hosted on `seasonal-victus` (VirtualBox). Static IPs configured in `/etc
 |---|---|---|
 | Main-LAN DHCP / default resolver advertised by router | Verizon WNC-CR200A (`192.168.1.1`) | Existing gateway/DHCP source; may still answer local DHCP lease names |
 | Internal DNS service | SeasonalDNS (`192.168.1.14`) | Technitium DNS Server for internal recursive/local DNS. Static IP is configured in-guest. This VM is **not** public authoritative DNS for `seasonalnet.org`; Cloudflare remains authoritative public DNS. |
+| R340 internal DNS records to add | SeasonalDNS | Recommended records: `seasonalr340.lan.seasonalnet.org` → `192.168.1.22`, `idrac-r340.lan.seasonalnet.org` → `192.168.1.23`, and optional service alias `pbs.lan.seasonalnet.org` → `192.168.1.22` if PBS is bare-metal on SeasonalR340. |
 
 ---
 
@@ -112,6 +115,7 @@ All VMs hosted on `seasonal-victus` (VirtualBox). Static IPs configured in `/etc
 ## Known Remaining Items
 
 - `seasonal-teal-laptop` is dynamic (`.240` area) — candidate for `.20–.49` static band
-- CME-rack Dell PowerEdge R230 uses Main-LAN addressing over VLAN 99 transit rather than sitting behind `10.42.2.0/24` on SeasonalEDGE-R1
+- CME-rack Dell PowerEdge R230 and planned SeasonalR340 use Main-LAN addressing over VLAN 99 transit rather than sitting behind `10.42.2.0/24` on SeasonalEDGE-R1
+- SeasonalR340 physical switch ports still need final confirmation after installation
 - SeasonalBRIDGE-NONROOT BVI1 still has stale `ipv6 address dhcp` / `ipv6 address autoconfig` — clean up via console next opportunity
 - Phone-LAN gateway is non-standard (`.10` over `.1`) — non-urgent
