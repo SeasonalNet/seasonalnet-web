@@ -1,6 +1,7 @@
 // src/app/api/stations/[stationId]/alerts/route.ts
 import { NextResponse } from "next/server"
 import { STATION_ALERTS } from "@/lib/station-alert-config"
+import { sameCodesIntersectServiceArea, sameToMarineZone } from "@/lib/alert-map-utils"
 
 type NwsFeature = {
   id?: string
@@ -23,21 +24,6 @@ type NwsFeature = {
   }
 }
 
-const MARINE_SAME_SS_TO_UGC_PREFIX: Record<string, string> = {
-  "70": "LSZ",
-  "71": "GMZ",
-  "73": "ANZ",
-  "74": "AMZ",
-  "75": "PZZ",
-  "76": "PZZ",
-  "77": "PKZ",
-  "78": "PHZ",
-  "79": "PMZ",
-  "81": "LOZ",
-  "82": "LHZ",
-  "83": "LEZ",
-}
-
 function isNwsKeepAliveOrTest(f: NwsFeature): boolean {
   const id = String(f?.id ?? "").toLowerCase()
   const p = f?.properties ?? {}
@@ -52,16 +38,6 @@ function isNwsKeepAliveOrTest(f: NwsFeature): boolean {
 
 function uniq<T>(arr: T[]): T[] {
   return Array.from(new Set(arr))
-}
-
-function sameToMarineZone(same: string): string | null {
-  const s = String(same ?? "").trim()
-  if (!/^\d{6}$/.test(s)) return null
-
-  const prefix = MARINE_SAME_SS_TO_UGC_PREFIX[s.slice(1, 3)]
-  if (!prefix) return null
-
-  return `${prefix}${s.slice(3)}`
 }
 
 async function fetchNwsActiveAlertsByArea(area: string, ua: string): Promise<NwsFeature[]> {
@@ -108,7 +84,7 @@ export async function GET(
 
   const ua = "(seasonalnet.org, info@seasonalnet.org)"
 
-  const sameSet = new Set(uniq(cfg.sameCodes).map(String))
+  const serviceAreaSameCodes = uniq(cfg.sameCodes).map(String)
   const areas = uniq(cfg.nwsAreas)
   const marineZones = uniq(
     cfg.sameCodes
@@ -140,7 +116,7 @@ export async function GET(
     .filter((f) => {
       const sames = f?.properties?.geocode?.SAME
       if (!Array.isArray(sames) || sames.length === 0) return false
-      return sames.some((code) => sameSet.has(String(code)))
+      return sameCodesIntersectServiceArea(sames.map(String), serviceAreaSameCodes)
     })
 
   const alerts = filtered.map((f) => {

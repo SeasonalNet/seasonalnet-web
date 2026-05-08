@@ -255,6 +255,7 @@ export function deriveAlertSeverity(
 
 export type CoverageRef =
   | { kind: "fips"; id: string }
+  | { kind: "state"; id: string }
   | { kind: "marineZone"; id: string };
 
 // SAME PSSCCC → marine UGC prefix by SS
@@ -273,14 +274,68 @@ const MARINE_SAME_SS_TO_UGC_PREFIX: Record<string, string> = {
   "83": "LEZ", // Lake Erie
 };
 
+export const NATIONAL_SAME_LOCATION = "000000";
+
+function normalizeSameCode(value: unknown): string | null {
+  const s = String(value ?? "").trim();
+  return /^\d{6}$/.test(s) ? s : null;
+}
+
+function normalizeFipsCode(value: unknown): string | null {
+  const s = String(value ?? "").trim();
+  return /^\d{5}$/.test(s) ? s : null;
+}
+
+function uniqOrdered(values: Iterable<string>): string[] {
+  const out: string[] = [];
+  const seen = new Set<string>();
+  for (const value of values) {
+    if (seen.has(value)) continue;
+    seen.add(value);
+    out.push(value);
+  }
+  return out;
+}
+
+function fipsInState(stateFips: string, availableFips: Iterable<string> | undefined): string[] {
+  if (!/^\d{2}$/.test(stateFips) || !availableFips) return [];
+
+  const matches: string[] = [];
+  for (const raw of availableFips) {
+    const fips = normalizeFipsCode(raw);
+    if (!fips || fips === "00000") continue;
+    if (fips.startsWith(stateFips)) matches.push(fips);
+  }
+  return uniqOrdered(matches);
+}
+
+/**
+ * True for an ordinary state/territory-wide SAME location: 0SS000.
+ *
+ * 000000 is national/all-US and is intentionally not treated as a local
+ * wildcard.  Marine SS families are also not treated as state wildcards.
+ */
+export function isStatewideSameCode(same: string): boolean {
+  const s = normalizeSameCode(same);
+  if (!s || s === NATIONAL_SAME_LOCATION) return false;
+  if (!s.startsWith("0") || !s.endsWith("000")) return false;
+  return !MARINE_SAME_SS_TO_UGC_PREFIX[s.slice(1, 3)];
+}
+
+export function sameToStateFips(same: string): string | null {
+  const s = normalizeSameCode(same);
+  return s && isStatewideSameCode(s) ? s.slice(1, 3) : null;
+}
+
 /**
  * SAME codes are 6 digits:
- *   - land:   "0" + 5-digit county/independent-city FIPS
- *   - marine: PSSCCC where SS selects the marine UGC prefix
+ *   - land county/city: "0" + 5-digit county/independent-city FIPS
+ *   - state-wide land:  0SS000, expanded against the station service area
+ *   - marine:          PSSCCC where SS selects the marine UGC prefix
  */
 export function sameToCoverageRef(same: string): CoverageRef | null {
-  const s = String(same ?? "").trim();
-  if (!/^\d{6}$/.test(s)) return null;
+  const s = normalizeSameCode(same);
+  if (!s || s === NATIONAL_SAME_LOCATION) return null;
 
   const marinePrefix = MARINE_SAME_SS_TO_UGC_PREFIX[s.slice(1, 3)];
   if (marinePrefix) {
@@ -288,6 +343,7 @@ export function sameToCoverageRef(same: string): CoverageRef | null {
   }
 
   if (!s.startsWith("0")) return null;
+  if (isStatewideSameCode(s)) return { kind: "state", id: s.slice(1, 3) };
   return { kind: "fips", id: s.slice(1) };
 }
 
@@ -306,14 +362,92 @@ export function fipsToSame(fips: string): string {
 }
 
 /**
+ * Expand a SAME coverage ref into concrete station-area county/city FIPS codes.
+ *
+ * State-wide SAME codes intentionally expand only across the provided station
+ * service-area FIPS set, not every county in the state.
+ */
+export function fipsFromCoverageRef(
+  ref: CoverageRef | null,
+  availableFips?: Iterable<string>,
+): string[] {
+  if (!ref) return [];
+  if (ref.kind === "fips") return [ref.id];
+  if (ref.kind === "state") return fipsInState(ref.id, availableFips);
+  return [];
+}
+
+/**
+ * Expand a raw 5-digit FIPS value, treating SS000 as a state wildcard when a
+ * station service-area FIPS set is available.
+ */
+export function expandFipsCode(
+  fips: string,
+  availableFips?: Iterable<string>,
+): string[] {
+  const normalized = normalizeFipsCode(fips);
+  if (!normalized || normalized === "00000") return [];
+  if (normalized.endsWith("000")) {
+    const expanded = fipsInState(normalized.slice(0, 2), availableFips);
+    return expanded.length > 0 ? expanded : [];
+  }
+  return [normalized];
+}
+
+export function fipsFromSameCode(
+  same: string,
+  availableFips?: Iterable<string>,
+): string[] {
+  return fipsFromCoverageRef(sameToCoverageRef(same), availableFips);
+}
+
+/**
+ * Return true when a SAME location intersects a configured station service area.
+ *
+ * Exact SAME matches always pass, while 0SS000 state-wide inputs pass only when
+ * the service area contains at least one concrete county/city SAME code in that
+ * state.  000000 never matches.
+ */
+export function sameCodeIntersectsServiceArea(
+  same: string,
+  serviceAreaSameCodes: Iterable<string>,
+): boolean {
+  const s = normalizeSameCode(same);
+  if (!s || s === NATIONAL_SAME_LOCATION) return false;
+
+  const serviceCodes = Array.from(serviceAreaSameCodes, (code) => normalizeSameCode(code))
+    .filter((code): code is string => Boolean(code));
+
+  if (serviceCodes.includes(s)) return true;
+
+  const stateFips = sameToStateFips(s);
+  if (!stateFips) return false;
+
+  return serviceCodes.some((code) => {
+    const ref = sameToCoverageRef(code);
+    return ref?.kind === "fips" && ref.id.startsWith(stateFips);
+  });
+}
+
+export function sameCodesIntersectServiceArea(
+  sameCodes: Iterable<string> | undefined,
+  serviceAreaSameCodes: Iterable<string>,
+): boolean {
+  for (const same of sameCodes ?? []) {
+    if (sameCodeIntersectsServiceArea(same, serviceAreaSameCodes)) return true;
+  }
+  return false;
+}
+
+/**
  * Extract county FIPS codes referenced in a NWS alert.
  */
-export function fipsFromAlert(alert: NwsAlertFeature): string[] {
+export function fipsFromAlert(
+  alert: NwsAlertFeature,
+  availableFips?: Iterable<string>,
+): string[] {
   const same: string[] = alert.properties.parameters?.SAME ?? [];
-  return same.flatMap((s) => {
-    const f = sameToFips(s);
-    return f ? [f] : [];
-  });
+  return uniqOrdered(same.flatMap((s) => fipsFromSameCode(s, availableFips)));
 }
 
 /**

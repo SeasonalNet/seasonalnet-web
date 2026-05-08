@@ -8,7 +8,7 @@
 //   3. CAP polygon outlines for NWS alerts with geometry
 //   4. Hatch overlay where both overlap
 
-import { useEffect, useRef, useMemo, useCallback } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { useTheme } from "next-themes";
 import type { Map as LeafletMap, GeoJSON as LeafletGeoJSON } from "leaflet";
 import type { NwsAlertFeature, StationHandledAlert } from "@/lib/alert-map-utils";
@@ -16,7 +16,9 @@ import {
   capPolygonStyle,
   countyFillStyle,
   overlappingCountyStyle,
+  expandFipsCode,
   fipsFromAlert,
+  fipsFromCoverageRef,
   marineZonesFromAlert,
   sameToCoverageRef,
   sameToFips,
@@ -113,27 +115,6 @@ export default function StationMapClient({
   const tileLayerRef = useRef<any>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const { resolvedTheme } = useTheme();
-
-  // Derive sets of FIPS codes relevant to each alert type
-  const capFipsSets = useMemo<Map<string, Set<string>>>(() => {
-    const m = new Map<string, Set<string>>();
-    for (const alert of capAlerts) {
-      m.set(alert.id, new Set(fipsFromAlert(alert)));
-    }
-    return m;
-  }, [capAlerts]);
-
-  const handledFipsSet = useMemo<Set<string>>(() => {
-    const s = new Set<string>();
-    for (const a of handledAlerts) {
-      (a.sameCodes ?? []).forEach(sc => {
-        const f = sameToFips(sc);
-        if (f) s.add(f);
-      });
-      (a.fipsCodes ?? []).forEach(f => s.add(f));
-    }
-    return s;
-  }, [handledAlerts]);
 
   // Station's own FIPS set (the counties this station covers at all)
   const stationFipsSet = useMemo<Set<string>>(() => {
@@ -266,7 +247,7 @@ export default function StationMapClient({
       for (const alert of capAlerts) {
         if (alert.geometry) continue; // polygon alerts handled later
         const sev = deriveAlertSeverity(alert.properties.event, alert.properties.severity);
-        fipsFromAlert(alert).forEach((f) => upgradeSeverity(fipsDominantSeverity, f, sev));
+        fipsFromAlert(alert, stationFipsSet).forEach((f) => upgradeSeverity(fipsDominantSeverity, f, sev));
         marineZonesFromAlert(alert).forEach((z) => upgradeSeverity(marineDominantSeverity, z, sev));
       }
 
@@ -280,15 +261,19 @@ export default function StationMapClient({
           const ref = sameToCoverageRef(sc);
           if (!ref) continue;
 
-          if (ref.kind === "fips") {
-            upgradeSeverity(fipsDominantSeverity, ref.id, sev);
-          } else {
+          if (ref.kind === "marineZone") {
             upgradeSeverity(marineDominantSeverity, ref.id, sev);
+          } else {
+            for (const fips of fipsFromCoverageRef(ref, stationFipsSet)) {
+              upgradeSeverity(fipsDominantSeverity, fips, sev);
+            }
           }
         }
 
         for (const f of alert.fipsCodes ?? []) {
-          upgradeSeverity(fipsDominantSeverity, f, sev);
+          for (const fips of expandFipsCode(f, stationFipsSet)) {
+            upgradeSeverity(fipsDominantSeverity, fips, sev);
+          }
         }
       }
 
@@ -300,7 +285,7 @@ export default function StationMapClient({
 
       for (const alert of capAlerts) {
         if (!alert.geometry) continue;
-        fipsFromAlert(alert).forEach((f) => capPolygonFips.add(f));
+        fipsFromAlert(alert, stationFipsSet).forEach((f) => capPolygonFips.add(f));
         marineZonesFromAlert(alert).forEach((z) => capPolygonMarineZones.add(z));
       }
       // -----------------------------------------------------------------------
@@ -427,7 +412,7 @@ export default function StationMapClient({
     });
 
     return () => { cancelled = true; };
-  }, [capAlerts, handledAlerts, countiesUrl, stationFipsSet, capFipsSets]);
+  }, [capAlerts, handledAlerts, countiesUrl, marineZonesUrl, resolvedTheme, stationFipsSet, stationMarineZoneSet]);
 
   // -------------------------------------------------------------------------
   // Render
