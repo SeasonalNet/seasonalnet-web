@@ -5,7 +5,7 @@ description: "Address bands, infrastructure inventory, and routing notes for the
 
 **Subnet:** `192.168.1.0/24`  
 **Gateway:** `192.168.1.1` (Verizon WNC-CR200A)  
-**Last updated:** 2026-05-08
+**Last updated:** 2026-05-09
 
 ---
 
@@ -48,7 +48,8 @@ All VMs hosted on `seasonal-victus` (VirtualBox). Static IPs configured in `/etc
 | `192.168.1.12` | FreePBX17 | `enp0s9` | FreePBX / Asterisk SIP PBX. Also has `enp0s3` (VBox NAT, `10.0.2.15`) and `enp0s8` (Phone-LAN, `192.168.56.10`) |
 | `192.168.1.13` | SeasonalMail | `enp0s8` | `mailcow` powered mail server (`mail.seasonalnet.org`) |
 | `192.168.1.14` | SeasonalDNS | `enp0s8` | Internal Technitium DNS resolver / local DNS management; not public authoritative DNS for `seasonalnet.org` |
-| `192.168.1.15 – .19` | *(reserved for future VMs)* | | |
+| `192.168.1.15` | SeasonalMonitor | `enp0s8` | Prometheus/Grafana observability VM. Runs Docker Compose stack for Prometheus, Grafana, blackbox_exporter, and snmp_exporter; host-native node_exporter. Grafana is published at `grafana.seasonalnet.org` through SeasonalWeb and Authentik OAuth. |
+| `192.168.1.16 – .19` | *(reserved for future VMs)* | | |
 
 
 
@@ -91,8 +92,18 @@ All VMs hosted on `seasonal-victus` (VirtualBox). Static IPs configured in `/etc
 | Main-LAN DHCP / default resolver advertised by router | Verizon WNC-CR200A (`192.168.1.1`) | Existing gateway/DHCP source; may still answer local DHCP lease names |
 | Internal DNS service | SeasonalDNS (`192.168.1.14`) | Technitium DNS Server for internal recursive/local DNS. Static IP is configured in-guest. This VM is **not** public authoritative DNS for `seasonalnet.org`; Cloudflare remains authoritative public DNS. |
 | R340 internal DNS records to add | SeasonalDNS | Recommended records: `seasonalr340.lan.seasonalnet.org` → `192.168.1.22`, `idrac-r340.lan.seasonalnet.org` → `192.168.1.23`, and optional service alias `pbs.lan.seasonalnet.org` → `192.168.1.22` if PBS is bare-metal on SeasonalR340. |
+| SeasonalMonitor internal DNS records | SeasonalDNS | `seasonalmonitor.lan.seasonalnet.org` → `192.168.1.15`; optional alias `monitor.lan.seasonalnet.org` → `seasonalmonitor.lan.seasonalnet.org`. |
+| SeasonalMonitor public Grafana DNS | Cloudflare / SeasonalWeb | `grafana.seasonalnet.org` is a Cloudflare-proxied public hostname terminating at SeasonalWeb (`192.168.1.8`), then reverse-proxied to Grafana on SeasonalMonitor (`192.168.1.15:3000`). Prometheus remains private. |
 
 ---
+
+## Public Web Routing via SeasonalWeb
+
+SeasonalWeb receives public HTTP/HTTPS traffic and routes hostname-based services to the appropriate internal backend. Cloudflare remains the public DNS and TLS edge for proxied hostnames.
+
+| Hostname | SeasonalWeb backend | Authentication / Exposure | Notes |
+|---|---|---|---|
+| `grafana.seasonalnet.org` | `http://192.168.1.15:3000` | Public via Cloudflare; Grafana uses Authentik OAuth/OIDC with a local break-glass admin account retained | SeasonalMonitor dashboard front door. Prometheus (`192.168.1.15:9090`) is intentionally not published. |
 
 ## Port Forwarding (Verizon WNC-CR200A)
 
@@ -117,5 +128,6 @@ All VMs hosted on `seasonal-victus` (VirtualBox). Static IPs configured in `/etc
 - `seasonal-teal-laptop` is dynamic (`.240` area) — candidate for `.20–.49` static band
 - CME-rack Dell PowerEdge R230 and planned SeasonalR340 use Main-LAN addressing over VLAN 99 transit rather than sitting behind `10.42.2.0/24` on SeasonalEDGE-R1
 - SeasonalR340 physical switch ports still need final confirmation after installation
+- SeasonalMonitor SNMP polling and Redfish collection still need to be expanded after the CME rack/backhaul path is stable enough for reliable polling
 - SeasonalBRIDGE-NONROOT BVI1 still has stale `ipv6 address dhcp` / `ipv6 address autoconfig` — clean up via console next opportunity
 - Phone-LAN gateway is non-standard (`.10` over `.1`) — non-urgent

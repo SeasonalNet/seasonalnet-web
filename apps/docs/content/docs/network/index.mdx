@@ -50,6 +50,8 @@ Main LAN (192.168.1.0/24)
 | IAX2 | 4569 | UDP | FreePBX17 (`192.168.1.12`) |
 | RTP | 10000–20000 | UDP | FreePBX17 (`192.168.1.12`) |
 
+SeasonalWeb performs hostname-based routing for public web services behind the shared 80/443 forwards. `grafana.seasonalnet.org` is routed by SeasonalWeb to Grafana on SeasonalMonitor (`192.168.1.15:3000`) and uses Authentik OAuth/OIDC. Prometheus on SeasonalMonitor (`192.168.1.15:9090`) remains private and is not exposed as a public hostname.
+
 ---
 
 ## DNS / DHCP
