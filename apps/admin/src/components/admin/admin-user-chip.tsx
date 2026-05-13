@@ -1,5 +1,9 @@
 import { auth } from "@/auth"
 
+type AdminSessionExtras = {
+  preferred_username?: string | null
+}
+
 function initials(name?: string | null, email?: string | null) {
   const source = (name || email || "U").trim()
   const parts = source.split(/\s+/).filter(Boolean)
@@ -15,7 +19,8 @@ export async function AdminUserChip() {
 
   if (!user) return null
 
-  const displayName = user.name || (session as any).preferred_username || "Signed in"
+  const adminSession = session as typeof session & AdminSessionExtras
+  const displayName = user.name || adminSession.preferred_username || "Signed in"
   const email = user.email || ""
 
   return (

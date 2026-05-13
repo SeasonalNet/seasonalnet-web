@@ -1,7 +1,7 @@
 "use client"
 
 import * as React from "react"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
 
@@ -670,14 +670,16 @@ function OriginateAudioDialog({ action }: { action: AdminActionControlProps }) {
   const [pending, setPending] = useState(false)
   const [form, setForm] = useState<OriginationFormState>(defaultOriginationForm())
 
-  useEffect(() => {
-    if (!open || typeof window === "undefined") return
+  function onOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen)
+
+    if (!nextOpen || typeof window === "undefined") return
 
     const assetId = window.localStorage.getItem(LAST_UPLOADED_AUDIO_ASSET_KEY)
     if (assetId) {
       setForm((prev) => ({ ...prev, audioAssetId: prev.audioAssetId || assetId }))
     }
-  }, [open])
+  }
 
   async function onSubmit() {
     if (!action.href || pending) return
@@ -706,7 +708,7 @@ function OriginateAudioDialog({ action }: { action: AdminActionControlProps }) {
   }
 
   return (
-    <Dialog open={open} onOpenChange={setOpen}>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
         <TriggerButton />
       </DialogTrigger>

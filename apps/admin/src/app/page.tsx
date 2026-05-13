@@ -1,24 +1,32 @@
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
 import { SiteFooter } from "@/components/site-footer"
-import { AdminModuleCard } from "@/components/admin/admin-module-card"
+import { AdminWorkspace } from "@/components/admin/admin-workspace"
 import { buildAdminModules } from "@/lib/admin/modules"
 import { getSeasonalWeatherOverview } from "@/lib/server/modules/seasonalweather"
+import { getSeasonalProvisioningOverview } from "@/lib/server/modules/seasonalprovisioning"
 
 export const dynamic = "force-dynamic"
 
-const SHOW_PLANNED_MODULES = false
+type PageProps = {
+  searchParams?: Promise<{ module?: string }>
+}
 
-export default async function Page() {
-  const seasonalWeatherOverview = await getSeasonalWeatherOverview()
-  const allModules = buildAdminModules(seasonalWeatherOverview)
+export default async function Page({ searchParams }: PageProps) {
+  const [{ module: selectedModuleId } = {}, seasonalWeatherOverview, seasonalProvisioningOverview] =
+    await Promise.all([
+      searchParams,
+      getSeasonalWeatherOverview(),
+      getSeasonalProvisioningOverview(),
+    ])
 
-  const modules = SHOW_PLANNED_MODULES
-    ? allModules
-    : allModules.filter((module) => !module.tags.includes("planned"))
+  const modules = buildAdminModules(
+    seasonalWeatherOverview,
+    seasonalProvisioningOverview,
+  ).filter((module) => !module.tags.includes("planned"))
 
   return (
-    <main className="mx-auto max-w-6xl px-4 pb-10">
+    <main className="mx-auto max-w-7xl px-4 pb-10">
       <section className="space-y-6 pt-10">
         <div className="rounded-3xl border bg-card/50 p-6 md:p-10">
           <div className="flex flex-wrap items-start justify-between gap-4">
@@ -34,7 +42,7 @@ export default async function Page() {
               </h1>
               <p className="mt-2 max-w-2xl text-sm text-muted-foreground md:text-base">
                 Status, operations, and administration for SeasonalNet systems.
-                One front door. One card per system. No nonsense.
+                Select a module from the sidebar and work in one focused panel.
               </p>
             </div>
           </div>
@@ -46,11 +54,7 @@ export default async function Page() {
           </p>
         </div>
 
-        <div className="space-y-6">
-          {modules.map((module) => (
-            <AdminModuleCard key={module.id} module={module} />
-          ))}
-        </div>
+        <AdminWorkspace modules={modules} selectedModuleId={selectedModuleId} />
       </section>
 
       <div className="mt-10">

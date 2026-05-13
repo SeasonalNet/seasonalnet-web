@@ -3,14 +3,14 @@
 SeasonalNet admin front door scaffold.
 
 Built by cloning the shared SeasonalNet site shell and adapting it into a centralized,
-card-based control plane.
+sidebar-driven control plane.
 
 ## Design rules locked in
 
 - standard SeasonalNet site-header + site-footer
 - black/white only
-- no sidebar
-- one card per managed system
+- sidebar module switcher
+- one focused panel per selected managed system
 - SoA grouping inside every module card:
   - Status
   - Operations
@@ -19,12 +19,12 @@ card-based control plane.
 - server-side proxy/BFF pattern for backend APIs
 - backend validation and idempotent write paths first
 
-## First module
+## Live modules
 
 - SeasonalWeather
+- SeasonalProvisioning
 
 ## Planned follow-ons
 
 - SeasonalPBX
-- SeasonalProvisioning
 - SeasonalRadio

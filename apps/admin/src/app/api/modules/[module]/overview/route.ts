@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { getSeasonalWeatherOverview } from "@/lib/server/modules/seasonalweather"
+import { getSeasonalProvisioningOverview } from "@/lib/server/modules/seasonalprovisioning"
 
 export const runtime = "nodejs"
 
@@ -19,8 +20,16 @@ export async function GET(
       })
     }
 
+    case "seasonalprovisioning": {
+      const overview = await getSeasonalProvisioningOverview()
+      return NextResponse.json(overview, {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      })
+    }
+
     case "seasonalpbx":
-    case "seasonalprovisioning":
     case "seasonalradio":
       return NextResponse.json(
         {

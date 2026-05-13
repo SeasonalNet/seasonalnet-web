@@ -20,7 +20,7 @@ export type SiteAnnouncement = {
 const ANNOUNCEMENTS_PATH =
   process.env.SEASONALNET_ANNOUNCEMENTS_PATH || "/etc/seasonalnet/announcements.json"
 
-type DocShape = { items?: SiteAnnouncement[] } | SiteAnnouncement[]
+type AnnouncementDoc = { items?: unknown }
 
 let cache: { mtimeMs: number; size: number; items: SiteAnnouncement[] } | null = null
 
@@ -32,6 +32,15 @@ function deriveSiteIdFromHost(host: string) {
   const h = normalizeHost(host)
   const first = h.split(".")[0]
   return first || ""
+}
+
+function isAnnouncementList(value: unknown): value is SiteAnnouncement[] {
+  return Array.isArray(value)
+}
+
+function isAnnouncementDoc(value: unknown): value is { items: SiteAnnouncement[] } {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return false
+  return Array.isArray((value as AnnouncementDoc).items)
 }
 
 function hostMatches(pattern: string, host: string) {
@@ -61,16 +70,16 @@ export async function loadAnnouncements(): Promise<{
     }
 
     const raw = await readFile(ANNOUNCEMENTS_PATH, "utf8")
-    const parsed = JSON.parse(raw) as DocShape
-    const items = Array.isArray(parsed)
+    const parsed = JSON.parse(raw) as unknown
+    const items = isAnnouncementList(parsed)
       ? parsed
-      : Array.isArray((parsed as any).items)
-        ? (parsed as any).items
+      : isAnnouncementDoc(parsed)
+        ? parsed.items
         : []
 
     cache = { mtimeMs, size, items }
     return { items, etag }
-  } catch (err) {
+  } catch {
     return { items: cache?.items ?? [], etag: null }
   }
 }

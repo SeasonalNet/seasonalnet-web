@@ -5,12 +5,13 @@ import {
   buildAccessPolicyFromEnv,
   isAuthorizedGroups,
   resolveAccessTier,
+  type AccessTier,
 } from "@seasonalnet/shell/src/lib/authz"
 
 const authentikIssuer = process.env.AUTH_AUTHENTIK_ISSUER!
 const accessPolicy = buildAccessPolicyFromEnv("AUTH_AUTHENTIK_ADMIN")
 
-type SessionLike = {
+type MutableSession = {
   user?: {
     id?: string | null
     name?: string | null
@@ -18,9 +19,11 @@ type SessionLike = {
   } | null
   preferred_username?: string | null
   groups?: string[]
-  access_tier?: "status" | "operations" | "administration" | null
+  access_tier?: AccessTier | null
   is_authorized?: boolean
-} | null | undefined
+}
+
+type SessionLike = MutableSession | null | undefined
 
 function normalizeGroups(value: unknown): string[] {
   if (!Array.isArray(value)) return []
@@ -41,7 +44,10 @@ function applyTokenClaims(token: Record<string, unknown>, profile?: Record<strin
   return token
 }
 
-function applySessionClaims(session: any, token: Record<string, unknown>) {
+function applySessionClaims<TSession extends MutableSession>(
+  session: TSession,
+  token: Record<string, unknown>,
+): TSession {
   if (session.user) {
     if (typeof token.email === "string") session.user.email = token.email
     if (typeof token.name === "string") session.user.name = token.name

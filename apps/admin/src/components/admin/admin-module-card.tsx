@@ -3,17 +3,20 @@ import {
   Clock3,
   FileText,
   Fingerprint,
+  Folder,
   Gauge,
+  ImageIcon,
+  KeyRound,
+  Link2,
   ListOrdered,
   PlugZap,
   RadioTower,
   Repeat2,
+  Server,
   ShieldCheck,
   Wrench,
-  type LucideIcon,
 } from "lucide-react"
 
-import { AdminActionButton } from "@/components/admin/admin-action-button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent } from "@/components/ui/card"
 import { Separator } from "@/components/ui/separator"
@@ -60,55 +63,63 @@ function emptyMessageFor(groupKey: AdminGroup["key"]) {
   }
 }
 
-function groupIconFor(groupKey: AdminGroup["key"]): LucideIcon {
+function renderGroupIcon(groupKey: AdminGroup["key"]) {
+  const className = "h-4 w-4 text-muted-foreground"
+
   switch (groupKey) {
     case "status":
-      return Activity
+      return <Activity className={className} />
     case "operations":
-      return Wrench
+      return <Wrench className={className} />
     case "administration":
-      return ShieldCheck
+      return <ShieldCheck className={className} />
     default:
-      return Activity
+      return <Activity className={className} />
   }
 }
 
-function statusIconFor(label: string): LucideIcon {
+function renderStatusIcon(label: string) {
   const key = label.trim().toLowerCase()
+  const className = "h-4 w-4 shrink-0 text-muted-foreground"
 
-  if (key === "api") return PlugZap
-  if (key === "mode") return Gauge
-  if (key === "liquidsoap") return RadioTower
-  if (key === "queues") return ListOrdered
-  if (key === "live time") return Clock3
-  if (key === "rebroadcast") return Repeat2
-  if (key === "last product") return FileText
-  if (key === "config") return Fingerprint
+  if (key === "api") return <PlugZap className={className} />
+  if (key === "mode") return <Gauge className={className} />
+  if (key === "liquidsoap") return <RadioTower className={className} />
+  if (key === "queues") return <ListOrdered className={className} />
+  if (key === "live time") return <Clock3 className={className} />
+  if (key === "rebroadcast") return <Repeat2 className={className} />
+  if (key === "last product") return <FileText className={className} />
+  if (key === "config") return <Fingerprint className={className} />
+  if (key === "filesystem") return <Server className={className} />
+  if (key === "root") return <Folder className={className} />
+  if (key === "public url") return <Link2 className={className} />
+  if (key === "index") return <FileText className={className} />
+  if (key === "wallpapers") return <ImageIcon className={className} />
+  if (key === "cme assets") return <Folder className={className} />
+  if (key === "tokens") return <KeyRound className={className} />
+  if (key === "pbx sync") return <Repeat2 className={className} />
+  if (key === "updated") return <Clock3 className={className} />
 
-  return Activity
+  return <Activity className={className} />
 }
 
 function StatusList({ items }: { items: AdminStatusItem[] }) {
   return (
     <div className="space-y-2">
-      {items.map((item) => {
-        const Icon = statusIconFor(item.label)
-
-        return (
-          <div
-            key={item.label}
-            className="flex items-start justify-between gap-3 rounded-xl border bg-background/40 px-3 py-2 text-sm"
-          >
-            <div className="flex min-w-0 items-center gap-2.5">
-              <Icon className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <div className="text-muted-foreground">{item.label}</div>
-            </div>
-            <div className={`text-right font-medium ${toneClass(item.tone)}`}>
-              {item.value}
-            </div>
+      {items.map((item) => (
+        <div
+          key={item.label}
+          className="flex items-start justify-between gap-3 rounded-xl border bg-background/40 px-3 py-2 text-sm"
+        >
+          <div className="flex min-w-0 items-center gap-2.5">
+            {renderStatusIcon(item.label)}
+            <div className="text-muted-foreground">{item.label}</div>
           </div>
-        )
-      })}
+          <div className={`max-w-[65%] break-words text-right font-medium ${toneClass(item.tone)}`}>
+            {item.value}
+          </div>
+        </div>
+      ))}
     </div>
   )
 }
@@ -159,13 +170,12 @@ function GroupBlock({ group }: { group: AdminGroup }) {
   const actions = visibleActions(group.actions)
   const hasStatus = Boolean(group.statusItems?.length)
   const hasActions = actions.length > 0
-  const GroupIcon = groupIconFor(group.key)
 
   return (
     <section className="space-y-3 rounded-2xl border bg-card/40 p-4">
       <div>
         <div className="flex items-center gap-2">
-          <GroupIcon className="h-4 w-4 text-muted-foreground" />
+          {renderGroupIcon(group.key)}
           <div className="text-base font-semibold">{group.title}</div>
         </div>
         <div className="mt-1 text-sm text-muted-foreground">{group.summary}</div>
