@@ -8,9 +8,9 @@ import { Phone, Activity, GitBranch, Shield, ArrowUpRight } from "lucide-react"
 
 const links = [
   {
-    title: "Service status",
-    desc: "Uptime, endpoints, and external health checks.",
-    href: "https://status.seasonalnet.org",
+    title: "Observability",
+    desc: "Grafana dashboards from SeasonalMonitor.",
+    href: "https://grafana.seasonalnet.org",
     icon: Activity,
   },
   {
@@ -50,9 +50,9 @@ export default function Page() {
 
           <div className="mt-6 flex flex-wrap gap-3">
             <Button asChild>
-              <a href="https://status.seasonalnet.org" target="_blank" rel="noreferrer noopener">
+              <a href="https://grafana.seasonalnet.org" target="_blank" rel="noreferrer noopener">
                 <Activity className="mr-2 h-4 w-4" />
-                System Status
+                Open Grafana
               </a>
             </Button>
 

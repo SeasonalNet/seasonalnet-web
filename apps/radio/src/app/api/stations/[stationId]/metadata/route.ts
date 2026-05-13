@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cacheControlHeader, getCachedValue } from "@seasonalnet/shell/src/lib/server/cache";
 import { getStationMetaServerCfg } from "@/lib/server/station-metadata";
 
 export const runtime = "nodejs";
@@ -14,10 +15,10 @@ type Ctx = {
   params: Promise<{ stationId: string }>;
 };
 
-function asArray(x: any): IcecastSource[] {
+function asArray(x: unknown): IcecastSource[] {
   if (!x) return [];
-  if (Array.isArray(x)) return x.filter(Boolean);
-  if (typeof x === "object") return [x];
+  if (Array.isArray(x)) return x.filter((item): item is IcecastSource => Boolean(item) && typeof item === "object");
+  if (typeof x === "object") return [x as IcecastSource];
   return [];
 }
 
@@ -43,7 +44,7 @@ function pickSource(sources: IcecastSource[], mountPath?: string): IcecastSource
   return sources[0];
 }
 
-function pairsToObject(raw: any): Record<string, string> {
+function pairsToObject(raw: unknown): Record<string, string> {
   // Liquidsoap /nowplaying returns either:
   //   []  (no metadata)
   // or:
@@ -74,26 +75,19 @@ function safeArtworkUrl(u: string | undefined, fallback: string): string {
   return fallback;
 }
 
-export async function GET(request: NextRequest, context: Ctx) {
-  const { stationId } = await context.params;
-
+async function buildStationMetadata(stationId: string, mountPath?: string) {
   const cfg = getStationMetaServerCfg(stationId);
-  if (!cfg) {
-    return NextResponse.json({ error: "metadata not supported for this station" }, { status: 404 });
-  }
-
-  const mountParam = request.nextUrl.searchParams.get("mount") ?? undefined;
-  const mountPath = mountParam ? normalizeMount(mountParam) : undefined;
+  if (!cfg) return null;
 
   // --- 1) Prefer Liquidsoap nowplaying (SeasonalWeather "IP-RDS") ---
   // Put this in cfg later if you want; for now, keep it simple + explicit.
   const nowPlayingUrl = cfg.nowPlayingUrl;
-  
+
   if (nowPlayingUrl) {
     try {
       const r = await fetch(nowPlayingUrl, { cache: "no-store" });
       if (r.ok) {
-        const raw: any = await r.json();
+        const raw: unknown = await r.json();
         const m = pairsToObject(raw);
 
         const title = String(m.title ?? m.song ?? "").trim();
@@ -103,22 +97,19 @@ export async function GET(request: NextRequest, context: Ctx) {
 
         // Liquidsoap returns [] when it has nothing; only “win” if title exists.
         if (title) {
-          return NextResponse.json(
-            {
-              title,
-              artist,
-              album,
-              artworkUrl,
-              updatedAt: new Date().toISOString(),
-              mount: mountPath ?? null,
+          return {
+            title,
+            artist,
+            album,
+            artworkUrl,
+            updatedAt: new Date().toISOString(),
+            mount: mountPath ?? null,
 
-              // optional extra fields (won’t hurt anything)
-              sw_kind: m.sw_kind ?? null,
-              sw_cycle_key: m.sw_cycle_key ?? null,
-              sw_mode: m.sw_mode ?? null,
-            },
-            { headers: { "Cache-Control": "no-store, max-age=0" } }
-          );
+            // optional extra fields (won’t hurt anything)
+            sw_kind: m.sw_kind ?? null,
+            sw_cycle_key: m.sw_cycle_key ?? null,
+            sw_mode: m.sw_mode ?? null,
+          };
         }
       }
     } catch {
@@ -130,35 +121,61 @@ export async function GET(request: NextRequest, context: Ctx) {
   try {
     const r = await fetch(cfg.statusUrl, { cache: "no-store" });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const j: any = await r.json();
+    const j: unknown = await r.json();
+    const icestats = j && typeof j === "object" ? (j as { icestats?: { source?: unknown } }).icestats : undefined;
 
-    const sources = asArray(j?.icestats?.source);
+    const sources = asArray(icestats?.source);
     const s = pickSource(sources, mountPath);
 
     const streamTitle = String(s?.title ?? "").trim();
 
-    return NextResponse.json(
-      {
-        title: streamTitle || cfg.defaultArtist,
-        artist: cfg.defaultArtist,
-        album: cfg.defaultAlbum ?? "",
-        artworkUrl: cfg.defaultArtworkUrl ?? "",
-        updatedAt: new Date().toISOString(),
-        mount: mountPath ?? null,
-      },
-      { headers: { "Cache-Control": "no-store, max-age=0" } }
-    );
+    return {
+      title: streamTitle || cfg.defaultArtist,
+      artist: cfg.defaultArtist,
+      album: cfg.defaultAlbum ?? "",
+      artworkUrl: cfg.defaultArtworkUrl ?? "",
+      updatedAt: new Date().toISOString(),
+      mount: mountPath ?? null,
+    };
   } catch {
-    return NextResponse.json(
-      {
-        title: cfg.defaultArtist,
-        artist: cfg.defaultArtist,
-        album: cfg.defaultAlbum ?? "",
-        artworkUrl: cfg.defaultArtworkUrl ?? "",
-        updatedAt: new Date().toISOString(),
-        mount: mountPath ?? null,
-      },
-      { headers: { "Cache-Control": "no-store, max-age=0" } }
-    );
+    return {
+      title: cfg.defaultArtist,
+      artist: cfg.defaultArtist,
+      album: cfg.defaultAlbum ?? "",
+      artworkUrl: cfg.defaultArtworkUrl ?? "",
+      updatedAt: new Date().toISOString(),
+      mount: mountPath ?? null,
+    };
   }
+}
+
+export async function GET(request: NextRequest, context: Ctx) {
+  const { stationId } = await context.params;
+
+  const mountParam = request.nextUrl.searchParams.get("mount") ?? undefined;
+  const mountPath = mountParam ? normalizeMount(mountParam) : undefined;
+
+  if (!getStationMetaServerCfg(stationId)) {
+    return NextResponse.json({ error: "metadata not supported for this station" }, { status: 404 });
+  }
+
+  const cached = await getCachedValue(
+    {
+      key: `radio:station-metadata:${stationId}:${mountPath ?? "default"}`,
+      ttlMs: 5_000,
+      staleTtlMs: 30_000,
+    },
+    async () => {
+      const payload = await buildStationMetadata(stationId, mountPath);
+      if (!payload) throw new Error("metadata not supported for this station");
+      return payload;
+    },
+  );
+
+  return NextResponse.json(cached.value, {
+    headers: {
+      "Cache-Control": cacheControlHeader(5, 30),
+      "X-SeasonalNet-Cache": cached.status,
+    },
+  });
 }

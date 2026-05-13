@@ -1,7 +1,29 @@
 import { NextResponse } from "next/server"
+import { cacheControlHeader, getCachedValue } from "@seasonalnet/shell/src/lib/server/cache"
 import { gql } from "@/lib/freepbx-gql"
 
 export const runtime = "nodejs"
+
+type FetchAllExtensionsResult = {
+  fetchAllExtensions?: {
+    totalCount?: number | null
+    status?: unknown
+    message?: unknown
+  }
+}
+
+type FetchAllCdrsResult = {
+  fetchAllCdrs?: {
+    status?: unknown
+    message?: unknown
+    totalCount?: number | null
+    cdrs?: Array<{ calldate?: string | null }>
+  }
+}
+
+function errorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error)
+}
 
 function ymdLocal(d = new Date()) {
   const y = d.getFullYear()
@@ -45,7 +67,7 @@ function qCdrRows(startDate: string, endDate: string, first: number) {
 }
 
 async function fetchCdrCount(startDate: string, endDate: string, cap = 20000) {
-  const data = await gql<any>(qCdrRows(startDate, endDate, cap))
+  const data = await gql<FetchAllCdrsResult>(qCdrRows(startDate, endDate, cap))
   const node = data?.fetchAllCdrs
 
   const rows = Array.isArray(node?.cdrs) ? node.cdrs.length : 0
@@ -61,32 +83,33 @@ async function fetchCdrCount(startDate: string, endDate: string, cap = 20000) {
   }
 }
 
-export async function GET() {
+async function buildMetrics() {
   const enabled = process.env.FREEPBX_METRICS_ENABLED === "1"
   if (!enabled) {
-    return NextResponse.json({ enabled: false, generatedAt: new Date().toISOString() })
+    return { enabled: false, generatedAt: new Date().toISOString() }
   }
 
   const today = ymdLocal()
   const monthStart = `${today.slice(0, 8)}01`
   const allTimeStart = "1970-01-01"
 
-  const out: any = {
+  const out: Record<string, unknown> = {
     enabled: true,
     generatedAt: new Date().toISOString(),
   }
+  const truncations: boolean[] = []
 
   // Extensions
   try {
-    const ext = await gql<any>(qExt())
+    const ext = await gql<FetchAllExtensionsResult>(qExt())
     out.extensionCount = ext?.fetchAllExtensions?.totalCount ?? null
     out._ext = {
       status: ext?.fetchAllExtensions?.status,
       message: ext?.fetchAllExtensions?.message,
     }
-  } catch (e: any) {
-    out.error = `Extensions query failed: ${e?.message ?? String(e)}`
-    return NextResponse.json(out)
+  } catch (error: unknown) {
+    out.error = `Extensions query failed: ${errorMessage(error)}`
+    return out
   }
 
   // CDR counts by counting returned rows
@@ -94,38 +117,55 @@ export async function GET() {
     const todayRes = await fetchCdrCount(today, today)
     out.callsToday = todayRes.count
     out._cdrToday = todayRes
-  } catch (e: any) {
+    truncations.push(todayRes.truncated)
+  } catch (error: unknown) {
     out.callsToday = null
-    out._cdrToday = { status: false, message: e?.message ?? String(e) }
+    out._cdrToday = { status: false, message: errorMessage(error) }
   }
 
   try {
     const monthRes = await fetchCdrCount(monthStart, today)
     out.callsThisMonth = monthRes.count
     out._cdrMonth = monthRes
-  } catch (e: any) {
+    truncations.push(monthRes.truncated)
+  } catch (error: unknown) {
     out.callsThisMonth = null
-    out._cdrMonth = { status: false, message: e?.message ?? String(e) }
+    out._cdrMonth = { status: false, message: errorMessage(error) }
   }
 
   try {
     const totalRes = await fetchCdrCount(allTimeStart, today)
     out.totalCalls = totalRes.count
     out._cdrTotal = totalRes
-  } catch (e: any) {
+    truncations.push(totalRes.truncated)
+  } catch (error: unknown) {
     out.totalCalls = null
-    out._cdrTotal = { status: false, message: e?.message ?? String(e) }
+    out._cdrTotal = { status: false, message: errorMessage(error) }
   }
 
   // If we ever hit cap, surface a warning (so you know to paginate later)
-  const anyTrunc =
-    out._cdrToday?.truncated || out._cdrMonth?.truncated || out._cdrTotal?.truncated
-  if (anyTrunc) {
+  if (truncations.some(Boolean)) {
     out.warning =
       "CDR results hit the safety cap; counts may be truncated. Increase cap or implement pagination."
   }
 
-  return NextResponse.json(out, {
-    headers: { "Cache-Control": "public, max-age=30, s-maxage=30" },
+  return out
+}
+
+export async function GET() {
+  const cached = await getCachedValue(
+    {
+      key: "pbx:metrics",
+      ttlMs: 30_000,
+      staleTtlMs: 2 * 60_000,
+    },
+    buildMetrics,
+  )
+
+  return NextResponse.json(cached.value, {
+    headers: {
+      "Cache-Control": cacheControlHeader(30, 120),
+      "X-SeasonalNet-Cache": cached.status,
+    },
   })
 }

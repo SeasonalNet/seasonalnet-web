@@ -26,7 +26,7 @@ export const site = {
   footerNote: "Built to be fast, boring, and resilient.",
   primary: [
     { title: "Go to Radio", href: "https://radio.seasonalnet.org/", icon: Radio },
-    { title: "System Status", href: "https://status.seasonalnet.org/", icon: Activity },
+    { title: "Open Grafana", href: "https://grafana.seasonalnet.org/", icon: Activity },
   ],
   portals: [
     {
@@ -62,10 +62,10 @@ export const site = {
       external: true,
     },
     {
-      key: "status",
-      title: "Status",
-      description: "Uptime Kuma dashboards and health checks.",
-      href: "https://status.seasonalnet.org/",
+      key: "grafana",
+      title: "Grafana",
+      description: "SeasonalMonitor dashboards and observability.",
+      href: "https://grafana.seasonalnet.org/",
       icon: Activity,
       external: true,
     },

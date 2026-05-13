@@ -1,5 +1,6 @@
 // src/app/api/stations/[stationId]/handled-alerts/route.ts
 import { NextResponse } from "next/server"
+import { cacheControlHeader, getCachedValue } from "@seasonalnet/shell/src/lib/server/cache"
 import { STATION_HANDLED_ALERTS } from "@/lib/station-handled-alert-config"
 import { STATION_HANDLED_FEEDS } from "@/lib/server/station-handled-feed-config"
 
@@ -27,6 +28,12 @@ type StationAlertFeedV1 = {
   generatedAt?: string
   source?: string
   alerts?: unknown
+}
+
+type UnknownRecord = Record<string, unknown>
+
+function asRecord(v: unknown): UnknownRecord | null {
+  return v && typeof v === "object" ? (v as UnknownRecord) : null
 }
 
 function clamp(s: unknown, max = 800): string {
@@ -59,7 +66,7 @@ function uniqStrings(v: unknown): string[] {
   return out
 }
 
-function normalizeFrom(v: any): FeedSender | null {
+function normalizeFrom(v: unknown): FeedSender | null {
   if (!v) return null
 
   if (typeof v === "string") {
@@ -67,9 +74,10 @@ function normalizeFrom(v: any): FeedSender | null {
     return name ? { name, kind: "unknown" } : null
   }
 
-  if (typeof v === "object") {
-    const name = String(v.name ?? v.sender ?? v.from ?? "").trim()
-    const kindRaw = String(v.kind ?? v.type ?? "").toLowerCase()
+  const record = asRecord(v)
+  if (record) {
+    const name = String(record.name ?? record.sender ?? record.from ?? "").trim()
+    const kindRaw = String(record.kind ?? record.type ?? "").toLowerCase()
     const kind =
       kindRaw === "relay" ? "relay" :
       kindRaw === "origin" ? "origin" :
@@ -82,36 +90,38 @@ function normalizeFrom(v: any): FeedSender | null {
   return null
 }
 
-function normalizeAlert(raw: any): StationFeedAlert | null {
-  if (!raw || typeof raw !== "object") return null
+function normalizeAlert(raw: unknown): StationFeedAlert | null {
+  const record = asRecord(raw)
+  if (!record) return null
 
-  const id = clamp(raw.id ?? raw.capId ?? raw.nwsId ?? raw.uri ?? "", 300).trim()
+  const id = clamp(record.id ?? record.capId ?? record.nwsId ?? record.uri ?? "", 300).trim()
   if (!id) return null
 
-  const sameCodes = uniqStrings(raw.sameCodes ?? raw.same ?? raw.geocode?.SAME)
+  const geocode = asRecord(record.geocode)
+  const sameCodes = uniqStrings(record.sameCodes ?? record.same ?? geocode?.SAME)
+  const rawLinks = asRecord(record.links)
 
-  const links =
-    raw.links && typeof raw.links === "object"
-      ? {
-          primary: typeof raw.links.primary === "string" ? raw.links.primary : undefined,
-          nws: typeof raw.links.nws === "string" ? raw.links.nws : undefined,
-        }
-      : undefined
+  const links = rawLinks
+    ? {
+        primary: typeof rawLinks.primary === "string" ? rawLinks.primary : undefined,
+        nws: typeof rawLinks.nws === "string" ? rawLinks.nws : undefined,
+      }
+    : undefined
 
   return {
     id,
-    event: clamp(raw.event ?? "Alert", 120).trim() || "Alert",
-    headline: textOrEmpty(raw.headline),
-    severity: clamp(raw.severity ?? "Unknown", 24).trim() || "Unknown",
-    urgency: clamp(raw.urgency ?? "Unknown", 24).trim() || "Unknown",
-    certainty: clamp(raw.certainty ?? "Unknown", 24).trim() || "Unknown",
-    area: textOrEmpty(raw.area ?? raw.areaDesc),
-    effective: toIsoOrNull(raw.effective),
-    ends: toIsoOrNull(raw.ends),
-    expires: toIsoOrNull(raw.expires),
-    sent: toIsoOrNull(raw.sent),
+    event: clamp(record.event ?? "Alert", 120).trim() || "Alert",
+    headline: textOrEmpty(record.headline),
+    severity: clamp(record.severity ?? "Unknown", 24).trim() || "Unknown",
+    urgency: clamp(record.urgency ?? "Unknown", 24).trim() || "Unknown",
+    certainty: clamp(record.certainty ?? "Unknown", 24).trim() || "Unknown",
+    area: textOrEmpty(record.area ?? record.areaDesc),
+    effective: toIsoOrNull(record.effective),
+    ends: toIsoOrNull(record.ends),
+    expires: toIsoOrNull(record.expires),
+    sent: toIsoOrNull(record.sent),
     sameCodes,
-    from: normalizeFrom(raw.from ?? raw.sender),
+    from: normalizeFrom(record.from ?? record.sender),
     links,
   }
 }
@@ -126,25 +136,22 @@ async function fetchJsonWithTimeout(url: string, init: RequestInit, timeoutMs: n
   }
 }
 
-export async function GET(_req: Request, ctx: { params: Promise<{ stationId: string }> }) {
-  const { stationId } = await ctx.params
-
-  // Config gate: if not enabled, return a calm "disabled" payload (200).
+async function buildHandledAlerts(stationId: string) {
   const uiCfg = STATION_HANDLED_ALERTS[stationId]
   if (!uiCfg) {
-    return NextResponse.json({
+    return {
       ok: true,
       enabled: false,
       stationId,
       source: "station_feed",
       generatedAt: new Date().toISOString(),
       alerts: [],
-    })
+    }
   }
 
   const feedCfg = STATION_HANDLED_FEEDS[stationId]
   if (!feedCfg) {
-    return NextResponse.json({
+    return {
       ok: false,
       enabled: true,
       stationId,
@@ -152,7 +159,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ stationId: str
       generatedAt: new Date().toISOString(),
       error: "station enabled but no server feed config",
       alerts: [],
-    })
+    }
   }
 
   const headers: Record<string, string> = {
@@ -171,12 +178,12 @@ export async function GET(_req: Request, ctx: { params: Promise<{ stationId: str
   try {
     const res = await fetchJsonWithTimeout(
       feedCfg.feedUrl,
-      { headers, next: { revalidate } as any },
+      { headers, next: { revalidate } } as RequestInit & { next: { revalidate: number } },
       8000
     )
 
     if (!res.ok) {
-      return NextResponse.json({
+      return {
         ok: false,
         enabled: true,
         stationId,
@@ -184,23 +191,23 @@ export async function GET(_req: Request, ctx: { params: Promise<{ stationId: str
         generatedAt: new Date().toISOString(),
         error: `feed http ${res.status}`,
         alerts: [],
-      })
+      }
     }
 
     data = (await res.json()) as StationAlertFeedV1
-  } catch (e: any) {
-    return NextResponse.json({
+  } catch (e: unknown) {
+    return {
       ok: false,
       enabled: true,
       stationId,
       source: "station_feed",
       generatedAt: new Date().toISOString(),
-      error: e?.name === "AbortError" ? "feed timeout" : "feed fetch failed",
+      error: e instanceof Error && e.name === "AbortError" ? "feed timeout" : "feed fetch failed",
       alerts: [],
-    })
+    }
   }
 
-  const rawAlerts = Array.isArray(data?.alerts) ? (data!.alerts as any[]) : []
+  const rawAlerts = Array.isArray(data?.alerts) ? (data.alerts as unknown[]) : []
   const normalized: StationFeedAlert[] = []
   for (const a of rawAlerts) {
     const n = normalizeAlert(a)
@@ -217,7 +224,7 @@ export async function GET(_req: Request, ctx: { params: Promise<{ stationId: str
     return aEnd - bEnd
   })
 
-  return NextResponse.json({
+  return {
     ok: true,
     enabled: true,
     stationId,
@@ -226,5 +233,28 @@ export async function GET(_req: Request, ctx: { params: Promise<{ stationId: str
       ? (toIsoOrNull(data.generatedAt) ?? new Date().toISOString())
       : new Date().toISOString(),
     alerts: normalized,
+  }
+}
+
+export async function GET(_req: Request, ctx: { params: Promise<{ stationId: string }> }) {
+  const { stationId } = await ctx.params
+
+  const feedCfg = STATION_HANDLED_FEEDS[stationId]
+  const ttlSeconds = Math.max(1, Math.floor(feedCfg?.revalidateSeconds ?? 10))
+
+  const cached = await getCachedValue(
+    {
+      key: `radio:handled-alerts:${stationId}`,
+      ttlMs: ttlSeconds * 1000,
+      staleTtlMs: Math.max(30_000, ttlSeconds * 5_000),
+    },
+    () => buildHandledAlerts(stationId),
+  )
+
+  return NextResponse.json(cached.value, {
+    headers: {
+      "Cache-Control": cacheControlHeader(ttlSeconds, Math.max(30, ttlSeconds * 5)),
+      "X-SeasonalNet-Cache": cached.status,
+    },
   })
 }

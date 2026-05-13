@@ -130,4 +130,4 @@ SeasonalWeb receives public HTTP/HTTPS traffic and routes hostname-based service
 - CME-rack Dell PowerEdge R230 and SeasonalR340 use Main-LAN addressing over VLAN 99 transit rather than sitting behind `10.42.2.0/24` on SeasonalEDGE-R1
 - SeasonalMonitor SNMP polling and Redfish collection still need to be expanded after the CME rack/backhaul path is stable enough for reliable polling
 - SeasonalBRIDGE-NONROOT BVI1 still has stale `ipv6 address dhcp` / `ipv6 address autoconfig` — clean up via console next opportunity
-- Decide what should replace SeasonalUtilities / Uptime Kuma for `status.seasonalnet.org`, or formally document that the public status service is retired.
+- Treat `status.seasonalnet.org` as retired with SeasonalUtilities; use `grafana.seasonalnet.org` as the SeasonalMonitor observability front door.

@@ -1,5 +1,7 @@
 import "server-only"
 
+import { getCachedValue } from "@seasonalnet/shell/src/lib/server/cache"
+
 export type SeasonalWeatherOverview = {
   configured: boolean
   reachable: boolean
@@ -70,7 +72,7 @@ async function seasonalWeatherFetch(path: string, init: RequestInit = {}, tokenK
   return res.json()
 }
 
-export async function getSeasonalWeatherOverview(): Promise<SeasonalWeatherOverview> {
+async function getSeasonalWeatherOverviewFresh(): Promise<SeasonalWeatherOverview> {
   if (!API_BASE || !READ_TOKEN) {
     return {
       configured: false,
@@ -130,4 +132,17 @@ export async function getSeasonalWeatherOverview(): Promise<SeasonalWeatherOverv
       error: error instanceof Error ? error.message : "Unable to reach SeasonalWeather.",
     }
   }
+}
+
+export async function getSeasonalWeatherOverview(): Promise<SeasonalWeatherOverview> {
+  const cached = await getCachedValue(
+    {
+      key: "admin:seasonalweather:overview",
+      ttlMs: 10_000,
+      staleTtlMs: 60_000,
+    },
+    getSeasonalWeatherOverviewFresh,
+  )
+
+  return cached.value
 }

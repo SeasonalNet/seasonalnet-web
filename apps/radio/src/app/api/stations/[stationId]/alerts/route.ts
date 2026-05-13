@@ -1,5 +1,6 @@
 // src/app/api/stations/[stationId]/alerts/route.ts
 import { NextResponse } from "next/server"
+import { cacheControlHeader, getCachedValue } from "@seasonalnet/shell/src/lib/server/cache"
 import { STATION_ALERTS } from "@/lib/station-alert-config"
 import { sameCodesIntersectServiceArea, sameToMarineZone } from "@/lib/alert-map-utils"
 
@@ -72,15 +73,9 @@ async function fetchNwsActiveAlertsByZone(zone: string, ua: string): Promise<Nws
   return Array.isArray(data?.features) ? (data.features as NwsFeature[]) : []
 }
 
-export async function GET(
-  _req: Request,
-  ctx: { params: Promise<{ stationId: string }> }
-) {
-  const { stationId } = await ctx.params
+async function buildStationAlerts(stationId: string) {
   const cfg = STATION_ALERTS[stationId]
-  if (!cfg) {
-    return NextResponse.json({ error: "unknown stationId" }, { status: 404 })
-  }
+  if (!cfg) return null
 
   const ua = "(seasonalnet.org, info@seasonalnet.org)"
 
@@ -151,11 +146,41 @@ export async function GET(
     return aEnd - bEnd
   })
 
-  return NextResponse.json({
+  return {
     stationId,
     serviceAreaName: cfg.serviceAreaName,
     generatedAt: new Date().toISOString(),
     source: "nws",
     alerts,
+  }
+}
+
+export async function GET(
+  _req: Request,
+  ctx: { params: Promise<{ stationId: string }> }
+) {
+  const { stationId } = await ctx.params
+  if (!STATION_ALERTS[stationId]) {
+    return NextResponse.json({ error: "unknown stationId" }, { status: 404 })
+  }
+
+  const cached = await getCachedValue(
+    {
+      key: `radio:station-alerts:${stationId}`,
+      ttlMs: 60_000,
+      staleTtlMs: 5 * 60_000,
+    },
+    async () => {
+      const payload = await buildStationAlerts(stationId)
+      if (!payload) throw new Error("unknown stationId")
+      return payload
+    },
+  )
+
+  return NextResponse.json(cached.value, {
+    headers: {
+      "Cache-Control": cacheControlHeader(60, 300),
+      "X-SeasonalNet-Cache": cached.status,
+    },
   })
 }
