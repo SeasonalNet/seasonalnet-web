@@ -14,7 +14,7 @@ Top-level index of all SeasonalNet network segments. For full topology detail, s
 | Main LAN | `192.168.1.0/24` | ISP-assigned (native) | `192.168.1.1` | [`LANs/seasonalnet-lan-map.md`](/docs/network/lans/main-lan) |
 | SeasonalCME Voice | `10.42.0.0/24` (VLAN 10) | `FD42:42::/64` | `10.42.0.1` | [`LANs/seasonalcme-network-map.md`](/docs/network/lans/seasonalcme) |
 | SeasonalCME Management | `10.42.2.0/24` (VLAN 42) | `FD42:42:2::/64` | `10.42.2.1` | [`LANs/seasonalcme-network-map.md`](/docs/network/lans/seasonalcme) |
-| Phone-LAN | `192.168.56.0/24` | `FD42:56::/64` | `192.168.56.10` | [`LANs/phonelan-map.md`](/docs/network/lans/phone-lan) |
+| Phone-LAN | `192.168.56.0/24` | `FD42:56::/64` | `192.168.56.1` | [`LANs/phonelan-map.md`](/docs/network/lans/phone-lan) |
 
 ---
 
@@ -32,9 +32,9 @@ Main LAN (192.168.1.0/24)
     |       |-- SeasonalCME Voice VLAN (10.42.0.0/24, VLAN 10)
     |       `-- SeasonalCME Management VLAN (10.42.2.0/24, VLAN 42)
     |
-    `-- FreePBX17 (192.168.1.12)
+    `-- SeasonalPBX (192.168.1.12)
             |
-            `-- Phone-LAN (192.168.56.0/24)
+            `-- Phone-LAN (192.168.56.0/24, gateway 192.168.56.1)
 ```
 
 ---
@@ -45,10 +45,10 @@ Main LAN (192.168.1.0/24)
 |---|---|---|---|
 | HTTP | 80 | TCP | SeasonalWeb (`192.168.1.8`) |
 | HTTPS | 443 | TCP | SeasonalWeb (`192.168.1.8`) |
-| SIP | 5060 | TCP+UDP | FreePBX17 (`192.168.1.12`) |
-| SIP TLS | 5061 | TCP | FreePBX17 (`192.168.1.12`) |
-| IAX2 | 4569 | UDP | FreePBX17 (`192.168.1.12`) |
-| RTP | 10000–20000 | UDP | FreePBX17 (`192.168.1.12`) |
+| SIP | 5060 | TCP+UDP | SeasonalPBX (`192.168.1.12`) |
+| SIP TLS | 5061 | TCP | SeasonalPBX (`192.168.1.12`) |
+| IAX2 | 4569 | UDP | SeasonalPBX (`192.168.1.12`) |
+| RTP | 10000–20000 | UDP | SeasonalPBX (`192.168.1.12`) |
 
 SeasonalWeb performs hostname-based routing for public web services behind the shared 80/443 forwards. `grafana.seasonalnet.org` is routed by SeasonalWeb to Grafana on SeasonalMonitor (`192.168.1.15:3000`) and uses Authentik OAuth/OIDC. Prometheus on SeasonalMonitor (`192.168.1.15:9090`) remains private and is not exposed as a public hostname.
 
@@ -62,4 +62,4 @@ Cloudflare remains authoritative public DNS for `seasonalnet.org`. SeasonalDNS i
 |---|---|---|
 | Main LAN | SeasonalDNS / Technitium (`192.168.1.14`) for internal DNS; WNC-CR200A (`192.168.1.1`) remains DHCP/default gateway | Verizon WNC-CR200A |
 | SeasonalCME | SeasonalEDGE-R1 (OSPF 42 domain) | SeasonalEDGE-R1 |
-| Phone-LAN | `dnsmasq` on FreePBX17 (`192.168.56.10`) | `dnsmasq` on FreePBX17 |
+| Phone-LAN | `dnsmasq` on SeasonalPBX (`192.168.56.1`, `FD42:56::1`) | `dnsmasq` on SeasonalPBX |
