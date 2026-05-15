@@ -44,7 +44,7 @@ The radio app reads SeasonalWeather server-side endpoints for station-handled al
 | --- | --- | --- |
 | `SEASONALWEATHER_HOST` | `192.168.1.10` | Shared host used by the default URLs. |
 | `SEASONALWEATHER_API_BASE_URL` | `http://$SEASONALWEATHER_HOST` | Base URL for the SeasonalWeather station API. |
-| `SEASONALWEATHER_HANDLED_ALERTS_URL` | `$SEASONALWEATHER_API_BASE_URL/api/v1/handled-alerts` | Full station-handled alerts feed URL. The legacy JSON path is still valid only as a compatibility fallback. |
+| `SEASONALWEATHER_HANDLED_ALERTS_URL` | `$SEASONALWEATHER_API_BASE_URL/v1/handled-alerts` | Full station-handled alerts feed URL. |
 | `SEASONALWEATHER_ICECAST_STATUS_URL` | `http://$SEASONALWEATHER_HOST:8000/status-json.xsl` | Icecast status fallback metadata. |
 | `SEASONALWEATHER_NOWPLAYING_URL` | `http://$SEASONALWEATHER_HOST:7099/nowplaying` | Liquidsoap IP-RDS / now-playing metadata. |
 ## Alert map SAME coverage behavior
