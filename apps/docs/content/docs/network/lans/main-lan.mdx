@@ -64,6 +64,7 @@ VMs in this band are static-addressed service hosts. Most are hosted on `seasona
 | `192.168.1.21` | SeasonalR230 | Dell PowerEdge R230 / Proxmox host on Main LAN via CME rack VLAN 99 transit path |
 | `192.168.1.22` | SeasonalR340 | Dell PowerEdge R340 / Proxmox VE host on Main LAN via CME rack VLAN 99 transit path. Hosts the SeasonalBack PBS VM at `192.168.1.16`; this is no longer the PBS service address itself. |
 | `192.168.1.23` | SeasonalR340-iDRAC | Dell PowerEdge R340 out-of-band management on Main LAN via CME rack VLAN 99 transit path |
+| `192.168.1.24` | seasonal-teal-laptop | VirtualBox-capable physical host with no resident VMs; used as jump box to SeasonalCME network (`10.42.0.0/24`) |
 
 ---
 
@@ -129,7 +130,6 @@ SeasonalWeb receives public HTTP/HTTPS traffic and routes hostname-based service
 
 ## Known Remaining Items
 
-- `seasonal-teal-laptop` is dynamic (`.240` area) — candidate for `.20–.49` static band
 - CME-rack Dell PowerEdge R230 and SeasonalR340 use Main-LAN addressing over VLAN 99 transit rather than sitting behind `10.42.2.0/24` on SeasonalEDGE-R1
 - SeasonalBack currently stores PBS data on its VM root filesystem / single virtual disk. Re-document if a separate datastore disk, passthrough disk, or direct-attached storage layout is added.
 - SeasonalMonitor SNMP polling and Redfish collection still need to be expanded after the CME rack/backhaul path is stable enough for reliable polling
