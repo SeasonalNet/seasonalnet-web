@@ -27,14 +27,20 @@ Verizon WNC-CR200A (192.168.1.1)
     |
 Main LAN (192.168.1.0/24)
     |
+    |-- SeasonalWX (192.168.1.10)
+    |       `-- Current SeasonalWeather VM / weather radio API
+    |
     |-- SeasonalEDGE-R1 (192.168.1.4)
     |       |
     |       |-- SeasonalCME Voice VLAN (10.42.0.0/24, VLAN 10)
     |       `-- SeasonalCME Management VLAN (10.42.2.0/24, VLAN 42)
     |
-    `-- SeasonalPBX (192.168.1.12)
-            |
-            `-- Phone-LAN (192.168.56.0/24, gateway 192.168.56.1)
+    |-- SeasonalPBX (192.168.1.12)
+    |       |
+    |       `-- Phone-LAN (192.168.56.0/24, gateway 192.168.56.1)
+    |
+    `-- SeasonalR340 (192.168.1.22)
+            `-- SeasonalBack PBS VM (192.168.1.16)
 ```
 
 ---
@@ -49,6 +55,12 @@ Main LAN (192.168.1.0/24)
 | SIP TLS | 5061 | TCP | SeasonalPBX (`192.168.1.12`) |
 | IAX2 | 4569 | UDP | SeasonalPBX (`192.168.1.12`) |
 | RTP | 10000–20000 | UDP | SeasonalPBX (`192.168.1.12`) |
+| SMTP | 25 | TCP | SeasonalMail (`192.168.1.13`) |
+| Submission | 587 | TCP | SeasonalMail (`192.168.1.13`) |
+| SMTPS | 465 | TCP | SeasonalMail (`192.168.1.13`) |
+| IMAP | 143 | TCP | SeasonalMail (`192.168.1.13`) |
+| POP3 | 110 | TCP | SeasonalMail (`192.168.1.13`) |
+| POP3S | 995 | TCP | SeasonalMail (`192.168.1.13`) |
 
 SeasonalWeb performs hostname-based routing for public web services behind the shared 80/443 forwards. `grafana.seasonalnet.org` is routed by SeasonalWeb to Grafana on SeasonalMonitor (`192.168.1.15:3000`) and uses Authentik OAuth/OIDC. Prometheus on SeasonalMonitor (`192.168.1.15:9090`) remains private and is not exposed as a public hostname.
 
@@ -56,7 +68,7 @@ SeasonalWeb performs hostname-based routing for public web services behind the s
 
 ## DNS / DHCP
 
-Cloudflare remains authoritative public DNS for `seasonalnet.org`. SeasonalDNS is for internal LAN recursion/local records only.
+Cloudflare remains authoritative public DNS for `seasonalnet.org`. SeasonalDNS is for internal LAN recursion/local records only. Current internal aliases include `wx.lan.seasonalnet.org`, `seasonalwx.lan.seasonalnet.org`, and `seasonalweather.lan.seasonalnet.org` for SeasonalWX (`192.168.1.10`), plus `seasonalback.lan.seasonalnet.org` with `back.lan.seasonalnet.org` as a service alias for SeasonalBack (`192.168.1.16`).
 
 | Segment | DNS | DHCP |
 |---|---|---|
