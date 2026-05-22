@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 
 import {
+  SeasonalWeatherApiError,
   seasonalWeatherApi,
   type SeasonalWeatherCapability,
 } from "@/lib/server/modules/seasonalweather-api"
@@ -112,10 +113,23 @@ async function handle(
 
     return NextResponse.json(result)
   } catch (error) {
+    if (error instanceof SeasonalWeatherApiError) {
+      return NextResponse.json(
+        {
+          error:
+            typeof error.body === "object" && error.body?.error
+              ? error.body.error
+              : { message: error.message },
+          upstream_status: error.status,
+        },
+        { status: error.status }
+      )
+    }
+
     const message =
       error instanceof Error ? error.message : "Unexpected upstream error"
 
-    return NextResponse.json({ error: message }, { status: 500 })
+    return NextResponse.json({ error: { message } }, { status: 500 })
   }
 }
 

@@ -28,3 +28,23 @@ sidebar-driven control plane.
 
 - SeasonalPBX
 - SeasonalRadio
+
+
+## SeasonalWeather backend wiring
+
+The admin app server-side API routes proxy SeasonalWeather control calls. Configure the
+admin app runtime with a reachable SeasonalWeather HTTP base URL and the matching API
+tokens:
+
+```env
+SEASONALWEATHER_API_BASE=http://wx.lan.seasonalnet.org
+SEASONALWEATHER_READ_TOKEN=...
+SEASONALWEATHER_CONTROL_TOKEN=...
+SEASONALWEATHER_ORIGINATE_TOKEN=...
+SEASONALWEATHER_CONFIG_TOKEN=... # optional; falls back to CONTROL token
+```
+
+Do not rely on `127.0.0.1` unless SeasonalWeather is running on the same host as the
+admin Next.js process. For the normal SeasonalNet split-host deployment, point this at
+the SeasonalWX nginx proxy or another internal reverse proxy that can reach the local
+SeasonalWeather daemon.

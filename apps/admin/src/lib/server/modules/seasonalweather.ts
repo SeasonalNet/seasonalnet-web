@@ -22,7 +22,7 @@ export type SeasonalWeatherOverview = {
   error?: string
 }
 
-const API_BASE = process.env.SEASONALWEATHER_API_BASE
+const API_BASE = process.env.SEASONALWEATHER_API_BASE?.trim().replace(/\/+$/, "")
 const READ_TOKEN = process.env.SEASONALWEATHER_READ_TOKEN
 const CONTROL_TOKEN = process.env.SEASONALWEATHER_CONTROL_TOKEN
 const ORIGINATE_TOKEN = process.env.SEASONALWEATHER_ORIGINATE_TOKEN
