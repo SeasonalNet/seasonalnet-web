@@ -27,6 +27,9 @@ Verizon WNC-CR200A (192.168.1.1)
     |
 Main LAN (192.168.1.0/24)
     |
+    |-- SeasonalR230 (192.168.1.21)
+    |       `-- Primary Proxmox VM host for SeasonalDNS/Auth/Forge/Mail/Monitor/PBX/WX/Rain/Web
+    |
     |-- SeasonalWX (192.168.1.10)
     |       `-- Current SeasonalWeather VM / weather radio API
     |
@@ -68,7 +71,7 @@ SeasonalWeb performs hostname-based routing for public web services behind the s
 
 ## DNS / DHCP
 
-Cloudflare remains authoritative public DNS for `seasonalnet.org`. SeasonalDNS is for internal LAN recursion/local records only. Current internal aliases include `wx.lan.seasonalnet.org`, `seasonalwx.lan.seasonalnet.org`, and `seasonalweather.lan.seasonalnet.org` for SeasonalWX (`192.168.1.10`), plus `seasonalback.lan.seasonalnet.org` with `back.lan.seasonalnet.org` as a service alias for SeasonalBack (`192.168.1.16`).
+Cloudflare remains authoritative public DNS for `seasonalnet.org`. SeasonalDNS is for internal LAN recursion/local records only. Current internal aliases include `wx.lan.seasonalnet.org`, `seasonalwx.lan.seasonalnet.org`, and `seasonalweather.lan.seasonalnet.org` for SeasonalWX (`192.168.1.10`), plus `seasonalback.lan.seasonalnet.org` with `back.lan.seasonalnet.org` as a service alias for SeasonalBack (`192.168.1.16`). SeasonalR230 is the primary Proxmox host for the active service VM fleet; SeasonalBack remains hosted on SeasonalR340.
 
 | Segment | DNS | DHCP |
 |---|---|---|

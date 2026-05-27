@@ -5,9 +5,9 @@ description: "Routing, services, and attached-device map for the Phone-LAN segme
 
 **IPv4 subnet:** `192.168.56.0/24`  
 **IPv6 ULA:** `FD42:56::/64`  
-**IPv4 gateway:** `192.168.56.1` (SeasonalPBX `enp0s9`)
-**IPv6 gateway:** `FD42:56::1` (SeasonalPBX `enp0s9`)
-**Last updated:** 2026-05-12
+**IPv4 gateway:** `192.168.56.1` (SeasonalPBX Phone-LAN interface)
+**IPv6 gateway:** `FD42:56::1` (SeasonalPBX Phone-LAN interface)
+**Last updated:** 2026-05-26
 
 ---
 
@@ -15,7 +15,7 @@ description: "Routing, services, and attached-device map for the Phone-LAN segme
 
 | Range / Prefix | Purpose |
 |---|---|
-| `192.168.56.1` | Gateway / PBX / Phone-LAN services host (SeasonalPBX `enp0s9`) |
+| `192.168.56.1` | Gateway / PBX / Phone-LAN services host (SeasonalPBX Phone-LAN interface) |
 | `192.168.56.2 – .49` | Reserved static infrastructure / future devices |
 | `192.168.56.50 – .99` | Static or semi-static LAN devices |
 | `192.168.56.100 – .200` | DHCP pool / dynamic phone clients |
@@ -28,14 +28,11 @@ description: "Routing, services, and attached-device map for the Phone-LAN segme
 
 | IP / Prefix | Device | Interface | Notes |
 |---|---|---|---|
-| `192.168.56.1` | SeasonalPBX | `enp0s9` | Phone-LAN IPv4 gateway, DNS, DHCPv4, SIP services |
-| `FD42:56::1/64` | SeasonalPBX | `enp0s9` | Phone-LAN IPv6 ULA gateway / RA source |
-| `192.168.1.12` | SeasonalPBX | `enp0s8` | Main-LAN-facing uplink address |
-| `2600:1003:a012:e209:a00:27ff:fee1:b820/64` | SeasonalPBX | `enp0s8` | Dynamic native Main-LAN IPv6 address observed on 2026-05-12 |
-| link-local only | SeasonalPBX | `enp0s3` | VirtualBox NAT / installer-only interface; no current IPv4 address in latest capture |
+| `192.168.56.1` | SeasonalPBX | Phone-LAN interface | Phone-LAN IPv4 gateway, DNS, DHCPv4, SIP services |
+| `FD42:56::1/64` | SeasonalPBX | Phone-LAN interface | Phone-LAN IPv6 ULA gateway / RA source |
+| `192.168.1.12` | SeasonalPBX | Main-LAN interface | Main-LAN-facing service/uplink address; hosted as VMID `106` on SeasonalR230 |
 | `192.168.56.4` | SeasonalAP-2702E (AIR-SAP2702E-A-K9) | `BVI1` | Phone-LAN wireless AP |
 | `FD42:56::4/64` | SeasonalAP-2702E (AIR-SAP2702E-A-K9) | `BVI1` | AP IPv6 ULA |
-| `2600:1003:a012:e209:a66c:2aff:fe28:440c` | SeasonalAP-2702E (AIR-SAP2702E-A-K9) | `BVI1` | AP global IPv6 address via autoconfiguration |
 
 ---
 
@@ -54,11 +51,10 @@ description: "Routing, services, and attached-device map for the Phone-LAN segme
 
 | Network | Relationship | Notes |
 |---|---|---|
-| `192.168.1.0/24` | Main LAN / upstream routed network | SeasonalPBX exits Phone-LAN via `enp0s8`; default IPv4 route points to `192.168.1.1` |
-| main-LAN IPv6 | Upstream IPv6 path | SeasonalPBX receives native global IPv6 on `enp0s8` |
+| `192.168.1.0/24` | Main LAN / upstream routed network | SeasonalPBX exits Phone-LAN through its Main-LAN interface; default IPv4 route points to `192.168.1.1` |
+| main-LAN IPv6 | Upstream IPv6 path | SeasonalPBX may receive native global IPv6 on its Main-LAN interface; exact SLAAC addresses are live state rather than stable documentation identity |
 | `10.42.0.0/24` | SeasonalCME voice VLAN | Reached from SeasonalPBX through main LAN via `192.168.1.4` |
 | `10.42.2.0/24` | SeasonalCME management VLAN | Reached from SeasonalPBX through main LAN via `192.168.1.4` |
-| VirtualBox NAT | Installer / emergency-adjacent network | Present as `enp0s3`; current capture shows link-local IPv6 only and no active IPv4 route |
 
 ---
 
@@ -67,16 +63,16 @@ description: "Routing, services, and attached-device map for the Phone-LAN segme
 | Item | Value | Notes |
 |---|---|---|
 | Phone-LAN router | SeasonalPBX | Debian 12 FreePBX/Asterisk VM replacing the retired FreePBX17 VM |
-| IPv4 default route | `default via 192.168.1.1 dev enp0s8` | Active upstream path to main LAN / Internet |
-| Main-LAN IPv4 | `192.168.1.12/24 dev enp0s8` | Static in-guest address; DNS name `seasonalpbx.lan.seasonalnet.org` |
-| Phone-LAN IPv4 | `192.168.56.1/24 dev enp0s9` | Static in-guest address; gateway for phones and ATAs |
-| Phone-LAN IPv6 ULA | `FD42:56::1/64 dev enp0s9` | Static ULA gateway address |
-| DNS service | `dnsmasq` on SeasonalPBX | Listens on `127.0.0.1`, `192.168.56.1`, `FD42:56::1`, and the `enp0s9` link-local address |
+| IPv4 default route | `default via 192.168.1.1` on the Main-LAN interface | Active upstream path to main LAN / Internet |
+| Main-LAN IPv4 | `192.168.1.12/24` | Static in-guest address; DNS name `seasonalpbx.lan.seasonalnet.org` |
+| Phone-LAN IPv4 | `192.168.56.1/24` | Static in-guest address; gateway for phones and ATAs |
+| Phone-LAN IPv6 ULA | `FD42:56::1/64` | Static ULA gateway address |
+| DNS service | `dnsmasq` on SeasonalPBX | Listens on `127.0.0.1`, `192.168.56.1`, `FD42:56::1`, and the Phone-LAN interface link-local address |
 | DHCPv4 service | `dnsmasq` on SeasonalPBX | Serves `192.168.56.100 – 192.168.56.200` |
 | IPv6 LAN service | `dnsmasq` RA / stateless DHCPv6 | Advertises `FD42:56::/64` for SLAAC/stateless DHCPv6 on Phone-LAN |
 | SIP service | `asterisk` on SeasonalPBX | Listens for Phone-LAN SIP endpoints and Internet-facing PBX forwards from Main LAN |
-| IPv4 NAT | iptables / netfilter-persistent | `192.168.56.0/24` is masqueraded out `enp0s8` |
-| IPv6 forwarding | iptables / netfilter-persistent | Permits `FD42:56::/64` forwarding from `enp0s9` toward `enp0s8` plus established return traffic |
+| IPv4 NAT | iptables / netfilter-persistent | `192.168.56.0/24` is masqueraded out the Main-LAN interface |
+| IPv6 forwarding | iptables / netfilter-persistent | Permits `FD42:56::/64` forwarding from the Phone-LAN interface toward Main-LAN plus established return traffic |
 
 ---
 
@@ -114,16 +110,15 @@ description: "Routing, services, and attached-device map for the Phone-LAN segme
 ```text
 Main LAN / SeasonalNet upstream (192.168.1.0/24)
         |
-        |  SeasonalPBX enp0s8 = 192.168.1.12
+        |  SeasonalPBX Main-LAN IP = 192.168.1.12
         |  default route -> 192.168.1.1
         |
-SeasonalPBX
-  |- enp0s3 = VirtualBox NAT / installer-only, no current IPv4
-  |- enp0s8 = 192.168.1.12 / native Main-LAN IPv6
-  |- enp0s9 = 192.168.56.1 / FD42:56::1
+SeasonalPBX (VMID 106 on SeasonalR230)
+  |- Main-LAN interface = 192.168.1.12 / native Main-LAN IPv6 if available
+  |- Phone-LAN interface = 192.168.56.1 / FD42:56::1
   |- DNS + DHCPv4 + RA/stateless DHCPv6 via dnsmasq
   |- SIP / PBX services via Asterisk
-  `- routes / NATs Phone-LAN out enp0s8
+  `- routes / NATs Phone-LAN out Main-LAN
 
 Phone-LAN (flat unmanaged LAN)
   |- SeasonalAP-2702E = 192.168.56.4 / FD42:56::4
@@ -140,8 +135,8 @@ Wireless side
 
 - Phone-LAN is a **flat LAN**, not a VLAN-backed fabric. Physical switching is presently unmanaged, so the map records the L3/L2 segment and observed devices rather than a port-by-port switch topology.
 - SeasonalPBX replaces the retired legacy FreePBX17 VM. FreePBX17-era references to Phone-LAN gateway `192.168.56.10`, Main-LAN on `enp0s9`, or Phone-LAN on `enp0s8` are stale.
-- SeasonalPBX currently uses `enp0s8` for Main-LAN and `enp0s9` for Phone-LAN. `enp0s3` is not the active routing path and has no current IPv4 address in the latest capture.
-- The AP has both a Phone-LAN ULA (`FD42:56::4`) and a native Main-LAN-derived global IPv6 address via autoconfiguration.
+- SeasonalPBX is now documented by stable role/address rather than old VirtualBox-era interface names. Re-add exact Linux interface names only after validating them on the current Proxmox VM.
+- The AP has a stable Phone-LAN ULA (`FD42:56::4`). Native global IPv6/SLAAC addresses should be treated as live state rather than stable public documentation identity.
 - The previous capture showed SIP keepalive / OPTIONS / NOTIFY traffic between the PBX and observed phones, plus direct NTP from client devices to upstream servers. Treat exact client leases as live DHCP state.
 
 ---
