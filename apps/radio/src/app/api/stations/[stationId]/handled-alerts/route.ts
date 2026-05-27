@@ -19,6 +19,7 @@ type StationFeedAlert = {
   expires: string | null
   sent: string | null
   sameCodes: string[]
+  source: string | null
   from: FeedSender | null
   links?: { primary?: string; nws?: string }
 }
@@ -121,6 +122,7 @@ function normalizeAlert(raw: unknown): StationFeedAlert | null {
     expires: toIsoOrNull(record.expires),
     sent: toIsoOrNull(record.sent),
     sameCodes,
+    source: textOrEmpty(record.source ?? record.provider ?? record.channel) || null,
     from: normalizeFrom(record.from ?? record.sender),
     links,
   }

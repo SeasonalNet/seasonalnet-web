@@ -4,11 +4,22 @@ import * as React from "react"
 import { cn } from "@seasonalnet/shell/src/lib/utils"
 import * as Lucide from "lucide-react"
 
+export type AlertToneMode = "nws" | "eas"
+
 type Props = {
   event: string
   severity?: string | null
   className?: string
-  mode?: "nws" | "eas"
+  mode?: AlertToneMode
+}
+
+type HandledAlertToneSource = {
+  feedSource?: string | null
+  alertSource?: string | null
+  from?: {
+    name?: string | null
+    kind?: string | null
+  } | null
 }
 
 function norm(s: string) {
@@ -300,6 +311,34 @@ export function alertToneClassEasHandled(event: string, severity?: string | null
     return EAS_EVENT_TONE[norm(event)] ?? EAS_EVENT_TONE[norm(canon)] ?? easToneByName(canon)
   }
   return alertToneClass(event, severity)
+}
+
+const CUSTOM_HANDLED_ALERT_SOURCE_RE = /\b(ern|gwes|ipaws)\b|integrated public alert|emergency relay network/i
+const NWS_HANDLED_ALERT_SOURCE_RE = /\b(nws|nwws|json-ld|json ld|originated)\b|api\.weather\.gov|weather\.gov|national weather service/i
+const SEASONALWEATHER_SOURCE_RE = /\bseasonalweather\b/i
+
+function sourceTextForTone({ feedSource, alertSource, from }: HandledAlertToneSource): string {
+  return [feedSource, alertSource, from?.name, from?.kind]
+    .filter((value): value is string => typeof value === "string" && value.trim().length > 0)
+    .join(" ")
+}
+
+/**
+ * Station-handled alerts can arrive from multiple backends.  Only ERN/GWES
+ * relay traffic and IPAWS-originated traffic should use the handled/EAS tone
+ * map; NWS-originated traffic and locally originated SeasonalWeather entries
+ * should keep the NWS event color map.
+ */
+export function handledAlertToneModeForSource(source: HandledAlertToneSource): AlertToneMode {
+  const text = sourceTextForTone(source)
+  const kind = norm(source.from?.kind ?? "")
+
+  if (CUSTOM_HANDLED_ALERT_SOURCE_RE.test(text)) return "eas"
+  if (NWS_HANDLED_ALERT_SOURCE_RE.test(text) || kind === "origin") return "nws"
+  if (kind === "relay") return "eas"
+  if (SEASONALWEATHER_SOURCE_RE.test(text)) return "nws"
+
+  return "nws"
 }
 
 type IconName =

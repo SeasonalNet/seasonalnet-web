@@ -54,6 +54,7 @@ type StationFeedAlert = {
   expires: string | null;
   sent?: string | null;
   sameCodes?: string[];
+  source?: string | null;
   from: FeedSender | null;
   links?: { primary?: string; nws?: string };
 };
@@ -96,7 +97,7 @@ function normaliseHandledAlerts(alerts: StationFeedAlert[]): StationHandledAlert
     id: a.id,
     eventType: a.event,
     severity: a.severity,
-    source: a.from?.name,
+    source: a.source ?? a.from?.name,
     areaDesc: a.area,
     sameCodes: a.sameCodes ?? [],
     fipsCodes: [],

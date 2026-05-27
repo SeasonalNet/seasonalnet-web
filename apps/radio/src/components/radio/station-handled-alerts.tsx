@@ -6,7 +6,12 @@ import { Badge } from "@seasonalnet/shell/src/components/ui/badge"
 import { Button } from "@seasonalnet/shell/src/components/ui/button"
 import { cn } from "@seasonalnet/shell/src/lib/utils"
 import { ExternalLink, RefreshCw, TriangleAlert } from "lucide-react"
-import { AlertEventIcon, alertToneClassEasHandled } from "@/components/radio/alert-event-icon"
+import {
+  AlertEventIcon,
+  alertToneClass,
+  alertToneClassEasHandled,
+  handledAlertToneModeForSource,
+} from "@/components/radio/alert-event-icon"
 import { STATION_HANDLED_ALERTS } from "@/lib/station-handled-alert-config"
 
 type FeedSender = { name: string; kind?: "relay" | "origin" | "unknown" }
@@ -24,6 +29,7 @@ type StationFeedAlert = {
   expires: string | null
   sent?: string | null
   sameCodes?: string[]
+  source?: string | null
   from: FeedSender | null
   links?: { primary?: string; nws?: string }
 }
@@ -145,14 +151,22 @@ export function StationHandledAlerts({
             const until = a.ends ?? a.expires
             const href = a.links?.primary ?? a.links?.nws ?? ""
             const fromLabel = a.from?.name ?? ""
+            const toneMode = handledAlertToneModeForSource({
+              feedSource: data?.source,
+              alertSource: a.source,
+              from: a.from,
+            })
+            const toneClass = toneMode === "eas"
+              ? alertToneClassEasHandled(a.event, a.severity)
+              : alertToneClass(a.event, a.severity)
 
             return (
               <Alert key={a.id} className="relative">
                 <div className="flex items-start justify-between gap-3">
                   <div className="min-w-0 flex-1 space-y-1">
                     <div className="flex flex-wrap items-center gap-2 min-w-0">
-                      <AlertTitle className={cn("min-w-0 flex items-center gap-2 leading-tight", alertToneClassEasHandled(a.event, a.severity))}>
-                        <AlertEventIcon event={a.event} severity={a.severity} mode="eas" />
+                      <AlertTitle className={cn("min-w-0 flex items-center gap-2 leading-tight", toneClass)}>
+                        <AlertEventIcon event={a.event} severity={a.severity} mode={toneMode} />
                         <span className="truncate">{a.event}</span>
                       </AlertTitle>
 
