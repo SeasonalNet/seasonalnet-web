@@ -12,9 +12,9 @@ type SiteAnnouncement = {
   id: string
   title: string
   body: string
-  level?: "info" | "success" | "warning" | "danger"
-  href?: string
-  hrefLabel?: string
+  level?: "info" | "success" | "warning" | "critical" | "danger"
+  href?: string | null
+  hrefLabel?: string | null
 }
 
 function levelBadge(level?: SiteAnnouncement["level"]) {
@@ -23,6 +23,7 @@ function levelBadge(level?: SiteAnnouncement["level"]) {
       return { label: "Live", variant: "default" as const }
     case "warning":
       return { label: "Heads up", variant: "secondary" as const }
+    case "critical":
     case "danger":
       return { label: "Important", variant: "destructive" as const }
     case "info":
@@ -39,8 +40,8 @@ export function SiteAnnouncements({ className }: { className?: string }) {
     try {
       const res = await fetch("/api/announcements", { cache: "no-store" })
       if (!res.ok) return
-      const data = (await res.json()) as { items?: SiteAnnouncement[] }
-      setItems(Array.isArray(data.items) ? data.items : [])
+      const data = (await res.json()) as { data?: SiteAnnouncement[]; items?: SiteAnnouncement[] }
+      setItems(Array.isArray(data.data) ? data.data : Array.isArray(data.items) ? data.items : [])
     } catch {
       // optional UI: fail silently
     } finally {

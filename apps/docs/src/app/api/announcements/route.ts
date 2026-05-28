@@ -1,31 +1,15 @@
 import { NextResponse } from "next/server"
-import { getActiveAnnouncementsFrom, loadAnnouncements } from "@/lib/announcements"
+import { loadAnnouncements } from "@/lib/announcements"
 
 export const runtime = "nodejs"
 
 export async function GET(req: Request) {
   const host = req.headers.get("host") || ""
-  const { items: all, etag } = await loadAnnouncements()
+  const document = await loadAnnouncements({ host })
 
-  if (etag && req.headers.get("if-none-match") === etag) {
-    return new NextResponse(null, {
-      status: 304,
-      headers: {
-        "Cache-Control": "no-store",
-        ETag: etag,
-      },
-    })
-  }
-
-  const items = getActiveAnnouncementsFrom(all, new Date(), { host })
-
-  return NextResponse.json(
-    { items, generatedAt: new Date().toISOString() },
-    {
-      headers: {
-        "Cache-Control": "no-store",
-        ...(etag ? { ETag: etag } : {}),
-      },
-    }
-  )
+  return NextResponse.json(document, {
+    headers: {
+      "Cache-Control": "no-store",
+    },
+  })
 }
