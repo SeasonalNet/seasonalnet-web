@@ -1,5 +1,6 @@
 import {
   Activity,
+  Braces,
   Clock3,
   FileText,
   Fingerprint,
@@ -8,9 +9,11 @@ import {
   ImageIcon,
   KeyRound,
   Link2,
+  Network,
   ListOrdered,
   PlugZap,
   RadioTower,
+  Rss,
   Repeat2,
   Server,
   ShieldCheck,
@@ -83,6 +86,10 @@ function renderStatusIcon(label: string) {
   const className = "h-4 w-4 shrink-0 text-muted-foreground"
 
   if (key === "api") return <PlugZap className={className} />
+  if (key === "readiness") return <Gauge className={className} />
+  if (key === "contract") return <Braces className={className} />
+  if (key === "announcements") return <Rss className={className} />
+  if (key === "base url") return <Network className={className} />
   if (key === "mode") return <Gauge className={className} />
   if (key === "liquidsoap") return <RadioTower className={className} />
   if (key === "queues") return <ListOrdered className={className} />

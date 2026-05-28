@@ -5,6 +5,7 @@ import { AdminWorkspace } from "@/components/admin/admin-workspace"
 import { buildAdminModules } from "@/lib/admin/modules"
 import { getSeasonalWeatherOverview } from "@/lib/server/modules/seasonalweather"
 import { getSeasonalProvisioningOverview } from "@/lib/server/modules/seasonalprovisioning"
+import { getSeasonalApidOverview } from "@/lib/server/modules/seasonalapid"
 
 export const dynamic = "force-dynamic"
 
@@ -13,16 +14,22 @@ type PageProps = {
 }
 
 export default async function Page({ searchParams }: PageProps) {
-  const [{ module: selectedModuleId } = {}, seasonalWeatherOverview, seasonalProvisioningOverview] =
-    await Promise.all([
-      searchParams,
-      getSeasonalWeatherOverview(),
-      getSeasonalProvisioningOverview(),
-    ])
+  const [
+    { module: selectedModuleId } = {},
+    seasonalWeatherOverview,
+    seasonalProvisioningOverview,
+    seasonalApidOverview,
+  ] = await Promise.all([
+    searchParams,
+    getSeasonalWeatherOverview(),
+    getSeasonalProvisioningOverview(),
+    getSeasonalApidOverview(),
+  ])
 
   const modules = buildAdminModules(
     seasonalWeatherOverview,
     seasonalProvisioningOverview,
+    seasonalApidOverview,
   ).filter((module) => !module.tags.includes("planned"))
 
   return (

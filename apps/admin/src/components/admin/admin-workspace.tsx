@@ -1,6 +1,7 @@
 import Link from "next/link"
 import {
   Activity,
+  Braces,
   CloudSun,
   KeyRound,
   Phone,
@@ -26,6 +27,8 @@ function moduleIconFor(moduleId: string): LucideIcon {
       return CloudSun
     case "seasonalprovisioning":
       return KeyRound
+    case "seasonalapid":
+      return Braces
     case "seasonalpbx":
       return Phone
     case "seasonalradio":
