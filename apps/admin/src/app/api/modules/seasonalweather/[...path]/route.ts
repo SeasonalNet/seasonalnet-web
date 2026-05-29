@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
+import { problemDetailFromError, problemJson } from "@seasonalnet/shell/src/lib/server/problem"
 
 import {
   SeasonalWeatherApiError,
@@ -81,7 +82,12 @@ async function handle(
   const def = ROUTES[key]
 
   if (!def || !def.methods.includes(req.method as "POST" | "DELETE")) {
-    return NextResponse.json({ error: "Not found" }, { status: 404 })
+    return problemJson({
+      type: "/problems/not-found",
+      title: "Not found",
+      status: 404,
+      detail: "No supported SeasonalWeather operation matches this route and method.",
+    })
   }
 
   try {
@@ -114,22 +120,26 @@ async function handle(
     return NextResponse.json(result)
   } catch (error) {
     if (error instanceof SeasonalWeatherApiError) {
-      return NextResponse.json(
-        {
-          error:
-            typeof error.body === "object" && error.body?.error
-              ? error.body.error
-              : { message: error.message },
-          upstream_status: error.status,
-        },
-        { status: error.status }
-      )
+      return problemJson({
+        type: "/problems/upstream-seasonalweather-error",
+        title: "SeasonalWeather API request failed",
+        status: error.status,
+        detail:
+          typeof error.body === "object" && error.body?.error
+            ? String(error.body.error)
+            : error.message,
+        extensions: { upstream_status: error.status },
+      })
     }
 
-    const message =
-      error instanceof Error ? error.message : "Unexpected upstream error"
+    const message = problemDetailFromError(error, "Unexpected upstream error")
 
-    return NextResponse.json({ error: { message } }, { status: 500 })
+    return problemJson({
+      type: "/problems/upstream-seasonalweather-error",
+      title: "SeasonalWeather proxy failed",
+      status: 500,
+      detail: message,
+    })
   }
 }
 

@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { problemJson } from "@seasonalnet/shell/src/lib/server/problem";
 import { cacheControlHeader, getCachedValue } from "@seasonalnet/shell/src/lib/server/cache";
 import { getStationMetaServerCfg } from "@/lib/server/station-metadata";
 
@@ -156,7 +157,12 @@ export async function GET(request: NextRequest, context: Ctx) {
   const mountPath = mountParam ? normalizeMount(mountParam) : undefined;
 
   if (!getStationMetaServerCfg(stationId)) {
-    return NextResponse.json({ error: "metadata not supported for this station" }, { status: 404 });
+    return problemJson({
+      type: "/problems/unsupported-station-metadata",
+      title: "Station metadata is not supported",
+      status: 404,
+      detail: "metadata not supported for this station",
+    });
   }
 
   const cached = await getCachedValue(

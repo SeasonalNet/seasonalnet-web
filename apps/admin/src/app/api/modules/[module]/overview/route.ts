@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { problemJson } from "@seasonalnet/shell/src/lib/server/problem"
 import { getSeasonalWeatherOverview } from "@/lib/server/modules/seasonalweather"
 import { getSeasonalProvisioningOverview } from "@/lib/server/modules/seasonalprovisioning"
 import { getSeasonalApidOverview } from "@/lib/server/modules/seasonalapid"
@@ -55,6 +56,11 @@ export async function GET(
       )
 
     default:
-      return NextResponse.json({ error: "Unknown module." }, { status: 404 })
+      return problemJson({
+        type: "/problems/unknown-module",
+        title: "Unknown module",
+        status: 404,
+        detail: "Unknown module.",
+      })
   }
 }

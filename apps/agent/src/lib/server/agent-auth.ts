@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto"
 
 import type { Session } from "next-auth"
-import { NextResponse } from "next/server"
+import { problemJson } from "@seasonalnet/shell/src/lib/server/problem"
 
 import { auth, getSessionAccessTier, isAuthorizedSession } from "@/auth"
 
@@ -30,14 +30,24 @@ export async function requireAuthorizedAgentSession() {
 
   if (!session?.user) {
     return {
-      response: NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 }),
+      response: problemJson({
+        type: "/problems/unauthorized",
+        title: "Unauthorized",
+        status: 401,
+        detail: "Authentication is required.",
+      }),
       session: null,
     }
   }
 
   if (!isAuthorizedSession(session)) {
     return {
-      response: NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 }),
+      response: problemJson({
+        type: "/problems/forbidden",
+        title: "Forbidden",
+        status: 403,
+        detail: "The authenticated user is not allowed to access this resource.",
+      }),
       session: null,
     }
   }

@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server"
+import { problemDetailFromError, problemJson } from "@seasonalnet/shell/src/lib/server/problem"
 
 import { ensureAgentSessionOwnership, requireAuthorizedAgentSession } from "@/lib/server/agent-auth"
 import { seasonalAgentJson } from "@/lib/server/seasonal-agent"
@@ -14,12 +15,22 @@ export async function GET(
   const authResult = await requireAuthorizedAgentSession()
   if (authResult.response) return authResult.response
   const session = authResult.session
-  if (!session) return NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 })
+  if (!session) return problemJson({
+    type: "/problems/unauthorized",
+    title: "Unauthorized",
+    status: 401,
+    detail: "Authentication is required.",
+  })
 
   try {
     const { sessionId } = await params
     if (!ensureAgentSessionOwnership(session, sessionId)) {
-      return NextResponse.json({ ok: false, error: "Forbidden" }, { status: 403 })
+      return problemJson({
+        type: "/problems/forbidden",
+        title: "Forbidden",
+        status: 403,
+        detail: "The authenticated user is not allowed to access this resource.",
+      })
     }
 
     const url = new URL(request.url)
@@ -34,7 +45,12 @@ export async function GET(
 
     return NextResponse.json(payload, { status: ok ? 200 : status })
   } catch (error) {
-    const message = error instanceof Error ? error.message : "Unexpected upstream error"
-    return NextResponse.json({ ok: false, error: message }, { status: 500 })
+    const message = problemDetailFromError(error, "Unexpected upstream error")
+    return problemJson({
+      type: "/problems/upstream-agent-error",
+      title: "Seasonal Agent request failed",
+      status: 500,
+      detail: message,
+    })
   }
 }

@@ -51,7 +51,9 @@ export function AdminActionButton({
 
         try {
           const data = await res.json()
-          if (data?.error) message = data.error
+          if (data?.detail) message = data.detail
+          else if (data?.error) message = data.error
+          else if (data?.title) message = data.title
         } catch {
           // ignore parse failure
         }

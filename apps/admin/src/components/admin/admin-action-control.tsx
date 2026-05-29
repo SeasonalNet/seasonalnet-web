@@ -83,8 +83,10 @@ function parseSameCodes(raw: string): string[] {
 async function getErrorMessage(res: Response) {
   try {
     const data = await res.json()
+    if (typeof data?.detail === "string") return data.detail
     if (typeof data?.error === "string") return data.error
     if (typeof data?.error?.message === "string") return data.error.message
+    if (typeof data?.title === "string") return data.title
     return JSON.stringify(data?.error ?? data)
   } catch {
     return `Request failed: ${res.status}`
@@ -598,9 +600,11 @@ function UploadAudioDialog({ action }: { action: AdminActionControlProps }) {
             }
 
             const message =
-              typeof data?.error === "string"
-                ? data.error
-                : data?.error?.message || `Upload failed: ${xhr.status}`
+              typeof data?.detail === "string"
+                ? data.detail
+                : typeof data?.error === "string"
+                  ? data.error
+                  : data?.error?.message || data?.title || `Upload failed: ${xhr.status}`
             reject(new Error(message))
           } catch {
             reject(new Error(`Upload failed: ${xhr.status}`))

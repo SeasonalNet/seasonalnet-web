@@ -1,5 +1,6 @@
 // src/app/api/stations/[stationId]/alerts/route.ts
 import { NextResponse } from "next/server"
+import { problemJson } from "@seasonalnet/shell/src/lib/server/problem"
 import { cacheControlHeader, getCachedValue } from "@seasonalnet/shell/src/lib/server/cache"
 import { STATION_ALERTS } from "@/lib/station-alert-config"
 import { sameCodesIntersectServiceArea, sameToMarineZone } from "@/lib/alert-map-utils"
@@ -161,7 +162,12 @@ export async function GET(
 ) {
   const { stationId } = await ctx.params
   if (!STATION_ALERTS[stationId]) {
-    return NextResponse.json({ error: "unknown stationId" }, { status: 404 })
+    return problemJson({
+      type: "/problems/unknown-station",
+      title: "Unknown station",
+      status: 404,
+      detail: "unknown stationId",
+    })
   }
 
   const cached = await getCachedValue(
