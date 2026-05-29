@@ -5,7 +5,7 @@ description: "Address bands, infrastructure inventory, and routing notes for the
 
 **Subnet:** `192.168.1.0/24`  
 **Gateway:** `192.168.1.1` (Verizon WNC-CR200A)  
-**Last updated:** 2026-05-26
+**Last updated:** 2026-05-29
 
 ---
 
@@ -35,7 +35,7 @@ description: "Address bands, infrastructure inventory, and routing notes for the
 
 ## VM / Server Band (`.6 – .19`)
 
-VMs in this band are static-addressed service hosts. SeasonalR230 is the primary Proxmox host for the active service VM fleet; static IPs are configured in-guest. SeasonalBack remains hosted on SeasonalR340.
+VMs in this band are static-addressed service hosts. SeasonalR230 is the primary Proxmox host for the main service VM fleet; static IPs are configured in-guest. SeasonalR340 hosts the backup/storage/sandbox support VMs: SeasonalBack, SeasonalNAS, and SeasonalSand.
 
 | IP | VM | Interface | Notes |
 |---|---|---|---|
@@ -49,8 +49,10 @@ VMs in this band are static-addressed service hosts. SeasonalR230 is the primary
 | `192.168.1.13` | SeasonalMail | Proxmox VMID `104` | `mailcow` powered mail server (`mail.seasonalnet.org`); hosted on SeasonalR230 |
 | `192.168.1.14` | SeasonalDNS | Proxmox VMID `101` | Internal Technitium DNS resolver / local DNS management; not public authoritative DNS for `seasonalnet.org`; hosted on SeasonalR230 |
 | `192.168.1.15` | SeasonalMonitor | Proxmox VMID `105` | Prometheus/Grafana observability VM hosted on SeasonalR230. Runs Docker Compose stack for Prometheus, Grafana, blackbox_exporter, snmp_exporter, and Redfish/iDRAC monitoring; host-native node_exporter. Grafana is published at `grafana.seasonalnet.org` through SeasonalWeb and Authentik OAuth. |
-| `192.168.1.16` | SeasonalBack | R340 Proxmox VM | Proxmox Backup Server VM hosted on SeasonalR340. DNS `seasonalback.lan.seasonalnet.org`; service alias `back.lan.seasonalnet.org`. Datastore `seasonalback` at `/mnt/datastore/seasonalback`, currently backed by the PBS VM root filesystem / single virtual disk. |
-| `192.168.1.17 – .19` | *(reserved for future VMs)* | | |
+| `192.168.1.16` | SeasonalBack | Proxmox VMID `100` | Proxmox Backup Server VM hosted on SeasonalR340. DNS `seasonalback.lan.seasonalnet.org`; service alias `back.lan.seasonalnet.org`. Datastore `seasonalback` at `/mnt/datastore/seasonalback`, currently backed by the PBS VM root filesystem / single virtual disk. |
+| `192.168.1.17` | SeasonalNAS | Proxmox VMID `110` | NAS / shared storage VM hosted on SeasonalR340. Main interface `ens18`; static IPv4 `192.168.1.17/24`; hostname/DNS `seasonalnas.lan.seasonalnet.org`. Runs Docker and storage-facing services; includes Docker bridge networks on RFC1918 `172.17.0.0/16` and `172.18.0.0/16`. |
+| `192.168.1.18` | SeasonalSand | Proxmox VMID `111` | SeasonalSandbox / `seasonal-sandboxd` VM hosted on SeasonalR340. Main interface `ens18`; static IPv4 `192.168.1.18/24`; hostname/DNS `seasonalsand.lan.seasonalnet.org`. Runs the sandbox daemon under Docker Compose, host-bound on `127.0.0.1:9090` inside the VM and using SeasonalNAS-backed workspace/artifact paths. |
+| `192.168.1.19` | *(reserved for future VM)* | | |
 
 
 
@@ -62,7 +64,7 @@ VMs in this band are static-addressed service hosts. SeasonalR230 is the primary
 |---|---|---|
 | `192.168.1.20` | seasonal-victus (Victus by HP Gaming Laptop 15-fa1xxx) | Ubuntu desktop/admin workstation on static Wi-Fi; no longer primary service VM host |
 | `192.168.1.21` | SeasonalR230 | Dell PowerEdge R230 / primary Proxmox VM host on Main LAN via CME rack VLAN 99 transit path. Owns service VMIDs `101`–`109`; SeasonalBack at `192.168.1.16` remains on SeasonalR340. |
-| `192.168.1.22` | SeasonalR340 | Dell PowerEdge R340 / Proxmox VE host on Main LAN via CME rack VLAN 99 transit path. Hosts the SeasonalBack PBS VM at `192.168.1.16`; this is no longer the PBS service address itself. |
+| `192.168.1.22` | SeasonalR340 | Dell PowerEdge R340 / Proxmox VE host on Main LAN via CME rack VLAN 99 transit path. Hosts SeasonalBack (`192.168.1.16`, VMID `100`), SeasonalNAS (`192.168.1.17`, VMID `110`), and SeasonalSand (`192.168.1.18`, VMID `111`). |
 | `192.168.1.23` | SeasonalR340-iDRAC | Dell PowerEdge R340 out-of-band management on Main LAN via CME rack VLAN 99 transit path |
 | `192.168.1.24` | seasonal-teal-laptop | Ubuntu laptop / secondary VirtualBox-capable physical host with no resident VMs; used as jump box to SeasonalCME network (`10.42.0.0/24`) |
 
@@ -96,6 +98,8 @@ VMs in this band are static-addressed service hosts. SeasonalR230 is the primary
 | SeasonalWX internal DNS records | SeasonalDNS | `wx.lan.seasonalnet.org`, `seasonalwx.lan.seasonalnet.org`, and `seasonalweather.lan.seasonalnet.org` → `192.168.1.10`. The `seasonalweather` alias now points at SeasonalWX, not the retired original VM. |
 | SeasonalR340 internal DNS records | SeasonalDNS | `seasonalr340.lan.seasonalnet.org` → `192.168.1.22`; `idrac-r340.lan.seasonalnet.org` → `192.168.1.23`. |
 | SeasonalBack internal DNS records | SeasonalDNS | `seasonalback.lan.seasonalnet.org` → `192.168.1.16`; `back.lan.seasonalnet.org` CNAME/alias → `seasonalback.lan.seasonalnet.org`. |
+| SeasonalNAS internal DNS record | SeasonalDNS | `seasonalnas.lan.seasonalnet.org` → `192.168.1.17`. |
+| SeasonalSand internal DNS record | SeasonalDNS | `seasonalsand.lan.seasonalnet.org` → `192.168.1.18`. |
 | SeasonalMonitor internal DNS records | SeasonalDNS | `seasonalmonitor.lan.seasonalnet.org` → `192.168.1.15`; optional alias `monitor.lan.seasonalnet.org` → `seasonalmonitor.lan.seasonalnet.org`. |
 | SeasonalPBX internal DNS record | SeasonalDNS | `seasonalpbx.lan.seasonalnet.org` → `192.168.1.12`. SeasonalPBX is the current PBX and Phone-LAN gateway. |
 | SeasonalMonitor public Grafana DNS | Cloudflare / SeasonalWeb | `grafana.seasonalnet.org` is a Cloudflare-proxied public hostname terminating at SeasonalWeb (`192.168.1.8`), then reverse-proxied to Grafana on SeasonalMonitor (`192.168.1.15:3000`). Prometheus remains private. |
@@ -133,7 +137,7 @@ SeasonalWeb receives public HTTP/HTTPS traffic and routes hostname-based service
 ## Known Remaining Items
 
 - CME-rack Dell PowerEdge R230 and SeasonalR340 use Main-LAN addressing over VLAN 99 transit rather than sitting behind `10.42.2.0/24` on SeasonalEDGE-R1
-- SeasonalBack currently stores PBS data on its VM root filesystem / single virtual disk. Re-document if a separate datastore disk, passthrough disk, or direct-attached storage layout is added.
+- SeasonalBack currently stores PBS data on its VM root filesystem / single virtual disk. Re-document if a separate datastore disk, passthrough disk, direct-attached storage layout, or SeasonalNAS-backed backup storage layout is added.
 - SeasonalMonitor SNMP polling and Redfish/iDRAC collection have a working foundation; continue expanding dashboards and target coverage as needed.
 - SeasonalBRIDGE-NONROOT remains quarantined/disabled as a production path; clean up stale bridge IPv6/autoconfig details only if the Aironet bridge is revisited.
 - Decide what should replace SeasonalUtilities / Uptime Kuma for `status.seasonalnet.org`, or formally document that the public status service is retired.

@@ -43,7 +43,9 @@ Main LAN (192.168.1.0/24)
     |       `-- Phone-LAN (192.168.56.0/24, gateway 192.168.56.1)
     |
     `-- SeasonalR340 (192.168.1.22)
-            `-- SeasonalBack PBS VM (192.168.1.16)
+            |-- SeasonalBack PBS VM (192.168.1.16)
+            |-- SeasonalNAS storage VM (192.168.1.17)
+            `-- SeasonalSand sandbox VM (192.168.1.18)
 ```
 
 ---
@@ -71,7 +73,7 @@ SeasonalWeb performs hostname-based routing for public web services behind the s
 
 ## DNS / DHCP
 
-Cloudflare remains authoritative public DNS for `seasonalnet.org`. SeasonalDNS is for internal LAN recursion/local records only. Current internal aliases include `wx.lan.seasonalnet.org`, `seasonalwx.lan.seasonalnet.org`, and `seasonalweather.lan.seasonalnet.org` for SeasonalWX (`192.168.1.10`), plus `seasonalback.lan.seasonalnet.org` with `back.lan.seasonalnet.org` as a service alias for SeasonalBack (`192.168.1.16`). SeasonalR230 is the primary Proxmox host for the active service VM fleet; SeasonalBack remains hosted on SeasonalR340.
+Cloudflare remains authoritative public DNS for `seasonalnet.org`. SeasonalDNS is for internal LAN recursion/local records only. Current internal aliases include `wx.lan.seasonalnet.org`, `seasonalwx.lan.seasonalnet.org`, and `seasonalweather.lan.seasonalnet.org` for SeasonalWX (`192.168.1.10`), plus `seasonalback.lan.seasonalnet.org` with `back.lan.seasonalnet.org` as a service alias for SeasonalBack (`192.168.1.16`). SeasonalNAS uses `seasonalnas.lan.seasonalnet.org` (`192.168.1.17`) and SeasonalSand uses `seasonalsand.lan.seasonalnet.org` (`192.168.1.18`). SeasonalR230 is the primary Proxmox host for the main service VM fleet; SeasonalBack, SeasonalNAS, and SeasonalSand are hosted on SeasonalR340.
 
 | Segment | DNS | DHCP |
 |---|---|---|
