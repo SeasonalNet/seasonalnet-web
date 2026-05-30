@@ -30,6 +30,36 @@ const CONFIG_TOKEN = process.env.SEASONALWEATHER_CONFIG_TOKEN || CONTROL_TOKEN
 
 type TokenKind = "read" | "control" | "originate" | "config"
 
+type ProblemDetails = {
+  type?: string
+  title?: string
+  status?: number
+  detail?: string
+  code?: string
+  request_id?: string
+}
+
+function isProblemDetails(value: unknown): value is ProblemDetails {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value))
+}
+
+function problemSummary(value: unknown, fallback: string) {
+  if (!isProblemDetails(value)) return fallback
+  const detail = typeof value.detail === "string" ? value.detail : null
+  const title = typeof value.title === "string" ? value.title : null
+  return detail || title || fallback
+}
+
+async function readErrorBody(res: Response) {
+  const text = await res.text().catch(() => "")
+  if (!text) return null
+  try {
+    return JSON.parse(text) as unknown
+  } catch {
+    return text
+  }
+}
+
 function getToken(kind: TokenKind) {
   switch (kind) {
     case "control":
@@ -56,7 +86,7 @@ async function seasonalWeatherFetch(path: string, init: RequestInit = {}, tokenK
 
   const headers = new Headers(init.headers)
   headers.set("Authorization", `Bearer ${token}`)
-  headers.set("Accept", "application/json")
+  headers.set("Accept", "application/json, application/problem+json")
 
   const res = await fetch(`${API_BASE}${path}`, {
     ...init,
@@ -65,8 +95,9 @@ async function seasonalWeatherFetch(path: string, init: RequestInit = {}, tokenK
   })
 
   if (!res.ok) {
-    const body = await res.text().catch(() => "")
-    throw new Error(`${path} returned ${res.status}${body ? `: ${body}` : ""}`)
+    const body = await readErrorBody(res)
+    const detail = problemSummary(body, `${path} returned ${res.status}`)
+    throw new Error(detail)
   }
 
   return res.json()

@@ -48,3 +48,5 @@ Do not rely on `127.0.0.1` unless SeasonalWeather is running on the same host as
 admin Next.js process. For the normal SeasonalNet split-host deployment, point this at
 the SeasonalWX nginx proxy or another internal reverse proxy that can reach the local
 SeasonalWeather daemon.
+
+SeasonalWeather now publishes OpenAPI 3.1 at `/openapi.json` and returns RFC 9457 Problem Details for API errors (`application/problem+json`). The admin BFF accepts that media type from the upstream API and maps upstream problem metadata into its own Problem Details response for browser callers.

@@ -17,33 +17,71 @@ const TOKENS: Record<SeasonalWeatherCapability, string | undefined> = {
   config: process.env.SEASONALWEATHER_CONFIG_TOKEN || process.env.SEASONALWEATHER_CONTROL_TOKEN,
 }
 
-type SeasonalWeatherErrorBody = {
+export type SeasonalWeatherProblemDetails = {
+  type: string
+  title: string
+  status: number
+  detail?: string
+  instance?: string
+  code?: string
+  details?: Record<string, unknown>
+  errors?: Array<Record<string, unknown>>
+  request_id?: string
+  [extension: string]: unknown
+}
+
+type LegacySeasonalWeatherErrorBody = {
   error?: string | { message?: string; code?: string; details?: unknown }
   request_id?: string
   [key: string]: unknown
 }
 
+type SeasonalWeatherErrorBody = SeasonalWeatherProblemDetails | LegacySeasonalWeatherErrorBody
+
 export class SeasonalWeatherApiError extends Error {
   status: number
   body: SeasonalWeatherErrorBody | string | null
+  problem: SeasonalWeatherProblemDetails | null
 
   constructor(message: string, status: number, body: SeasonalWeatherErrorBody | string | null = null) {
     super(message)
     this.name = "SeasonalWeatherApiError"
     this.status = status
     this.body = body
+    this.problem = isProblemDetails(body) ? body : null
   }
 }
 
-function errorMessageFromBody(body: SeasonalWeatherErrorBody | string | null, fallback: string) {
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value))
+}
+
+function isProblemDetails(value: unknown): value is SeasonalWeatherProblemDetails {
+  return (
+    isRecord(value) &&
+    typeof value.type === "string" &&
+    typeof value.title === "string" &&
+    typeof value.status === "number"
+  )
+}
+
+function legacyErrorMessage(error: LegacySeasonalWeatherErrorBody["error"]) {
+  if (typeof error === "string") return error
+  if (isRecord(error) && typeof error.message === "string") return error.message
+  return null
+}
+
+export function seasonalWeatherProblemSummary(body: SeasonalWeatherErrorBody | string | null, fallback: string) {
   if (!body) return fallback
   if (typeof body === "string") return body || fallback
 
-  const error = body.error
-  if (typeof error === "string") return error
-  if (error && typeof error.message === "string") return error.message
+  if (isProblemDetails(body)) {
+    const detail = typeof body.detail === "string" ? body.detail : null
+    const title = typeof body.title === "string" ? body.title : null
+    return detail || title || fallback
+  }
 
-  return fallback
+  return legacyErrorMessage(body.error) || fallback
 }
 
 async function readResponseBody(res: Response): Promise<SeasonalWeatherErrorBody | string | null> {
@@ -82,7 +120,7 @@ export async function seasonalWeatherApi(
   const headers = new Headers(init.headers)
 
   headers.set("Authorization", `Bearer ${token}`)
-  headers.set("Accept", "application/json")
+  headers.set("Accept", "application/json, application/problem+json")
 
   const isMutating = method !== "GET" && method !== "HEAD"
   const isAudioUpload = upstreamPath === "/v1/uploads/audio"
@@ -116,7 +154,7 @@ export async function seasonalWeatherApi(
   if (!res.ok) {
     const body = await readResponseBody(res)
     throw new SeasonalWeatherApiError(
-      errorMessageFromBody(body, `SeasonalWeather API request failed: ${res.status}`),
+      seasonalWeatherProblemSummary(body, `SeasonalWeather API request failed: ${res.status}`),
       res.status,
       body
     )

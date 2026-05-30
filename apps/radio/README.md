@@ -47,6 +47,9 @@ The radio app reads SeasonalWeather server-side endpoints for station-handled al
 | `SEASONALWEATHER_HANDLED_ALERTS_URL` | `$SEASONALWEATHER_API_BASE_URL/v1/handled-alerts` | Full station-handled alerts feed URL. |
 | `SEASONALWEATHER_ICECAST_STATUS_URL` | `http://$SEASONALWEATHER_HOST:8000/status-json.xsl` | Icecast status fallback metadata. |
 | `SEASONALWEATHER_NOWPLAYING_URL` | `http://$SEASONALWEATHER_HOST:7099/nowplaying` | Liquidsoap IP-RDS / now-playing metadata. |
+
+
+The handled-alerts fetcher advertises `Accept: application/json, application/problem+json`. Normal feed responses remain JSON station-feed documents; upstream SeasonalWeather errors may be RFC 9457 Problem Details, which the radio BFF collapses into its degraded `ok: false` handled-alert collection with upstream problem metadata extensions.
 ## Alert map SAME coverage behavior
 
 The service-area map understands county/city SAME codes, marine SAME zones, and state-wide SAME locations. State-wide `0SS000` inputs such as `024000` are treated as station-area wildcards for that state: the map expands them only to counties already present in the station's configured service area, not to every county statewide. The national `000000` code is intentionally ignored for local map coloring.

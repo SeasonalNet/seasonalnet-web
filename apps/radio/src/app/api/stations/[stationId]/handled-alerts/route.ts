@@ -31,6 +31,15 @@ type StationAlertFeedV1 = {
   alerts?: unknown
 }
 
+type ProblemDetails = {
+  type?: string
+  title?: string
+  status?: number
+  detail?: string
+  code?: string
+  request_id?: string
+}
+
 type UnknownRecord = Record<string, unknown>
 
 function asRecord(v: unknown): UnknownRecord | null {
@@ -65,6 +74,33 @@ function uniqStrings(v: unknown): string[] {
     out.push(s)
   }
   return out
+}
+
+function problemDetails(v: unknown): ProblemDetails | null {
+  const record = asRecord(v)
+  if (!record) return null
+  const type = typeof record.type === "string" ? record.type : undefined
+  const title = typeof record.title === "string" ? record.title : undefined
+  const status = typeof record.status === "number" ? record.status : undefined
+  const detail = typeof record.detail === "string" ? record.detail : undefined
+  const code = typeof record.code === "string" ? record.code : undefined
+  const request_id = typeof record.request_id === "string" ? record.request_id : undefined
+  if (!type && !title && !detail && !code) return null
+  return { type, title, status, detail, code, request_id }
+}
+
+async function readProblemResponse(res: Response): Promise<ProblemDetails | null> {
+  const text = await res.text().catch(() => "")
+  if (!text) return null
+  try {
+    return problemDetails(JSON.parse(text))
+  } catch {
+    return null
+  }
+}
+
+function problemSummary(problem: ProblemDetails | null, fallback: string) {
+  return problem?.detail || problem?.title || fallback
 }
 
 function normalizeFrom(v: unknown): FeedSender | null {
@@ -165,7 +201,7 @@ async function buildHandledAlerts(stationId: string) {
   }
 
   const headers: Record<string, string> = {
-    Accept: "application/json",
+    Accept: "application/json, application/problem+json",
     "User-Agent": "SeasonalNet/2.0 (seasonal@seasonalnet.org)",
   }
 
@@ -185,13 +221,17 @@ async function buildHandledAlerts(stationId: string) {
     )
 
     if (!res.ok) {
+      const problem = await readProblemResponse(res)
       return {
         ok: false,
         enabled: true,
         stationId,
         source: "station_feed",
         generatedAt: new Date().toISOString(),
-        error: `feed http ${res.status}`,
+        error: problemSummary(problem, `feed http ${res.status}`),
+        upstreamProblemType: problem?.type,
+        upstreamCode: problem?.code,
+        upstreamRequestId: problem?.request_id,
         alerts: [],
       }
     }

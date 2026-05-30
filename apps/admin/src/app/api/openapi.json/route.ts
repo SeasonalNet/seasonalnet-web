@@ -35,7 +35,19 @@ function seasonalWeatherActionPath(summary: string) {
       summary,
       responses: {
         "200": jsonResponse("Upstream action result.", { $ref: "#/components/schemas/ActionResult" }),
+        "400": { $ref: "#/components/responses/BadRequest" },
+        "401": { $ref: "#/components/responses/Unauthorized" },
+        "403": { $ref: "#/components/responses/Forbidden" },
         "404": { $ref: "#/components/responses/NotFound" },
+        "409": {
+          description: "Conflict with the upstream SeasonalWeather command/idempotency state.",
+          content: {
+            "application/problem+json": {
+              schema: { $ref: "#/components/schemas/ProblemDetails" },
+            },
+          },
+        },
+        "422": { $ref: "#/components/responses/BadRequest" },
         "500": { $ref: "#/components/responses/InternalServerError" },
         "502": { $ref: "#/components/responses/BadGateway" },
       },
@@ -50,7 +62,19 @@ function seasonalWeatherDeleteActionPath(summary: string) {
       summary,
       responses: {
         "200": jsonResponse("Upstream action result.", { $ref: "#/components/schemas/ActionResult" }),
+        "400": { $ref: "#/components/responses/BadRequest" },
+        "401": { $ref: "#/components/responses/Unauthorized" },
+        "403": { $ref: "#/components/responses/Forbidden" },
         "404": { $ref: "#/components/responses/NotFound" },
+        "409": {
+          description: "Conflict with the upstream SeasonalWeather command/idempotency state.",
+          content: {
+            "application/problem+json": {
+              schema: { $ref: "#/components/schemas/ProblemDetails" },
+            },
+          },
+        },
+        "422": { $ref: "#/components/responses/BadRequest" },
         "500": { $ref: "#/components/responses/InternalServerError" },
         "502": { $ref: "#/components/responses/BadGateway" },
       },
@@ -86,6 +110,8 @@ const document = openApiDocument({
         responses: {
           "200": jsonResponse("Module overview payload.", { $ref: "#/components/schemas/ModuleOverview" }),
           "404": { $ref: "#/components/responses/NotFound" },
+          "500": { $ref: "#/components/responses/InternalServerError" },
+          "502": { $ref: "#/components/responses/BadGateway" },
         },
       },
     },

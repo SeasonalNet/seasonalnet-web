@@ -3,6 +3,7 @@ import { problemDetailFromError, problemJson } from "@seasonalnet/shell/src/lib/
 
 import {
   SeasonalWeatherApiError,
+  seasonalWeatherProblemSummary,
   seasonalWeatherApi,
   type SeasonalWeatherCapability,
 } from "@/lib/server/modules/seasonalweather-api"
@@ -124,11 +125,13 @@ async function handle(
         type: "/problems/upstream-seasonalweather-error",
         title: "SeasonalWeather API request failed",
         status: error.status,
-        detail:
-          typeof error.body === "object" && error.body?.error
-            ? String(error.body.error)
-            : error.message,
-        extensions: { upstream_status: error.status },
+        detail: seasonalWeatherProblemSummary(error.body, error.message),
+        extensions: {
+          upstream_status: error.status,
+          ...(error.problem?.type ? { upstream_problem_type: error.problem.type } : {}),
+          ...(error.problem?.code ? { upstream_code: error.problem.code } : {}),
+          ...(error.problem?.request_id ? { upstream_request_id: error.problem.request_id } : {}),
+        },
       })
     }
 

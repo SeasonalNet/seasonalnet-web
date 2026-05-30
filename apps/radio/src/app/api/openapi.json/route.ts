@@ -95,6 +95,9 @@ const handledAlertCollectionSchema = {
     source: { type: "string" },
     generatedAt: { type: "string", format: "date-time" },
     error: { type: "string" },
+    upstreamProblemType: { type: "string" },
+    upstreamCode: { type: "string" },
+    upstreamRequestId: { type: "string" },
     alerts: { type: "array", items: { $ref: "#/components/schemas/HandledAlert" } },
   },
 }
