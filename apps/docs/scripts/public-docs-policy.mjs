@@ -96,8 +96,8 @@ export const PUBLIC_DOCS_ALLOWLIST = [
     sourcePath: 'PROJECTS.md',
     outputPath: 'projects/index.mdx',
     routePath: '/docs/projects',
-    title: 'SeasonalNet Projects and Guides',
-    description: 'Scalable public documentation area for SeasonalNet-originated FOSS projects and reusable systems.',
+    title: 'Projects',
+    description: 'Scalable public documentation for SeasonalNet-originated FOSS projects, guides, and reusable systems.',
   },
 ];
 
