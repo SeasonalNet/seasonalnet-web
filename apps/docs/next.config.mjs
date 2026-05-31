@@ -4,6 +4,20 @@ import { createMDX } from 'fumadocs-mdx/next';
 const config = {
   reactCompiler: true,
   transpilePackages: ['@seasonalnet/shell'],
+  async redirects() {
+    return [
+      {
+        source: '/docs/network',
+        destination: '/docs/topology',
+        permanent: false,
+      },
+      {
+        source: '/docs/network/:path*',
+        destination: '/docs/topology/:path*',
+        permanent: false,
+      },
+    ];
+  },
 };
 
 const withMDX = createMDX();

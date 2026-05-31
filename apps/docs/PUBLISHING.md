@@ -15,12 +15,26 @@ Only the following source files may be copied into `apps/docs/content/docs`:
 | Source path | Published route | Output path |
 |---|---|---|
 | `README.md` | `/docs` | `index.mdx` |
-| `NETWORK.md` | `/docs/network` | `network/index.mdx` |
-| `LANs/seasonalnet-lan-map.md` | `/docs/network/lans/main-lan` | `network/lans/main-lan.mdx` |
-| `LANs/seasonalcme-network-map.md` | `/docs/network/lans/seasonalcme` | `network/lans/seasonalcme.mdx` |
-| `LANs/phonelan-map.md` | `/docs/network/lans/phone-lan` | `network/lans/phone-lan.mdx` |
+| `PLATFORM.md` | `/docs/about/platform` | `about/platform.mdx` |
+| `SERVICES.md` | `/docs/about/services` | `about/services.mdx` |
+| `NETWORK.md` | `/docs/topology` | `topology/index.mdx` |
+| `LANs/seasonalnet-lan-map.md` | `/docs/topology/lans/main-lan` | `topology/lans/main-lan.mdx` |
+| `LANs/seasonalcme-network-map.md` | `/docs/topology/lans/seasonalcme` | `topology/lans/seasonalcme.mdx` |
+| `LANs/phonelan-map.md` | `/docs/topology/lans/phone-lan` | `topology/lans/phone-lan.mdx` |
+| `PROJECTS.md` | `/docs/projects` | `projects/index.mdx` |
+
+Generated section indexes under `/docs/about` and `/docs/topology/lans` are controlled by `public-docs-policy.mjs` and are not copied from arbitrary source files.
 
 Any new public page requires an intentional policy edit before it may be synced or published.
+
+## Compatibility redirects
+
+The former network routes are redirected to the new topology section by the docs app Next.js config:
+
+- `/docs/network` -> `/docs/topology`
+- `/docs/network/:path*` -> `/docs/topology/:path*`
+
+These redirects preserve old links while making Topology the first-class section name.
 
 ## Explicit denylist
 

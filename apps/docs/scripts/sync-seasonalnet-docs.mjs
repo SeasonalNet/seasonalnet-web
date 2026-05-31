@@ -4,6 +4,7 @@ import process from 'node:process';
 import { fileURLToPath } from 'node:url';
 
 import {
+  PUBLIC_DOCS_ABOUT_META,
   PUBLIC_DOCS_ALLOWLIST,
   PUBLIC_DOCS_DENY_PREFIXES,
   PUBLIC_DOCS_LANS_META,
@@ -11,6 +12,7 @@ import {
   PUBLIC_DOCS_ROOT_META,
   PUBLIC_DOCS_SOURCE_DEFAULT_PATH,
   PUBLIC_DOCS_SOURCE_REPO,
+  PUBLIC_DOCS_TOPOLOGY_META,
 } from './public-docs-policy.mjs';
 
 const scriptDir = path.dirname(fileURLToPath(import.meta.url));
@@ -43,11 +45,14 @@ function rewriteInternalLinks(text, routeMap) {
     next = next.replace(new RegExp(`\\]\\(${escaped}\\)`, 'g'), `](${routePath})`);
   }
 
-  next = next.replace(/\]\((\.\/)?LANs\/seasonalnet-lan-map\.md\)/g, '](/docs/network/lans/main-lan)');
-  next = next.replace(/\]\((\.\/)?LANs\/seasonalcme-network-map\.md\)/g, '](/docs/network/lans/seasonalcme)');
-  next = next.replace(/\]\((\.\/)?LANs\/phonelan-map\.md\)/g, '](/docs/network/lans/phone-lan)');
+  next = next.replace(/\]\((\.\/)?LANs\/seasonalnet-lan-map\.md\)/g, '](/docs/topology/lans/main-lan)');
+  next = next.replace(/\]\((\.\/)?LANs\/seasonalcme-network-map\.md\)/g, '](/docs/topology/lans/seasonalcme)');
+  next = next.replace(/\]\((\.\/)?LANs\/phonelan-map\.md\)/g, '](/docs/topology/lans/phone-lan)');
   next = next.replace(/\]\(README\.md\)/g, '](/docs)');
-  next = next.replace(/\]\(NETWORK\.md\)/g, '](/docs/network)');
+  next = next.replace(/\]\(PLATFORM\.md\)/g, '](/docs/about/platform)');
+  next = next.replace(/\]\(SERVICES\.md\)/g, '](/docs/about/services)');
+  next = next.replace(/\]\(NETWORK\.md\)/g, '](/docs/topology)');
+  next = next.replace(/\]\(PROJECTS\.md\)/g, '](/docs/projects)');
 
   return next;
 }
@@ -73,25 +78,43 @@ function toMdx({ title, description }, rawText, routeMap) {
   ].join('\n');
 }
 
-function generateLanIndex() {
-  const lanEntries = PUBLIC_DOCS_ALLOWLIST.filter((entry) => entry.outputPath.startsWith('network/lans/'));
+function generateSectionIndex({ title, description, intro, section }) {
+  const entries = PUBLIC_DOCS_ALLOWLIST.filter((entry) => entry.section === section);
 
   const lines = [
     '---',
-    'title: "LAN Maps"',
-    'description: "Published network-segment maps sourced from the public SeasonalNet documentation set."',
+    `title: "${escapeFrontmatter(title)}"`,
+    `description: "${escapeFrontmatter(description)}"`,
     '---',
     '',
-    'Select a network segment:',
+    intro,
     '',
   ];
 
-  for (const entry of lanEntries) {
+  for (const entry of entries) {
     lines.push(`- [${entry.title}](${entry.routePath}) — ${entry.description}`);
   }
 
   lines.push('');
   return lines.join('\n');
+}
+
+function generateAboutIndex() {
+  return generateSectionIndex({
+    title: 'About SeasonalNet',
+    description: 'Platform overview and public-safe service catalog for SeasonalNet.',
+    intro: 'Read these pages for the high-level SeasonalNet platform model, service boundaries, and public-safe subsystem inventory.',
+    section: 'about',
+  });
+}
+
+function generateLanIndex() {
+  return generateSectionIndex({
+    title: 'LAN Maps',
+    description: 'Published network-segment maps sourced from the public SeasonalNet documentation set.',
+    intro: 'Select a network segment:',
+    section: 'topology-lans',
+  });
 }
 
 async function ensureRequiredSourceFiles() {
@@ -149,8 +172,11 @@ async function main() {
   const routeMap = buildRouteMap();
 
   await writeJson('meta.json', PUBLIC_DOCS_ROOT_META);
-  await writeJson('network/lans/meta.json', PUBLIC_DOCS_LANS_META);
-  await writeText('network/lans/index.mdx', generateLanIndex());
+  await writeJson('about/meta.json', PUBLIC_DOCS_ABOUT_META);
+  await writeJson('topology/meta.json', PUBLIC_DOCS_TOPOLOGY_META);
+  await writeJson('topology/lans/meta.json', PUBLIC_DOCS_LANS_META);
+  await writeText('about/index.mdx', generateAboutIndex());
+  await writeText('topology/lans/index.mdx', generateLanIndex());
 
   for (const entry of PUBLIC_DOCS_ALLOWLIST) {
     const inputPath = path.join(sourceRoot, entry.sourcePath);

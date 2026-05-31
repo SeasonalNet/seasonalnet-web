@@ -2,6 +2,8 @@
   "title": "Documentation",
   "pages": [
     "index",
-    "network"
+    "about",
+    "topology",
+    "projects"
   ]
 }

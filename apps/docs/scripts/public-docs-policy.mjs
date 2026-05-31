@@ -15,6 +15,18 @@ export const PUBLIC_DOCS_DENY_PREFIXES = ['VMs/'];
 export const PUBLIC_DOCS_MANAGED_OUTPUTS = [
   'index.mdx',
   'meta.json',
+  'about/index.mdx',
+  'about/platform.mdx',
+  'about/services.mdx',
+  'about/meta.json',
+  'topology/index.mdx',
+  'topology/lans/index.mdx',
+  'topology/lans/main-lan.mdx',
+  'topology/lans/seasonalcme.mdx',
+  'topology/lans/phone-lan.mdx',
+  'topology/lans/meta.json',
+  'topology/meta.json',
+  'projects/index.mdx',
   'network/index.mdx',
   'network/lans/index.mdx',
   'network/lans/main-lan.mdx',
@@ -31,41 +43,77 @@ export const PUBLIC_DOCS_ALLOWLIST = [
     outputPath: 'index.mdx',
     routePath: '/docs',
     title: 'SeasonalNet Documentation',
-    description: 'Public overview and publication scope for SeasonalNet documentation.',
+    description: 'Public documentation index for SeasonalNet platform, topology, and project guides.',
+  },
+  {
+    sourcePath: 'PLATFORM.md',
+    outputPath: 'about/platform.mdx',
+    routePath: '/docs/about/platform',
+    section: 'about',
+    title: 'SeasonalNet Platform Overview',
+    description: 'High-level definition of SeasonalNet, its operating model, and major platform domains.',
+  },
+  {
+    sourcePath: 'SERVICES.md',
+    outputPath: 'about/services.mdx',
+    routePath: '/docs/about/services',
+    section: 'about',
+    title: 'SeasonalNet Services Overview',
+    description: 'Public-safe catalog of major SeasonalNet services and subsystem boundaries.',
   },
   {
     sourcePath: 'NETWORK.md',
-    outputPath: 'network/index.mdx',
-    routePath: '/docs/network',
-    title: 'SeasonalNet Network Overview',
+    outputPath: 'topology/index.mdx',
+    routePath: '/docs/topology',
+    title: 'SeasonalNet Topology',
     description: 'Top-level index of SeasonalNet network segments and routing boundaries.',
   },
   {
     sourcePath: 'LANs/seasonalnet-lan-map.md',
-    outputPath: 'network/lans/main-lan.mdx',
-    routePath: '/docs/network/lans/main-lan',
+    outputPath: 'topology/lans/main-lan.mdx',
+    routePath: '/docs/topology/lans/main-lan',
+    section: 'topology-lans',
     title: 'SeasonalNet Main LAN',
     description: 'Address bands, infrastructure inventory, and routing notes for the main LAN.',
   },
   {
     sourcePath: 'LANs/seasonalcme-network-map.md',
-    outputPath: 'network/lans/seasonalcme.mdx',
-    routePath: '/docs/network/lans/seasonalcme',
+    outputPath: 'topology/lans/seasonalcme.mdx',
+    routePath: '/docs/topology/lans/seasonalcme',
+    section: 'topology-lans',
     title: 'SeasonalCME Network Map',
     description: 'Voice and management VLAN topology for the SeasonalCME lab.',
   },
   {
     sourcePath: 'LANs/phonelan-map.md',
-    outputPath: 'network/lans/phone-lan.mdx',
-    routePath: '/docs/network/lans/phone-lan',
+    outputPath: 'topology/lans/phone-lan.mdx',
+    routePath: '/docs/topology/lans/phone-lan',
+    section: 'topology-lans',
     title: 'SeasonalNet Phone-LAN',
     description: 'Routing, services, and attached-device map for the Phone-LAN segment.',
+  },
+  {
+    sourcePath: 'PROJECTS.md',
+    outputPath: 'projects/index.mdx',
+    routePath: '/docs/projects',
+    title: 'SeasonalNet Projects and Guides',
+    description: 'Scalable public documentation area for SeasonalNet-originated FOSS projects and reusable systems.',
   },
 ];
 
 export const PUBLIC_DOCS_ROOT_META = {
   title: 'Documentation',
-  pages: ['index', 'network'],
+  pages: ['index', 'about', 'topology', 'projects'],
+};
+
+export const PUBLIC_DOCS_ABOUT_META = {
+  title: 'About',
+  pages: ['index', 'platform', 'services'],
+};
+
+export const PUBLIC_DOCS_TOPOLOGY_META = {
+  title: 'Topology',
+  pages: ['index', 'lans'],
 };
 
 export const PUBLIC_DOCS_LANS_META = {

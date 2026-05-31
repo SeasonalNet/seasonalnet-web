@@ -1,21 +1,56 @@
 ---
 title: "SeasonalNet Documentation"
-description: "Public overview and publication scope for SeasonalNet documentation."
+description: "Public documentation index for SeasonalNet platform, topology, and project guides."
 ---
 
-Static reference documentation for the SeasonalNet homelab infrastructure. The repository is maintained as the public-safe documentation source for the rendered docs site.
+Static public-safe reference documentation for SeasonalNet. This repository backs the rendered documentation site and is organized as a small knowledge base, not only as a network map.
 
 ---
 
-## Structure
+## Published sections
 
-```
+### About
+
+What SeasonalNet is, what major systems exist, and what public-safe platform/service inventory belongs in the rendered docs site.
+
+Pages:
+
+- [Platform overview](/docs/about/platform) — SeasonalNet identity, operating model, boundaries, and major domains
+- [Service catalog](/docs/about/services) — public-safe service inventory and subsystem reference
+
+### Topology
+
+Where SeasonalNet systems live and how the network is connected. This section contains LAN maps, routing relationships, addressing bands, and device placement notes.
+
+Pages:
+
+- [Topology overview](/docs/topology) — top-level topology and segment index
+- [Main LAN](/docs/topology/lans/main-lan) — Main LAN (`192.168.1.0/24`)
+- [SeasonalCME](/docs/topology/lans/seasonalcme) — SeasonalCME lab (`10.42.0.0/24`, `10.42.2.0/24`)
+- [Phone-LAN](/docs/topology/lans/phone-lan) — Phone-LAN (`192.168.56.0/24`)
+
+### Projects
+
+Scalable public documentation for FOSS projects, reusable services, and deployable systems released from SeasonalNet.
+
+Pages:
+
+- [Projects and guides](/docs/projects) — section purpose and publication boundaries for future project guides
+
+---
+
+## Repository structure
+
+```text
 SeasonalNet-Documentation/
-├── README.md          # This file
+├── README.md          # Documentation root / section index
 ├── AGENTS.md          # Agent/machine reference for this documentation set
-├── NETWORK.md         # Top-level network overview and segment index
+├── PLATFORM.md        # About / platform overview
+├── SERVICES.md        # About / service catalog
+├── NETWORK.md         # Topology overview and segment index
+├── PROJECTS.md        # Projects and guides section root
 └── LANs/
-    ├── seasonalnet-lan-map.md     # Main LAN (192.168.1.0/24) — top-level segment
+    ├── seasonalnet-lan-map.md     # Main LAN (192.168.1.0/24)
     ├── seasonalcme-network-map.md # SeasonalCME lab (10.42.0.0/24, 10.42.2.0/24)
     └── phonelan-map.md            # Phone-LAN (192.168.56.0/24)
 ```
@@ -24,21 +59,23 @@ SeasonalNet-Documentation/
 
 ---
 
-## Scope
+## Publication scope
 
-This documentation covers:
+This documentation may cover:
 
-- Layer 2 / Layer 3 topology for all SeasonalNet network segments
+- Platform identity, public-safe service inventory, and subsystem boundaries
+- Layer 2 / Layer 3 topology for SeasonalNet network segments
 - Device inventory, static address assignments, and address band purpose
 - Routing, NAT, and services boundaries
 - Physical switch port maps where applicable
-- Known gaps and deferred cleanup items
+- Public FOSS project reference material and deployment/customization guides
+- Known gaps and deferred cleanup items when they are public-safe
 
 It does **not** cover:
 
-- VM-level configuration or credentials (`VMs/` — local only)
-- Application-layer configuration for hosted services
-- SeasonalWeather, SeasonalPBX, or SeasonalWeb internal architecture (maintained separately in their respective repositories)
+- VM-level credentials or sensitive configuration (`VMs/` — local only)
+- Secrets, private tokens, internal-only operational material, or unpublished access details
+- Live runtime truth that should be read from monitoring, admin, or agent tooling instead
 
 ---
 
