@@ -31,6 +31,14 @@ Role: telephony, call control, phone provisioning, and related communications fu
 
 Boundary: voice systems are part of SeasonalNet's communications domain.
 
+### PBX control plane / pbx-controld
+
+Role: authoritative coordination layer for bot-managed and portal-managed PBX extension state.
+
+`pbx-controld` runs on SeasonalDock at `/opt/pbx-controld` under Docker Compose. It is a Node.js / TypeScript Fastify service bound to `127.0.0.1:9091` inside SeasonalDock. It uses the `pbx_control` PostgreSQL database on SeasonalDB (`192.168.1.19`) and the `pbx` schema for extension ownership, operations, audit logs, reconcile runs, and migration state.
+
+Boundary: `pbx-controld` is intended to prevent the SPA, Discord bot, and FreePBX from each maintaining conflicting extension truth. UI clients and bot clients should use the control-plane API rather than mutating bot-managed extension state directly.
+
 ### Auth, Git, DNS, mail, and platform support services
 
 Role: identity, code hosting, internal DNS, mail, and supporting service infrastructure. SeasonalAuth provides the Authentik identity layer at `192.168.1.6`; SeasonalForge provides Forgejo/git service at `192.168.1.7` / `git.seasonalnet.org`; SeasonalMail is the mailcow-backed mail server at `192.168.1.13` for `mail.seasonalnet.org`.
@@ -40,6 +48,8 @@ Boundary: these services support operator workflows and platform administration.
 ### SeasonalDNS
 
 Role: internal Main-LAN DNS resolver and local DNS management service running Technitium DNS Server.
+
+SeasonalDNS runs at `192.168.1.14` on SeasonalR230. It manages internal records under `lan.seasonalnet.org`. Cloudflare remains authoritative for public `seasonalnet.org` DNS. Admin/static hosts should prefer SeasonalDNS directly for internal DNS lookups to avoid stale router-side local-name answers.
 
 Boundary: SeasonalDNS is not public authoritative DNS for `seasonalnet.org`; Cloudflare remains authoritative for public SeasonalNet DNS.
 
@@ -57,10 +67,25 @@ Boundary: SeasonalMonitor is observability infrastructure. It does not replace S
 
 Role: primary Proxmox host for the active SeasonalNet service VM fleet.
 
-SeasonalR230 is the Dell PowerEdge R230 Proxmox host at `192.168.1.21`, with iDRAC at `192.168.1.5`. It is connected through the CME rack VLAN 99 Main-LAN transit path. The current R230 service VM fleet is SeasonalDNS (VMID 101), SeasonalAuth (102), SeasonalForge (103), SeasonalMail (104), SeasonalMonitor (105), SeasonalPBX (106), SeasonalWX (107), SeasonalRain (108), and SeasonalWeb / SeasonalNet (109). These VMs have QEMU Guest Agent enabled/responding, Proxmox autostart configured, and verified PBS backups on SeasonalBack.
+SeasonalR230 is the Dell PowerEdge R230 Proxmox host at `192.168.1.30`, with iDRAC at `192.168.1.32`. It is connected through the CME rack VLAN 99 Main-LAN transit path. The current R230 service VM fleet is SeasonalDNS (VMID 101), SeasonalAuth (102), SeasonalForge (103), SeasonalMail (104), SeasonalMonitor (105), SeasonalPBX (106), SeasonalWX (107), SeasonalRain (108), and SeasonalWeb / SeasonalNet (109). These VMs have QEMU Guest Agent enabled/responding, Proxmox autostart configured, and verified PBS backups on SeasonalBack.
 
 Boundary: SeasonalR230 is the primary VM host, not the backup service. Backup service ownership remains with SeasonalBack.
 
+### SeasonalDB
+
+Role: shared PostgreSQL database host for SeasonalNet control-plane data.
+
+SeasonalDB is a Debian 13 VM hosted on SeasonalR340 as Proxmox VMID `112`. It uses `192.168.1.19` on Main LAN via interface `ens18`, with hostname/DNS `seasonaldb.lan.seasonalnet.org`. PostgreSQL 18 runs under Docker Compose from `/opt/seasonaldb`, with data under `/srv/seasonaldb/postgres` and backups under `/srv/seasonaldb/backups`. The current primary application database is `pbx_control`; its `pbx` schema includes extension ownership, operation, audit, reconcile, and migration tables for `pbx-controld`.
+
+Boundary: SeasonalDB is a database host. It should not be treated as a general application host.
+
+### SeasonalDock
+
+Role: Docker/control-plane application host.
+
+SeasonalDock is a Debian 13 VM hosted on SeasonalR340 as Proxmox VMID `113`. It uses `192.168.1.20` on Main LAN via interface `ens18`, with hostname/DNS `seasonaldock.lan.seasonalnet.org`. Docker Engine and Docker Compose are installed from Docker's official Debian repository. Its first hosted application is `pbx-controld` at `/opt/pbx-controld`.
+
+Boundary: SeasonalDock hosts containerized application/control-plane services. It keeps Node.js/TypeScript runtime and dependency churn off admin workstations such as seasonal-victus.
 
 ### SeasonalNAS
 
@@ -80,13 +105,13 @@ Boundary: SeasonalSand is a controlled execution/sandbox service. It should not 
 
 ### SeasonalR340 and SeasonalBack
 
-Role: secondary Proxmox host and backup/storage/sandbox support platform for local SeasonalNet infrastructure.
+Role: secondary Proxmox host and backup/storage/sandbox/database/Docker support platform for local SeasonalNet infrastructure.
 
-SeasonalR340 is the Dell PowerEdge R340 Proxmox host at `192.168.1.22`, with iDRAC at `192.168.1.23`. It is connected through the CME rack VLAN 99 Main-LAN transit path and hosts SeasonalBack (VMID 100), SeasonalNAS (VMID 110), and SeasonalSand (VMID 111).
+SeasonalR340 is the Dell PowerEdge R340 Proxmox host at `192.168.1.31`, with iDRAC at `192.168.1.33`. It is connected through the CME rack VLAN 99 Main-LAN transit path and hosts SeasonalBack (VMID 100), SeasonalNAS (VMID 110), SeasonalSand (VMID 111), SeasonalDB (VMID 112), and SeasonalDock (VMID 113).
 
 SeasonalBack is the Proxmox Backup Server VM hosted on SeasonalR340. It uses `192.168.1.16`; `seasonalback.lan.seasonalnet.org` resolves to that address, and `back.lan.seasonalnet.org` is a service alias. Its datastore is named `seasonalback` at `/mnt/datastore/seasonalback`. The current datastore backing is the PBS VM root filesystem / single virtual disk, not a separate mounted data disk.
 
-Boundary: SeasonalBack is the backup service VM. SeasonalNAS is the storage service VM. SeasonalSand is the sandbox service VM. SeasonalR340 is the hypervisor and hardware platform. Do not document PBS, NAS, or sandbox services as running directly on the R340 host unless that design changes.
+Boundary: SeasonalBack is the backup service VM. SeasonalNAS is the storage service VM. SeasonalSand is the sandbox service VM. SeasonalDB is the database service VM. SeasonalDock is the container/control-plane application host. SeasonalR340 is the hypervisor and hardware platform. Do not document PBS, NAS, sandbox, database, or Docker application services as running directly on the R340 host unless that design changes.
 
 ### Retired systems
 
@@ -99,6 +124,14 @@ SeasonalUtilities is retired. It previously occupied `192.168.1.11` and hosted u
 Role: browser-facing interfaces for platform functions such as docs, radio, PBX, provisioning, and agent access. SeasonalWeb / SeasonalNet runs as VMID 109 on SeasonalR230 and serves the reverse-proxy and Next.js SPA front-door role, including the public documentation site.
 
 Boundary: a web front door may expose part of SeasonalNet, but not the full live platform state by itself.
+
+## Operational notes
+
+### Proxmox live networking restarts
+
+During the 2026-06-07 LAN reshuffle, live networking restarts on SeasonalR230 and SeasonalR340 detached VM tap interfaces from `vmbr0`. Host management addresses stayed reachable, but guest VMs were isolated until their tap interfaces were reattached to `vmbr0`.
+
+Avoid `systemctl restart networking` on Proxmox hosts while VMs are live unless prepared to repair bridge membership or reboot during maintenance.
 
 ## Observability boundaries
 

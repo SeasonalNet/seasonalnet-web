@@ -27,8 +27,15 @@ Verizon WNC-CR200A (192.168.1.1)
     |
 Main LAN (192.168.1.0/24)
     |
-    |-- SeasonalR230 (192.168.1.21)
-    |       `-- Primary Proxmox VM host for SeasonalDNS/Auth/Forge/Mail/Monitor/PBX/WX/Rain/Web
+    |-- SeasonalR230 (192.168.1.30; iDRAC 192.168.1.32)
+    |       `-- Core Proxmox VM host for SeasonalDNS/Auth/Forge/Mail/Monitor/PBX/WX/Rain/Web
+    |
+    |-- SeasonalR340 (192.168.1.31; iDRAC 192.168.1.33)
+    |       |-- SeasonalBack PBS VM (192.168.1.16)
+    |       |-- SeasonalNAS storage VM (192.168.1.17)
+    |       |-- SeasonalSand sandbox VM (192.168.1.18)
+    |       |-- SeasonalDB PostgreSQL VM (192.168.1.19)
+    |       `-- SeasonalDock Docker/control-plane VM (192.168.1.20)
     |
     |-- SeasonalWX (192.168.1.10)
     |       `-- Current SeasonalWeather VM / weather radio API
@@ -38,15 +45,24 @@ Main LAN (192.168.1.0/24)
     |       |-- SeasonalCME Voice VLAN (10.42.0.0/24, VLAN 10)
     |       `-- SeasonalCME Management VLAN (10.42.2.0/24, VLAN 42)
     |
-    |-- SeasonalPBX (192.168.1.12)
-    |       |
-    |       `-- Phone-LAN (192.168.56.0/24, gateway 192.168.56.1)
-    |
-    `-- SeasonalR340 (192.168.1.22)
-            |-- SeasonalBack PBS VM (192.168.1.16)
-            |-- SeasonalNAS storage VM (192.168.1.17)
-            `-- SeasonalSand sandbox VM (192.168.1.18)
+    `-- SeasonalPBX (192.168.1.12)
+            |
+            `-- Phone-LAN (192.168.56.0/24, gateway 192.168.56.1)
 ```
+
+---
+
+## Main LAN Address Policy
+
+| Range | Purpose |
+|---|---|
+| `192.168.1.1` | Gateway |
+| `192.168.1.2` – `192.168.1.5` | Network infrastructure / reserved infrastructure |
+| `192.168.1.6` – `192.168.1.29` | Servers and service VMs |
+| `192.168.1.30` – `192.168.1.39` | Hypervisors and BMC/OOB management |
+| `192.168.1.40` – `192.168.1.49` | Admin workstations / fixed laptops |
+| `192.168.1.50` – `192.168.1.99` | Static non-server devices |
+| `192.168.1.100` – `192.168.1.254` | DHCP clients |
 
 ---
 
@@ -73,10 +89,28 @@ SeasonalWeb performs hostname-based routing for public web services behind the s
 
 ## DNS / DHCP
 
-Cloudflare remains authoritative public DNS for `seasonalnet.org`. SeasonalDNS is for internal LAN recursion/local records only. Current internal aliases include `wx.lan.seasonalnet.org`, `seasonalwx.lan.seasonalnet.org`, and `seasonalweather.lan.seasonalnet.org` for SeasonalWX (`192.168.1.10`), plus `seasonalback.lan.seasonalnet.org` with `back.lan.seasonalnet.org` as a service alias for SeasonalBack (`192.168.1.16`). SeasonalNAS uses `seasonalnas.lan.seasonalnet.org` (`192.168.1.17`) and SeasonalSand uses `seasonalsand.lan.seasonalnet.org` (`192.168.1.18`). SeasonalR230 is the primary Proxmox host for the main service VM fleet; SeasonalBack, SeasonalNAS, and SeasonalSand are hosted on SeasonalR340.
+Cloudflare remains authoritative public DNS for `seasonalnet.org`. SeasonalDNS is for internal LAN recursion/local records only. Current internal aliases include `wx.lan.seasonalnet.org`, `seasonalwx.lan.seasonalnet.org`, and `seasonalweather.lan.seasonalnet.org` for SeasonalWX (`192.168.1.10`), plus `seasonalback.lan.seasonalnet.org` with `back.lan.seasonalnet.org` as a service alias for SeasonalBack (`192.168.1.16`). SeasonalNAS uses `seasonalnas.lan.seasonalnet.org` (`192.168.1.17`), SeasonalSand uses `seasonalsand.lan.seasonalnet.org` (`192.168.1.18`), SeasonalDB uses `seasonaldb.lan.seasonalnet.org` (`192.168.1.19`), and SeasonalDock uses `seasonaldock.lan.seasonalnet.org` (`192.168.1.20`). SeasonalR230 and SeasonalR340 moved to the hypervisor/BMC band at `.30` and `.31` respectively.
 
 | Segment | DNS | DHCP |
 |---|---|---|
 | Main LAN | SeasonalDNS / Technitium (`192.168.1.14`) for internal DNS; WNC-CR200A (`192.168.1.1`) remains DHCP/default gateway | Verizon WNC-CR200A |
 | SeasonalCME | SeasonalEDGE-R1 (OSPF 42 domain) | SeasonalEDGE-R1 |
 | Phone-LAN | `dnsmasq` on SeasonalPBX (`192.168.56.1`, `FD42:56::1`) | `dnsmasq` on SeasonalPBX |
+
+Admin/static hosts should prefer SeasonalDNS (`192.168.1.14`) directly for DNS to avoid router-side stale or empty local answers for `lan.seasonalnet.org` records.
+
+---
+
+## Proxmox Bridge Cutover Note
+
+During the 2026-06-07 LAN reshuffle, restarting networking on live Proxmox hosts detached VM tap interfaces from `vmbr0`. The host management addresses remained reachable, but the guest VMs could not reach the LAN until the tap interfaces were reattached.
+
+Avoid `systemctl restart networking` on Proxmox hosts while VMs are live. Prefer a maintenance reboot or use `ifreload -a` where appropriate. If tap interfaces detach, reattach them carefully:
+
+```bash
+for dev in /sys/class/net/tap*; do
+  dev="${dev##*/}"
+  ip link set "$dev" master vmbr0
+  ip link set "$dev" up
+done
+```

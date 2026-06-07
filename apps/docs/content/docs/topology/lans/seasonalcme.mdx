@@ -9,7 +9,7 @@ description: "Voice and management VLAN topology for the SeasonalCME lab."
 **Management IPv6 ULA:** `FD42:42:2::/64`  
 **Voice gateway:** `10.42.0.1` / `FD42:42::1` (SeasonalEDGE-R1 `Gi0/1`)  
 **Management gateway:** `10.42.2.1` / `FD42:42:2::1` (SeasonalEDGE-R1 `Vlan42`)  
-**Last updated:** 2026-05-15
+**Last updated:** 2026-06-07
 
 ---
 
@@ -71,10 +71,10 @@ Current fixed assignments on VLAN 10 already align with this banding: `10.42.0.1
 | `192.168.1.3` | SeasonalBridge-NONROOT (AIR-AP1142N-A-K9) | `Gi1/0/1` on SW2 | Wireless bridge NONROOT; VLAN 99 attachment is currently disabled/quarantined after STP instability |
 | *(no IP)* | Verizon CE1000A / 100 ft Cat6 Main-LAN backhaul | `Gi1/0/3` on SW2 | Current production VLAN 99 Main-LAN/backhaul path for CME rack Main-LAN reachability; tested clean at 1 Gb/s full duplex |
 | *(no IP)* | TP-Link TL-PA7017P powerline path | `Gi1/0/4` on SW2 | Retired/disabled VLAN 99 backhaul path after collapsing under normal service traffic |
-| `192.168.1.21` | SeasonalR230 | access VLAN 99 port `Gi1/0/13` | Dell PowerEdge R230 / Proxmox host physically in CME rack, logically on Main LAN |
-| `192.168.1.5` | SeasonalR230-iDRAC | access VLAN 99 port `Gi1/0/14` | out-of-band management address on Main LAN |
-| `192.168.1.22` | SeasonalR340 | access VLAN 99 port `Gi1/0/16` | Dell PowerEdge R340 / Proxmox VE host, logically on Main LAN; hosts SeasonalBack PBS VM at `192.168.1.16` |
-| `192.168.1.23` | SeasonalR340-iDRAC | access VLAN 99 port `Gi1/0/15` | out-of-band management address on Main LAN; LLDP advertises iDRAC9 as `PowerEdge R340 MINWINPC` / port `32JBF33 Dedicated` |
+| `192.168.1.30` | SeasonalR230 | access VLAN 99 port `Gi1/0/13` | Dell PowerEdge R230 / Proxmox host physically in CME rack, logically on Main LAN |
+| `192.168.1.32` | SeasonalR230-iDRAC | access VLAN 99 port `Gi1/0/14` | out-of-band management address on Main LAN |
+| `192.168.1.31` | SeasonalR340 | access VLAN 99 port `Gi1/0/16` | Dell PowerEdge R340 / Proxmox VE host, logically on Main LAN; hosts SeasonalBack, SeasonalNAS, SeasonalSand, SeasonalDB, and SeasonalDock VMs |
+| `192.168.1.33` | SeasonalR340-iDRAC | access VLAN 99 port `Gi1/0/15` | out-of-band management address on Main LAN; LLDP advertises iDRAC9 as `PowerEdge R340 MINWINPC` / port `32JBF33 Dedicated` |
 
 ---
 
@@ -181,10 +181,10 @@ SW2 (PoE)
   |- Gi1/0/2 --> SeasonalAP-3602i (VLAN 10)
   |- Gi1/0/3 --> Verizon CE1000A / 100 ft Cat6 backhaul (VLAN 99 active path)
   |- Gi1/0/4 --> TP-Link TL-PA7017P powerline/backhaul (VLAN 99, shutdown/retired)
-  |- Gi1/0/13 --> SeasonalR230 = 192.168.1.21 (VLAN 99 / Main-LAN addressed)
-  |- Gi1/0/14 --> SeasonalR230-iDRAC = 192.168.1.5 (VLAN 99 / Main-LAN addressed)
-  |- Gi1/0/15 --> SeasonalR340-iDRAC = 192.168.1.23 (VLAN 99 / Main-LAN addressed)
-  |- Gi1/0/16 --> SeasonalR340 = 192.168.1.22 (VLAN 99 / Main-LAN addressed; hosts SeasonalBack PBS VM 192.168.1.16)
+  |- Gi1/0/13 --> SeasonalR230 = 192.168.1.30 (VLAN 99 / Main-LAN addressed)
+  |- Gi1/0/14 --> SeasonalR230-iDRAC = 192.168.1.32 (VLAN 99 / Main-LAN addressed)
+  |- Gi1/0/15 --> SeasonalR340-iDRAC = 192.168.1.33 (VLAN 99 / Main-LAN addressed)
+  |- Gi1/0/16 --> SeasonalR340 = 192.168.1.31 (VLAN 99 / Main-LAN addressed; hosts SeasonalBack/NAS/Sand/DB/Dock service VMs)
   `- Gi1/0/9+ --> phones / voice clients (VLAN 10)
 ```
 
@@ -196,4 +196,4 @@ SW2 (PoE)
 - `SeasonalCME-SW1 Gi0/22` and `SeasonalEDGE-R1 Gi0/0` form the VLAN 99 transit-side relationship seen in CDP; this is distinct from the voice-side `Gi0/24` ↔ `Gi0/1` link.
 - `VLAN 42` is present and trunked between SW1 and SW2, but no switch SVI for VLAN 42 was shown on the 2960-X switches in the captured output; management addresses shown on the switches are on `Vlan10`.
 - `SeasonalBridge-NONROOT` remains cabled on SW2 `Gi1/0/1` in VLAN 99, but that port is intentionally shut/quarantined. The Verizon CE1000A / 100 ft Cat6 path on SW2 `Gi1/0/3` is the current active Main-LAN/backhaul path. The TP-Link TL-PA7017P path on SW2 `Gi1/0/4` is disabled/retired.
-- SeasonalR340 VLAN 99 access ports are active: iDRAC on SW2 `Gi1/0/15`, Proxmox host NIC on SW2 `Gi1/0/16`. SeasonalBack PBS is a VM behind the R340 host bridge at `192.168.1.16`, not a separate physical switch port.
+- SeasonalR340 VLAN 99 access ports are active: iDRAC on SW2 `Gi1/0/15`, Proxmox host NIC on SW2 `Gi1/0/16`. SeasonalBack (`192.168.1.16`), SeasonalNAS (`192.168.1.17`), SeasonalSand (`192.168.1.18`), SeasonalDB (`192.168.1.19`), and SeasonalDock (`192.168.1.20`) are VMs behind the R340 host bridge, not separate physical switch ports.
