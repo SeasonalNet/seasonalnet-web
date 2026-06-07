@@ -5,7 +5,7 @@ description: "Address bands, infrastructure inventory, and routing notes for the
 
 **Subnet:** `192.168.1.0/24`  
 **Gateway:** `192.168.1.1` (Verizon WNC-CR200A)  
-**Last updated:** 2026-05-29
+**Last updated:** 2026-06-06
 
 ---
 
@@ -44,7 +44,7 @@ VMs in this band are static-addressed service hosts. SeasonalR230 is the primary
 | `192.168.1.8` | SeasonalWeb / SeasonalNet | Proxmox VMID `109` | NGINX reverse proxy, Next.js SPAs, docs site, DDNS updater; hosted on SeasonalR230 |
 | `192.168.1.9` | SeasonalRain | Proxmox VMID `108` | SeasonalNet Discord bot (`seasonalnet-discord-bot`); hosted on SeasonalR230 |
 | `192.168.1.10` | SeasonalWX | Proxmox VMID `107` | Current SeasonalWeather VM replacing the retired original SeasonalWeather VM; hosted on SeasonalR230. Runs weather radio / alert pipeline and LAN-side nginx reverse proxy for the SeasonalWeather API (`/v1/...` routes). DNS aliases include `wx.lan.seasonalnet.org`, `seasonalwx.lan.seasonalnet.org`, and `seasonalweather.lan.seasonalnet.org`. |
-| `192.168.1.11` | *(reserved; former SeasonalUtilities)* | | SeasonalUtilities has been retired, archived, and removed from the active VM inventory. Previously hosted Uptime Kuma / `status.seasonalnet.org`. |
+| `192.168.1.11` | *(reserved; former SeasonalUtilities)* | | SeasonalUtilities has been retired, archived, and removed from the active VM inventory. Former Uptime Kuma utility host; no active service assignment. |
 | `192.168.1.12` | SeasonalPBX | Proxmox VMID `106` | Current FreePBX / Asterisk SIP PBX and Phone-LAN gateway (`192.168.56.1`, `FD42:56::1`); hosted on SeasonalR230 |
 | `192.168.1.13` | SeasonalMail | Proxmox VMID `104` | `mailcow` powered mail server (`mail.seasonalnet.org`); hosted on SeasonalR230 |
 | `192.168.1.14` | SeasonalDNS | Proxmox VMID `101` | Internal Technitium DNS resolver / local DNS management; not public authoritative DNS for `seasonalnet.org`; hosted on SeasonalR230 |
@@ -140,4 +140,3 @@ SeasonalWeb receives public HTTP/HTTPS traffic and routes hostname-based service
 - SeasonalBack currently stores PBS data on its VM root filesystem / single virtual disk. Re-document if a separate datastore disk, passthrough disk, direct-attached storage layout, or SeasonalNAS-backed backup storage layout is added.
 - SeasonalMonitor SNMP polling and Redfish/iDRAC collection have a working foundation; continue expanding dashboards and target coverage as needed.
 - SeasonalBRIDGE-NONROOT remains quarantined/disabled as a production path; clean up stale bridge IPv6/autoconfig details only if the Aironet bridge is revisited.
-- Decide what should replace SeasonalUtilities / Uptime Kuma for `status.seasonalnet.org`, or formally document that the public status service is retired.
