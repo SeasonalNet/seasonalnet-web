@@ -1,85 +1,108 @@
+import type { ReactNode } from "react"
+import type { LucideIcon } from "lucide-react"
+import { Bot, Code, KeyRound, Network, PhoneCall, RadioTower, Shield, Users, Voicemail } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@seasonalnet/shell/src/components/ui/card"
-import { Button } from "@seasonalnet/shell/src/components/ui/button"
-import { Shield, Code, Bot, MessagesSquare } from "lucide-react"
+import { BlurFade } from "@/components/magic/blur-fade"
+import { SectionHeader } from "@/components/pbx-section"
+import { cn } from "@seasonalnet/shell/src/lib/utils"
 
-function FeatureCard({
-  title,
-  icon: Icon,
-  children,
-}: {
+type Feature = {
   title: string
-  icon: any
-  children: React.ReactNode
-}) {
-  return (
-    <Card className="bg-card/60">
-      <CardHeader className="pb-2">
-        <div className="flex items-center gap-2">
-          <Icon className="h-4 w-4 text-muted-foreground" />
-          <CardTitle className="text-base">{title}</CardTitle>
-        </div>
-      </CardHeader>
-      <CardContent className="text-sm text-muted-foreground">{children}</CardContent>
-    </Card>
-  )
+  icon: LucideIcon
+  body: ReactNode
 }
 
-export function JoinPBXCard() {
+const featureCards: Feature[] = [
+  {
+    title: "Voice + DTMF captcha",
+    icon: Shield,
+    body: "Randomized voice challenges with DTMF fallback keep spam and bot calls away from sensitive call paths.",
+  },
+  {
+    title: "Discord onboarding",
+    icon: Bot,
+    body: "The bot creates extensions, binds ownership, and delivers initial SIP details without exposing FreePBX admin controls.",
+  },
+  {
+    title: "AstroCom routing",
+    icon: Network,
+    body: (
+      <>
+        SeasonalPBX participates in AstroCom IAX2 routing, including <span className="font-medium text-foreground">404-0000</span> for SeasonalPBX and <span className="font-medium text-foreground">548-0000</span> for LiteNet.
+      </>
+    ),
+  },
+  {
+    title: "Voicemail included",
+    icon: Voicemail,
+    body: "User extensions are provisioned with voicemail so missed calls have a normal place to land.",
+  },
+  {
+    title: "Paging + conference",
+    icon: Users,
+    body: "Shared calling features are available today, including a one-page group and a public conference room.",
+  },
+  {
+    title: "Credential lifecycle",
+    icon: KeyRound,
+    body: "Long SIP secrets are treated as provisioning credentials: reveal for setup, rotate when leaked, and redact elsewhere.",
+  },
+  {
+    title: "FreePBX-backed calls",
+    icon: PhoneCall,
+    body: "Extension, trunk, voicemail, and routing behavior stays on the FreePBX/Asterisk side where calls are enforced.",
+  },
+  {
+    title: "OpenAPI control plane",
+    icon: Code,
+    body: "pbx-controld adds API contracts, sanity checks, idempotency, audit trails, and downstream job guardrails.",
+  },
+  {
+    title: "Lab interconnect ready",
+    icon: RadioTower,
+    body: "Built for hobbyist telecom experiments without pushing normal workflows into admin-only surfaces.",
+  },
+]
+
+function FeatureCard({ title, icon: Icon, body, className }: Feature & { className?: string }) {
   return (
-    <Card className="bg-card/60">
-      {/* Header row: title left, button right */}
-      <CardHeader className="flex flex-row items-center gap-3 space-y-0 pb-2">
-        <CardTitle className="text-base">Join the PBX</CardTitle>
-
-        <Button asChild size="sm">
-          <a href="https://discord.gg/UDfrTwYTy2" target="_blank" rel="noreferrer noopener">
-            <MessagesSquare className="mr-2 h-4 w-4" />
-            Join Discord
-          </a>
-        </Button>
+    <Card
+      className={cn(
+        "group h-full bg-card/60 transition-all duration-200 hover:-translate-y-1 hover:bg-card/80 hover:shadow-md",
+        className
+      )}
+    >
+      <CardHeader className="p-5 pb-2">
+        <CardTitle className="flex items-center gap-3 text-base font-semibold tracking-tight">
+          <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border border-border/80 bg-background/80 text-muted-foreground transition-colors group-hover:border-border group-hover:bg-background">
+            <Icon className="h-6 w-6" aria-hidden="true" />
+          </span>
+          <span>{title}</span>
+        </CardTitle>
       </CardHeader>
-
-      {/* Body: instructions */}
-      <CardContent className="space-y-3 text-sm">
-        <div className="text-muted-foreground">
-          Join the SeasonalNet Discord, then head to{" "}
-          <span className="font-medium text-foreground">#join-the-pbx</span>. The bot provisions your extension and DMs
-          your SIP details.
-        </div>
-
-        <ul className="list-disc pl-5 text-muted-foreground space-y-1">
-          <li>
-            Registrar: <span className="font-medium text-foreground">sip.seasonalnet.org</span>
-          </li>
-          <li>
-            Transport: <span className="font-medium text-foreground">TCP</span>
-          </li>
-          <li>Keep your password secret (screenshots are forever).</li>
-        </ul>
-      </CardContent>
+      <CardContent className="px-5 pb-5 text-[15px] leading-7 text-muted-foreground">{body}</CardContent>
     </Card>
   )
 }
 
 export function PBXFeaturesGrid() {
   return (
-    <div className="space-y-3">
-      <div className="text-sm font-medium text-muted-foreground">Features</div>
+    <section className="space-y-6">
+      <BlurFade>
+        <SectionHeader
+          eyebrow="Features"
+          title="What SeasonalPBX gives you"
+          description="All the tools a hobbyist homelab-run PBX should have: managed extensions, voicemail, caller filtering, inter-PBX routing, and API-backed provisioning guardrails."
+        />
+      </BlurFade>
 
-      <div className="grid gap-4 md:grid-cols-3">
-        <FeatureCard title="Voice + DTMF captcha" icon={Shield}>
-          Callers solve a short randomized digits challenge. Voice recognition (Vosk) with DTMF fallback keeps spam and
-          bots busy elsewhere.
-        </FeatureCard>
-
-        <FeatureCard title="Discord onboarding" icon={Bot}>
-          The bot handles extension creation + credential delivery with guardrails.
-        </FeatureCard>
-
-        <FeatureCard title="Open API" icon={Code}>
-          Provisioning is done through FreePBX APIs with sanity checks, rate limits, and “don’t let chaos win” rules.
-        </FeatureCard>
+      <div className="grid gap-3 md:grid-cols-3 md:gap-4">
+        {featureCards.map((feature, index) => (
+          <BlurFade key={feature.title} delay={0.04 * index}>
+            <FeatureCard {...feature} />
+          </BlurFade>
+        ))}
       </div>
-    </div>
+    </section>
   )
 }

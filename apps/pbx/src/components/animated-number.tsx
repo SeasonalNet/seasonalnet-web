@@ -24,8 +24,10 @@ export function AnimatedNumber({ value, durationMs = 650, format }: Props) {
 
     // If the jump is tiny, just snap (prevents micro-jitter on frequent refresh)
     if (Math.abs(to - from) < 1) {
-      setShown(to)
-      return
+      rafRef.current = requestAnimationFrame(() => setShown(to))
+      return () => {
+        if (rafRef.current) cancelAnimationFrame(rafRef.current)
+      }
     }
 
     const start = performance.now()

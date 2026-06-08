@@ -1,5 +1,7 @@
+"use client"
+
 import * as React from "react";
-import { motion, type HTMLMotionProps } from "framer-motion";
+import { motion, useReducedMotion, type HTMLMotionProps } from "framer-motion";
 import { cn } from "@seasonalnet/shell/src/lib/utils";
 
 export type BlurFadeProps = HTMLMotionProps<"div"> & {
@@ -20,17 +22,19 @@ export function BlurFade({
   viewport,
   ...props
 }: BlurFadeProps) {
+  const reduceMotion = useReducedMotion();
+
   return (
     <motion.div
       className={cn(className)}
-      initial={{ opacity: 0, y, filter: `blur(${blur})` }}
-      whileInView={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+      initial={reduceMotion ? { opacity: 0 } : { opacity: 0, y, filter: `blur(${blur})` }}
+      whileInView={reduceMotion ? { opacity: 1 } : { opacity: 1, y: 0, filter: "blur(0px)" }}
       viewport={viewport ?? { once: true, amount: 0.2 }}
       transition={{
-        duration,
+        duration: reduceMotion ? 0.15 : duration,
         ease: "easeOut",
         ...(transition ?? {}),
-        delay,
+        delay: reduceMotion ? 0 : delay,
       }}
       {...props}
     >
