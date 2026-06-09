@@ -4,6 +4,7 @@ import "./globals.css"
 import { ThemeProvider } from "@seasonalnet/shell/src/components/theme-provider"
 import { SiteHeader } from "@/components/site-header"
 import { SiteAnnouncements } from "@seasonalnet/shell/src/components/site-announcements"
+import { Toaster } from "@seasonalnet/shell/src/components/ui/sonner"
 
 export const metadata: Metadata = {
   title: "SeasonalNet",
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <SiteAnnouncements />
           </div>
           {children}
+          <Toaster richColors closeButton position="top-right" />
         </ThemeProvider>
       </body>
     </html>

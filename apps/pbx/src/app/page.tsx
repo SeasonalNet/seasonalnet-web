@@ -26,9 +26,11 @@ export default function Page() {
                   </a>
                 </Button>
 
-                <Button disabled size="lg" variant="secondary" className="min-w-40 opacity-60">
-                  <LayoutDashboard className="mr-2 h-4 w-4" />
-                  Dashboard
+                <Button asChild size="lg" variant="secondary" className="min-w-40 transition-all hover:-translate-y-0.5 active:translate-y-0">
+                  <a href="/dashboard">
+                    <LayoutDashboard className="mr-2 h-4 w-4" />
+                    Dashboard
+                  </a>
                 </Button>
               </div>
             </div>

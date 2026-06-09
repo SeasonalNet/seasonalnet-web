@@ -1,36 +1,59 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# SeasonalPBX SPA
 
-## Getting Started
+SeasonalPBX public landing page and authenticated self-service dashboard.
 
-First, run the development server:
+## Development
+
+Install dependencies from the monorepo root:
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+npm ci
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Run the PBX app:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run dev --workspace @seasonalnet/pbx
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+Validate the app:
 
-## Learn More
+```bash
+npm run lint --workspace @seasonalnet/pbx
+npm run build --workspace @seasonalnet/pbx
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Self-service dashboard
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+The dashboard lives at `/dashboard` and uses NextAuth/Auth.js with Authentik. Browser requests only hit the local BFF routes under `/api/pbx/self/*`; those route handlers call `pbx-controld` with a server-side client credential.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Required runtime variables:
 
-## Deploy on Vercel
+```env
+AUTH_SECRET=
+AUTH_AUTHENTIK_ISSUER=https://auth.example/application/o/pbx/
+AUTH_AUTHENTIK_ID=
+AUTH_AUTHENTIK_SECRET=
+PBX_CONTROLD_BASE_URL=http://127.0.0.1:9091
+PBX_CONTROLD_CLIENT_SECRET=
+PBX_DISCORD_ID_CLAIM=discord_id
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Optional access policy variables. If omitted, any authenticated Authentik session can access the PBX dashboard:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```env
+AUTH_AUTHENTIK_PBX_STATUS_GROUPS=
+AUTH_AUTHENTIK_PBX_OPERATIONS_GROUPS=
+AUTH_AUTHENTIK_PBX_ADMINISTRATION_GROUPS=
+```
+
+For non-production development only, `PBX_DEV_DISCORD_ID` can supply a Discord ID when the Authentik claim is missing.
+
+## Credential model
+
+SIP secrets are not included in generic reads. The dashboard exposes explicit reveal and rotate actions:
+
+- reveal: provision a trusted device with the current SIP secret
+- rotate: intentionally replace the SIP secret after compromise or refresh
+
+Existing extensions without credential custody need a rotate before dashboard reveal can work.
