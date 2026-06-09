@@ -13,7 +13,7 @@ export default function DashboardPage() {
             <div className="mx-auto max-w-3xl space-y-4">
               <h1 className="text-4xl font-semibold tracking-tight md:text-5xl">SeasonalPBX Dashboard</h1>
               <p className="mx-auto max-w-2xl text-sm leading-6 text-muted-foreground md:text-base">
-                Manage your extension, reveal SIP credentials for provisioning, and rotate them when necessary.
+                Review your extension, update its profile, and use credential tools when the extension class supports self-service custody.
               </p>
             </div>
           </div>

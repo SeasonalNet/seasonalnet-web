@@ -7,8 +7,8 @@ import { SiteAnnouncements } from "@seasonalnet/shell/src/components/site-announ
 import { Toaster } from "@seasonalnet/shell/src/components/ui/sonner"
 
 export const metadata: Metadata = {
-  title: "SeasonalNet",
-  description: "Unified front doors for SeasonalNet services.",
+  title: "SeasonalPBX",
+  description: "SeasonalPBX landing page and authenticated extension self-service dashboard.",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

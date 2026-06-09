@@ -17,22 +17,26 @@ import { Button } from "@seasonalnet/shell/src/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@seasonalnet/shell/src/components/ui/card"
 import { Input } from "@seasonalnet/shell/src/components/ui/input"
 import { Label } from "@seasonalnet/shell/src/components/ui/label"
-import { Separator } from "@seasonalnet/shell/src/components/ui/separator"
 import {
   CheckCircle2,
   Clipboard,
   Eye,
+  IdCard,
   KeyRound,
   Loader2,
   PhoneCall,
+  RefreshCw,
   RotateCw,
+  Save,
   Server,
   ShieldAlert,
   Sparkles,
   UserRound,
   Voicemail,
+  type LucideIcon,
 } from "lucide-react"
 
+import { classifyExtension, formatExtensionClassification, type ClassifiedExtension } from "@/lib/pbx-classification"
 import { cn } from "@seasonalnet/shell/src/lib/utils"
 
 type ExtensionOwner = {
@@ -42,6 +46,7 @@ type ExtensionOwner = {
   state: string
   displayName: string | null
   voicemailEmailMarker: string | null
+  classification?: ClassifiedExtension
   createdAt: string
   updatedAt: string
 }
@@ -108,13 +113,13 @@ async function readJson(response: Response): Promise<unknown> {
   }
 }
 
-async function requestJson<T>(url: string, init?: RequestInit): Promise<T> {
+async function requestJson<T>(url: string, init: RequestInit = {}): Promise<T> {
+  const headers = new Headers(init.headers)
+  if (init.body && !headers.has("content-type")) headers.set("content-type", "application/json")
+
   const response = await fetch(url, {
     ...init,
-    headers: {
-      "content-type": "application/json",
-      ...(init?.headers ?? {}),
-    },
+    headers,
   })
   const json = await readJson(response)
 
@@ -151,6 +156,17 @@ function formatOperationName(value: string) {
     .join(" ")
 }
 
+function formatDateTime(value: string | null) {
+  if (!value) return "—"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return "—"
+  return date.toLocaleString()
+}
+
+function ownerClassification(owner: ExtensionOwner): ClassifiedExtension {
+  return owner.classification ?? classifyExtension(owner.extension)
+}
+
 function IconBox({ children }: { children: React.ReactNode }) {
   return (
     <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md border bg-background/80 text-foreground transition-colors group-hover:bg-accent/60">
@@ -159,19 +175,65 @@ function IconBox({ children }: { children: React.ReactNode }) {
   )
 }
 
-function InfoTile({ label, value, icon: Icon }: { label: string; value: string; icon: typeof PhoneCall }) {
+function ControlSection({
+  title,
+  description,
+  icon: Icon,
+  action,
+  children,
+  className,
+  contentClassName,
+}: {
+  title: string
+  description?: React.ReactNode
+  icon: LucideIcon
+  action?: React.ReactNode
+  children?: React.ReactNode
+  className?: string
+  contentClassName?: string
+}) {
   return (
-    <Card className="bg-card/60 transition-all hover:-translate-y-1 hover:bg-card/80 hover:shadow-md">
-      <CardHeader className="pb-2">
-        <div className="flex items-center gap-3">
-          <IconBox>
-            <Icon className="h-5 w-5" />
-          </IconBox>
-          <CardTitle className="text-base">{label}</CardTitle>
+    <Card className={cn("bg-card/60", className)}>
+      <CardHeader className={cn(children ? "pb-4" : "pb-0")}>
+        <div className="flex flex-wrap items-start justify-between gap-4">
+          <div className="flex min-w-0 items-start gap-3">
+            <IconBox>
+              <Icon className="h-5 w-5" />
+            </IconBox>
+            <div className="min-w-0">
+              <CardTitle className="text-base font-semibold tracking-tight">{title}</CardTitle>
+              {description ? <div className="mt-1 text-sm leading-5 text-muted-foreground">{description}</div> : null}
+            </div>
+          </div>
+          {action ? <div className="flex shrink-0 items-center gap-2">{action}</div> : null}
         </div>
       </CardHeader>
-      <CardContent className="text-2xl font-semibold tracking-tight">{value}</CardContent>
+      {children ? <CardContent className={cn("pt-0", contentClassName)}>{children}</CardContent> : null}
     </Card>
+  )
+}
+
+function SummaryItem({ label, value, icon: Icon, detail }: { label: string; value: string; icon: LucideIcon; detail?: string }) {
+  return (
+    <div className="group flex min-w-0 items-start gap-3 rounded-2xl border bg-background/60 p-4 transition-all hover:-translate-y-0.5 hover:bg-card/80 hover:shadow-sm">
+      <IconBox>
+        <Icon className="h-5 w-5" />
+      </IconBox>
+      <div className="min-w-0">
+        <div className="text-[0.7rem] font-medium uppercase tracking-[0.18em] text-muted-foreground">{label}</div>
+        <div className="mt-1 truncate text-xl font-semibold tracking-tight text-foreground">{value}</div>
+        {detail ? <div className="mt-1 text-xs leading-5 text-muted-foreground">{detail}</div> : null}
+      </div>
+    </div>
+  )
+}
+
+function TipItem({ title, description }: { title: string; description: React.ReactNode }) {
+  return (
+    <div className="group rounded-2xl border bg-background/60 p-4 text-sm transition-all hover:-translate-y-0.5 hover:bg-card/80 hover:shadow-sm">
+      <div className="font-medium text-foreground">{title}</div>
+      <div className="mt-1 leading-6 text-muted-foreground">{description}</div>
+    </div>
   )
 }
 
@@ -200,73 +262,136 @@ function SecretField({ label, value }: { label: string; value: string }) {
 
 function EmptyExtensionCard({ loading, onClaim, available }: { loading: boolean; onClaim: () => void; available?: number }) {
   return (
-    <Card className="bg-card/60">
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <IconBox>
-            <Sparkles className="h-5 w-5" />
-          </IconBox>
-          <div>
-            <CardTitle>Claim your SeasonalPBX extension</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
-              The dashboard will claim a managed extension from the public pool and provision it through pbx-controld.
-            </p>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        <div className="rounded-2xl border bg-background/60 p-4 text-sm text-muted-foreground">
-          Available pool entries: <span className="font-medium text-foreground">{available ?? "—"}</span>
-        </div>
-        <Button onClick={onClaim} disabled={loading} size="lg" className="min-w-40">
-          {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <PhoneCall className="h-4 w-4" />}
-          Claim extension
-        </Button>
-      </CardContent>
-    </Card>
+    <ControlSection
+      title="Claim your SeasonalPBX extension"
+      description="The dashboard will claim a managed extension from the public pool and provision it through pbx-controld."
+      icon={Sparkles}
+      contentClassName="space-y-4"
+    >
+      <div className="rounded-2xl border bg-background/60 p-4 text-sm text-muted-foreground">
+        Available pool entries: <span className="font-medium text-foreground">{available ?? "—"}</span>
+      </div>
+      <Button onClick={onClaim} disabled={loading || available === 0} size="lg" className="min-w-40">
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <PhoneCall className="h-4 w-4" />}
+        Claim extension
+      </Button>
+    </ControlSection>
+  )
+}
+
+function ExtensionSummary({ owner }: { owner: ExtensionOwner }) {
+  const classification = ownerClassification(owner)
+  const classificationLabel = formatExtensionClassification(classification.classification)
+
+  return (
+    <ControlSection
+      title="Summary"
+      description={classification.reason}
+      icon={PhoneCall}
+      action={<Badge variant="outline" className="whitespace-nowrap">{classificationLabel}</Badge>}
+      contentClassName="pb-5"
+    >
+      <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
+        <SummaryItem label="Extension" value={owner.extension} icon={PhoneCall} />
+        <SummaryItem label="State" value={owner.state} icon={CheckCircle2} />
+        <SummaryItem label="Registrar" value="sip.seasonalnet.org" icon={Server} />
+        <SummaryItem label="Voicemail" value={owner.voicemailEmailMarker ? "Enabled" : "Provisioned"} icon={Voicemail} />
+      </div>
+    </ControlSection>
+  )
+}
+
+function ProfileSection({
+  owner,
+  fallbackDisplayName,
+  loading,
+  onSave,
+}: {
+  owner: ExtensionOwner
+  fallbackDisplayName: string
+  loading: boolean
+  onSave: (displayName: string) => void
+}) {
+  const [displayName, setDisplayName] = useState(owner.displayName ?? fallbackDisplayName)
+  const trimmedDisplayName = displayName.trim()
+  const currentDisplayName = owner.displayName ?? ""
+  const unchanged = trimmedDisplayName === currentDisplayName
+
+  return (
+    <ControlSection
+      title="Profile"
+      description="Update the display name attached to this extension owner record."
+      icon={IdCard}
+      contentClassName="space-y-4"
+    >
+      <div className="space-y-2">
+        <Label htmlFor="pbx-display-name">Display name</Label>
+        <Input
+          id="pbx-display-name"
+          value={displayName}
+          onChange={(event) => setDisplayName(event.target.value)}
+          maxLength={80}
+          placeholder="Optional display name"
+        />
+        <p className="text-xs text-muted-foreground">
+          Current stored value: <span className="font-medium text-foreground">{owner.displayName || "none"}</span>
+        </p>
+      </div>
+      <Button onClick={() => onSave(trimmedDisplayName)} disabled={loading || unchanged} className="min-w-36">
+        {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+        Save profile
+      </Button>
+    </ControlSection>
   )
 }
 
 function CredentialPanel({
+  owner,
   credentials,
   loading,
   onReveal,
   onRotate,
 }: {
+  owner: ExtensionOwner
   credentials: ExtensionCredentials | null
   loading: boolean
   onReveal: () => void
   onRotate: (resetVoicemailPin: boolean) => void
 }) {
   const [resetVoicemailPin, setResetVoicemailPin] = useState(false)
+  const classification = ownerClassification(owner)
+  const stateAllowsCredentials = owner.state === "active" || owner.state === "suspended"
+  const credentialsAvailable = classification.managedByControlPlane && stateAllowsCredentials
+
+  const disabledReason = !classification.managedByControlPlane
+    ? `Extension ${owner.extension} is ${formatExtensionClassification(classification.classification).toLowerCase()}: ${classification.reason}. Self-service credential reveal and rotation are limited to managed-pool extensions.`
+    : `Credentials are unavailable while extension ${owner.extension} is ${owner.state}.`
 
   return (
-    <Card className="bg-card/60">
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <IconBox>
-            <KeyRound className="h-5 w-5" />
-          </IconBox>
-          <div>
-            <CardTitle>SIP credentials</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Reveal your current secret to provision a phone. Rotate only when the secret leaked or you intentionally want a new one.
-            </p>
-          </div>
+    <ControlSection
+      title="SIP credentials"
+      description={
+        credentialsAvailable
+          ? "Reveal your current secret to provision a phone. Rotate only when the secret leaked or you intentionally want a new one."
+          : "Credential tools are shown only when this extension class and state support self-service custody."
+      }
+      icon={KeyRound}
+      contentClassName="space-y-4"
+    >
+      {credentialsAvailable && credentials ? (
+        <div className="space-y-4 rounded-2xl border bg-background/60 p-4">
+          <SecretField label="SIP secret" value={credentials.sipSecret} />
+          <SecretField label="Voicemail PIN" value={credentials.voicemailPin} />
         </div>
-      </CardHeader>
-      <CardContent className="space-y-4">
-        {credentials ? (
-          <div className="space-y-4 rounded-2xl border bg-background/60 p-4">
-            <SecretField label="SIP secret" value={credentials.sipSecret} />
-            <SecretField label="Voicemail PIN" value={credentials.voicemailPin} />
-          </div>
-        ) : (
-          <div className="rounded-2xl border bg-background/60 p-4 text-sm text-muted-foreground">
-            The secret is hidden from normal reads. Use reveal when configuring a trusted device.
-          </div>
-        )}
+      ) : (
+        <div className="rounded-2xl border bg-background/60 p-4 text-sm leading-6 text-muted-foreground">
+          {credentialsAvailable
+            ? "The secret is hidden from normal reads. Use reveal when configuring a trusted device."
+            : disabledReason}
+        </div>
+      )}
 
+      {credentialsAvailable ? (
         <div className="flex flex-col gap-3 sm:flex-row">
           <Button onClick={onReveal} disabled={loading} variant="secondary" className="min-w-36">
             {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Eye className="h-4 w-4" />}
@@ -294,9 +419,7 @@ function CredentialPanel({
                   onChange={(event) => setResetVoicemailPin(event.target.checked)}
                   className="mt-1"
                 />
-                <span>
-                  Reset voicemail PIN to the extension number too.
-                </span>
+                <span>Reset voicemail PIN to the extension number too.</span>
               </label>
               <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
@@ -307,43 +430,61 @@ function CredentialPanel({
             </AlertDialogContent>
           </AlertDialog>
         </div>
-      </CardContent>
-    </Card>
+      ) : null}
+    </ControlSection>
   )
 }
 
 function OperationsCard({ operations }: { operations: Operation[] }) {
   return (
-    <Card className="bg-card/60">
-      <CardHeader>
-        <div className="flex items-center gap-3">
-          <IconBox>
-            <Server className="h-5 w-5" />
-          </IconBox>
-          <div>
-            <CardTitle>Recent activity</CardTitle>
-            <p className="mt-1 text-sm text-muted-foreground">Recent pbx-controld operations for your Discord identity.</p>
-          </div>
-        </div>
-      </CardHeader>
-      <CardContent>
-        {operations.length === 0 ? (
-          <div className="rounded-2xl border bg-background/60 p-4 text-sm text-muted-foreground">No recent operations.</div>
-        ) : (
-          <div className="space-y-2">
-            {operations.slice(0, 6).map((operation) => (
-              <div key={operation.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-background/60 px-4 py-3 text-sm">
-                <div>
-                  <div className="font-medium">{formatOperationName(operation.operation)}</div>
-                  <div className="text-xs text-muted-foreground">{new Date(operation.createdAt).toLocaleString()}</div>
+    <ControlSection
+      title="Recent activity"
+      description="Recent pbx-controld operations for your Discord identity."
+      icon={Server}
+    >
+      {operations.length === 0 ? (
+        <div className="rounded-2xl border bg-background/60 p-4 text-sm text-muted-foreground">No recent operations.</div>
+      ) : (
+        <div className="space-y-2">
+          {operations.slice(0, 6).map((operation) => (
+            <div key={operation.id} className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border bg-background/60 px-4 py-3 text-sm">
+              <div className="min-w-0">
+                <div className="font-medium">{formatOperationName(operation.operation)}</div>
+                <div className="text-xs text-muted-foreground">
+                  {formatDateTime(operation.createdAt)}{operation.extension ? ` · ${operation.extension}` : ""}
                 </div>
-                <Badge variant="outline" className={cn("capitalize", statusClass(operation.status))}>{operation.status}</Badge>
+                {operation.error ? <div className="mt-1 max-w-xl text-xs text-destructive">{operation.error}</div> : null}
               </div>
-            ))}
-          </div>
-        )}
-      </CardContent>
-    </Card>
+              <Badge variant="outline" className={cn("capitalize", statusClass(operation.status))}>{operation.status}</Badge>
+            </div>
+          ))}
+        </div>
+      )}
+    </ControlSection>
+  )
+}
+
+function TipsSection({ credentialLifecycleEnabled }: { credentialLifecycleEnabled: boolean }) {
+  return (
+    <ControlSection
+      title="Tips"
+      description="Practical notes for provisioning and account changes."
+      icon={ShieldAlert}
+      contentClassName="pb-5"
+    >
+      <div className="grid gap-4 md:grid-cols-3">
+        <TipItem title="Transport" description="Use TCP unless your client requires otherwise." />
+        <TipItem
+          title="Credential model"
+          description={
+            credentialLifecycleEnabled
+              ? "Reveal for provisioning. Rotate only after a leak or intentional refresh."
+              : "Credential lifecycle actions are hidden for reserved and non-managed extension classes."
+          }
+        />
+        <TipItem title="Downstream writes" description="Supported changes queue through pbx-controld and apply to FreePBX safely." />
+      </div>
+    </ControlSection>
   )
 }
 
@@ -352,9 +493,12 @@ export function PBXDashboard() {
   const [credentials, setCredentials] = useState<ExtensionCredentials | null>(null)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const [lastLoadedAt, setLastLoadedAt] = useState<string | null>(null)
 
   const owner = data?.owner ?? null
   const available = data?.poolSummary?.available
+  const classification = owner ? ownerClassification(owner) : null
+  const credentialLifecycleEnabled = Boolean(classification?.managedByControlPlane && (owner?.state === "active" || owner?.state === "suspended"))
 
   const stateLabel = useMemo(() => owner?.state ?? "unclaimed", [owner])
 
@@ -364,6 +508,7 @@ export function PBXDashboard() {
     try {
       const payload = await requestJson<DashboardPayload>("/api/pbx/self", { cache: "no-store" })
       setData(payload)
+      setLastLoadedAt(new Date().toISOString())
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : String(loadError))
     } finally {
@@ -396,6 +541,13 @@ export function PBXDashboard() {
     )
   }
 
+  async function updateProfile(displayName: string) {
+    await mutate(() => requestJson<MutationPayload>("/api/pbx/self/profile", {
+      method: "PATCH",
+      body: JSON.stringify({ displayName }),
+    }))
+  }
+
   async function reveal() {
     await mutate(
       () => requestJson<MutationPayload>("/api/pbx/self/credentials/reveal", { method: "POST", body: JSON.stringify({}) }),
@@ -414,68 +566,63 @@ export function PBXDashboard() {
   }
 
   return (
-    <div className="space-y-6">
-      <Card className="bg-card/60">
-        <CardHeader>
-          <div className="flex flex-wrap items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
-              <IconBox>
-                <UserRound className="h-5 w-5" />
-              </IconBox>
-              <div>
-                <CardTitle>Dashboard status</CardTitle>
-                <p className="mt-1 text-sm text-muted-foreground">
-                  Signed in as {data?.user.displayName ?? "—"}. Discord ID: {data?.user.discordId ?? "—"}
-                </p>
-              </div>
-            </div>
+    <div className="mx-auto w-full max-w-6xl space-y-4 md:space-y-5">
+      <ControlSection
+        title="Dashboard status"
+        description={
+          <>
+            Signed in as {data?.user.displayName ?? "—"}. Discord ID: {data?.user.discordId ?? "—"}
+            <span className="mt-1 block text-xs">Last refreshed: {formatDateTime(lastLoadedAt)}</span>
+          </>
+        }
+        icon={UserRound}
+        action={
+          <>
             <Badge variant="outline" className={cn("capitalize", statusClass(stateLabel))}>{stateLabel}</Badge>
-          </div>
-        </CardHeader>
+            <Button
+              onClick={load}
+              disabled={loading}
+              variant="ghost"
+              size="icon"
+              className="h-8 w-8 rounded-full border bg-background/60"
+              aria-label="Refresh dashboard"
+              title="Refresh dashboard"
+            >
+              {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <RefreshCw className="h-4 w-4" />}
+            </Button>
+          </>
+        }
+      >
         {error ? (
-          <CardContent>
-            <div className="flex items-start gap-3 rounded-2xl border bg-background/60 p-4 text-sm text-muted-foreground">
-              <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
-              <span>{error}</span>
-            </div>
-          </CardContent>
+          <div className="flex items-start gap-3 rounded-2xl border bg-background/60 p-4 text-sm text-muted-foreground">
+            <ShieldAlert className="mt-0.5 h-4 w-4 shrink-0" />
+            <span>{error}</span>
+          </div>
         ) : null}
-      </Card>
+      </ControlSection>
 
       {owner ? (
         <>
-          <div className="grid gap-4 md:grid-cols-4">
-            <InfoTile label="Extension" value={owner.extension} icon={PhoneCall} />
-            <InfoTile label="State" value={owner.state} icon={CheckCircle2} />
-            <InfoTile label="Registrar" value="sip.seasonalnet.org" icon={Server} />
-            <InfoTile label="Voicemail" value={owner.voicemailEmailMarker ? "Enabled" : "Provisioned"} icon={Voicemail} />
-          </div>
+          <ExtensionSummary owner={owner} />
 
-          <div className="grid gap-4 lg:grid-cols-[1.1fr_0.9fr]">
-            <CredentialPanel credentials={credentials} loading={loading} onReveal={reveal} onRotate={rotate} />
-            <OperationsCard operations={data?.operations ?? []} />
-          </div>
+          <ProfileSection
+            key={`${owner.id}:${owner.displayName ?? ""}:${data?.user.displayName ?? ""}`}
+            owner={owner}
+            fallbackDisplayName={data?.user.displayName ?? ""}
+            loading={loading}
+            onSave={updateProfile}
+          />
+          <CredentialPanel owner={owner} credentials={credentials} loading={loading} onReveal={reveal} onRotate={rotate} />
+
+          <OperationsCard operations={data?.operations ?? []} />
+          <TipsSection credentialLifecycleEnabled={credentialLifecycleEnabled} />
         </>
       ) : (
-        <EmptyExtensionCard loading={loading} onClaim={claim} available={available} />
+        <>
+          <EmptyExtensionCard loading={loading} onClaim={claim} available={available} />
+          <OperationsCard operations={data?.operations ?? []} />
+        </>
       )}
-
-      <Separator />
-
-      <div className="grid gap-4 text-sm text-muted-foreground md:grid-cols-3">
-        <div className="rounded-2xl border bg-card/40 p-4">
-          <div className="font-medium text-foreground">Transport</div>
-          <div className="mt-1">Use TCP unless your client requires otherwise.</div>
-        </div>
-        <div className="rounded-2xl border bg-card/40 p-4">
-          <div className="font-medium text-foreground">Credential model</div>
-          <div className="mt-1">Reveal for provisioning. Rotate only after a leak or intentional refresh.</div>
-        </div>
-        <div className="rounded-2xl border bg-card/40 p-4">
-          <div className="font-medium text-foreground">Downstream writes</div>
-          <div className="mt-1">Changes queue through pbx-controld and apply to FreePBX safely.</div>
-        </div>
-      </div>
     </div>
   )
 }

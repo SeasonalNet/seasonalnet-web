@@ -1,5 +1,6 @@
 import { getPbxSelfSession, isSessionResponse } from "@/lib/server/pbx-session"
 import { getExtensionByDiscordId, problemResponse, updateExtensionProfile } from "@/lib/server/pbx-controld"
+import { pbxJsonResponse } from "@/lib/server/pbx-response"
 
 export const runtime = "nodejs"
 
@@ -14,7 +15,7 @@ export async function PATCH(request: Request) {
   try {
     const owner = await getExtensionByDiscordId(self.discordId)
     if (!owner) {
-      return Response.json(
+      return pbxJsonResponse(
         {
           type: "https://seasonalnet.org/problems/extension-not-claimed",
           title: "Extension not claimed",
@@ -28,7 +29,7 @@ export async function PATCH(request: Request) {
     const body = (await request.json().catch(() => ({}))) as ProfileBody
     const displayName = typeof body.displayName === "string" && body.displayName.trim() ? body.displayName.trim() : null
     const result = await updateExtensionProfile({ extension: owner.extension, displayName })
-    return Response.json(result, { status: 202 })
+    return pbxJsonResponse(result, { status: 202 })
   } catch (error) {
     return problemResponse(error)
   }

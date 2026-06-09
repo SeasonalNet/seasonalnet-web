@@ -30,10 +30,26 @@ const pbxMetricsSchema = {
   },
 }
 
+const extensionClassificationSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["extension", "classification", "managedByControlPlane", "reserved", "reason"],
+  properties: {
+    extension: { type: "string" },
+    classification: {
+      type: "string",
+      enum: ["managed-pool", "founder", "operator", "special-retained", "manual-or-unknown", "invalid"],
+    },
+    managedByControlPlane: { type: "boolean" },
+    reserved: { type: "boolean" },
+    reason: { type: "string" },
+  },
+}
+
 const extensionOwnerSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["id", "discordId", "extension", "state", "displayName", "voicemailEmailMarker", "createdAt", "updatedAt"],
+  required: ["id", "discordId", "extension", "state", "displayName", "voicemailEmailMarker", "classification", "createdAt", "updatedAt"],
   properties: {
     id: { type: "integer" },
     discordId: { type: "string" },
@@ -41,6 +57,7 @@ const extensionOwnerSchema = {
     state: { type: "string" },
     displayName: { type: ["string", "null"] },
     voicemailEmailMarker: { type: ["string", "null"] },
+    classification: extensionClassificationSchema,
     createdAt: { type: "string", format: "date-time" },
     updatedAt: { type: "string", format: "date-time" },
   },
@@ -53,6 +70,22 @@ const extensionCredentialsSchema = {
   properties: {
     sipSecret: { type: "string" },
     voicemailPin: { type: "string" },
+  },
+}
+
+const credentialMetadataSchema = {
+  type: "object",
+  additionalProperties: false,
+  required: ["extension", "sipSecretStored", "voicemailPinStored", "keyId", "createdAt", "updatedAt", "rotatedAt", "lastRevealedAt"],
+  properties: {
+    extension: { type: "string" },
+    sipSecretStored: { type: "boolean" },
+    voicemailPinStored: { type: "boolean" },
+    keyId: { type: ["string", "null"] },
+    createdAt: { type: "string", format: "date-time" },
+    updatedAt: { type: "string", format: "date-time" },
+    rotatedAt: { type: "string", format: "date-time" },
+    lastRevealedAt: { type: ["string", "null"], format: "date-time" },
   },
 }
 
@@ -112,16 +145,36 @@ const pbxSelfSchema = {
 const mutationSchema = {
   type: "object",
   additionalProperties: true,
-  required: ["owner", "replayed"],
+  required: ["operation", "owner", "replayed"],
   properties: {
+    operation: operationSchema,
     owner: { anyOf: [extensionOwnerSchema, { type: "null" }] },
     replayed: { type: "boolean" },
     credentials: { anyOf: [extensionCredentialsSchema, { type: "null" }] },
+    credentialMetadata: { anyOf: [credentialMetadataSchema, { type: "null" }] },
+  },
+}
+
+const profileUpdateRequestSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    displayName: { type: ["string", "null"], maxLength: 80 },
+  },
+}
+
+const rotateCredentialsRequestSchema = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    resetVoicemailPin: { type: "boolean" },
   },
 }
 
 const problemResponses = {
   "401": jsonResponse("Unauthorized.", problemSchema),
+  "403": jsonResponse("Forbidden.", problemSchema),
+  "404": jsonResponse("Not found.", problemSchema),
   "409": jsonResponse("Session or extension state conflict.", problemSchema),
   "500": jsonResponse("Server error.", problemSchema),
   "503": jsonResponse("PBX control backend unavailable or unconfigured.", problemSchema),
@@ -137,6 +190,7 @@ const document = openApiDocument({
   schemas: {
     Problem: problemSchema,
     PbxMetrics: pbxMetricsSchema,
+    ExtensionClassification: extensionClassificationSchema,
     PbxSelf: pbxSelfSchema,
     PbxMutation: mutationSchema,
   },
@@ -185,8 +239,34 @@ const document = openApiDocument({
       post: {
         tags: ["pbx"],
         summary: "Rotate SIP credentials for the signed-in user's extension.",
+        requestBody: {
+          required: false,
+          content: {
+            "application/json": {
+              schema: rotateCredentialsRequestSchema,
+            },
+          },
+        },
         responses: {
           "202": jsonResponse("Credential rotation payload.", { $ref: "#/components/schemas/PbxMutation" }),
+          ...problemResponses,
+        },
+      },
+    },
+    "/api/pbx/self/profile": {
+      patch: {
+        tags: ["pbx"],
+        summary: "Update the signed-in user's managed extension profile.",
+        requestBody: {
+          required: true,
+          content: {
+            "application/json": {
+              schema: profileUpdateRequestSchema,
+            },
+          },
+        },
+        responses: {
+          "202": jsonResponse("PBX profile mutation payload.", { $ref: "#/components/schemas/PbxMutation" }),
           ...problemResponses,
         },
       },

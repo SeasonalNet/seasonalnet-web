@@ -1,5 +1,6 @@
 import { getPbxSelfSession, isSessionResponse } from "@/lib/server/pbx-session"
-import { getExtensionByDiscordId, problemResponse, revealExtensionCredentials } from "@/lib/server/pbx-controld"
+import { assertSelfServiceCredentialAllowed, getExtensionByDiscordId, problemResponse, revealExtensionCredentials } from "@/lib/server/pbx-controld"
+import { pbxJsonResponse } from "@/lib/server/pbx-response"
 
 export const runtime = "nodejs"
 
@@ -10,7 +11,7 @@ export async function POST() {
   try {
     const owner = await getExtensionByDiscordId(self.discordId)
     if (!owner) {
-      return Response.json(
+      return pbxJsonResponse(
         {
           type: "https://seasonalnet.org/problems/extension-not-claimed",
           title: "Extension not claimed",
@@ -21,8 +22,10 @@ export async function POST() {
       )
     }
 
+    assertSelfServiceCredentialAllowed(owner)
+
     const result = await revealExtensionCredentials(owner.extension)
-    return Response.json(result)
+    return pbxJsonResponse(result)
   } catch (error) {
     return problemResponse(error)
   }

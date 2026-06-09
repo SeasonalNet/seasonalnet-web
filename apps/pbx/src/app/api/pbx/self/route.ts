@@ -1,5 +1,6 @@
 import { getPbxSelfSession, isSessionResponse } from "@/lib/server/pbx-session"
 import { getExtensionByDiscordId, getPoolSummary, listOperationsForDiscordId, problemResponse } from "@/lib/server/pbx-controld"
+import { pbxJsonResponse } from "@/lib/server/pbx-response"
 
 export const runtime = "nodejs"
 
@@ -14,7 +15,7 @@ export async function GET() {
       listOperationsForDiscordId(self.discordId).catch(() => []),
     ])
 
-    return Response.json({
+    return pbxJsonResponse({
       user: self,
       owner,
       poolSummary,

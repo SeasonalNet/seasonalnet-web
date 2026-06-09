@@ -1,4 +1,5 @@
 import { auth, isAuthorizedSession, sessionDiscordId, sessionDisplayName } from "@/auth"
+import { pbxJsonResponse } from "@/lib/server/pbx-response"
 
 export type PbxSelfSession = {
   displayName: string
@@ -10,7 +11,7 @@ export async function getPbxSelfSession(): Promise<PbxSelfSession | Response> {
   const session = await auth()
 
   if (!isAuthorizedSession(session)) {
-    return Response.json(
+    return pbxJsonResponse(
       {
         type: "https://seasonalnet.org/problems/unauthorized",
         title: "Unauthorized",
@@ -23,7 +24,7 @@ export async function getPbxSelfSession(): Promise<PbxSelfSession | Response> {
 
   const discordId = sessionDiscordId(session)
   if (!discordId) {
-    return Response.json(
+    return pbxJsonResponse(
       {
         type: "https://seasonalnet.org/problems/discord-account-not-linked",
         title: "Discord account not linked",

@@ -1,5 +1,8 @@
 import { randomUUID } from "node:crypto"
 
+import { classifyExtension, type ClassifiedExtension } from "@/lib/pbx-classification"
+import { pbxJsonResponse } from "@/lib/server/pbx-response"
+
 export type PbxProblem = {
   type?: string
   title?: string
@@ -16,6 +19,7 @@ export type ExtensionOwner = {
   state: "active" | "suspended" | "releasing" | "released" | "orphaned"
   displayName: string | null
   voicemailEmailMarker: string | null
+  classification?: ClassifiedExtension
   createdAt: string
   updatedAt: string
 }
@@ -87,12 +91,16 @@ function baseUrl() {
   return (process.env.PBX_CONTROLD_BASE_URL || "http://127.0.0.1:9091").replace(/\/+$/, "")
 }
 
-function clientSecret() {
-  return process.env.PBX_CONTROLD_CLIENT_SECRET || process.env.PBX_CONTROL_BEARER_TOKEN || ""
+function clientCredential() {
+  return process.env.PBX_CONTROLD_CLIENT_SECRET || ""
 }
 
-function mustClientSecret() {
-  const value = clientSecret()
+function legacyBearerToken() {
+  return process.env.PBX_CONTROL_BEARER_TOKEN || ""
+}
+
+function mustClientCredential() {
+  const value = clientCredential()
   if (!value) {
     throw new PbxControlError(503, {
       type: "https://seasonalnet.org/problems/pbx-controld-client-not-configured",
@@ -124,14 +132,17 @@ function problemFromUnknown(status: number, value: unknown): PbxProblem {
   }
 }
 
-async function getAccessToken() {
+async function getAccessToken(options: { forceRefresh?: boolean } = {}) {
+  const legacyToken = legacyBearerToken()
+  if (legacyToken && !clientCredential()) return legacyToken
+
   const now = Date.now()
-  if (cachedToken && cachedToken.expiresAtMs - 30_000 > now) return cachedToken.accessToken
+  if (!options.forceRefresh && cachedToken && cachedToken.expiresAtMs - 30_000 > now) return cachedToken.accessToken
 
   const response = await fetch(`${baseUrl()}/v1/auth/token`, {
     method: "POST",
     headers: {
-      authorization: `Bearer ${mustClientSecret()}`,
+      authorization: `Bearer ${mustClientCredential()}`,
       "content-type": "application/json",
     },
     body: JSON.stringify({
@@ -168,8 +179,8 @@ async function getAccessToken() {
   return payload.accessToken
 }
 
-async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
-  const token = await getAccessToken()
+async function request<T>(path: string, init: RequestInit = {}, retryOnUnauthorized = true): Promise<T> {
+  const token = await getAccessToken({ forceRefresh: !retryOnUnauthorized })
   const headers = new Headers(init.headers)
   headers.set("authorization", `Bearer ${token}`)
   if (init.body && !headers.has("content-type")) headers.set("content-type", "application/json")
@@ -181,7 +192,15 @@ async function request<T>(path: string, init: RequestInit = {}): Promise<T> {
   })
 
   const json = await parseResponseJson(response)
-  if (!response.ok) throw new PbxControlError(response.status, problemFromUnknown(response.status, json))
+  if (!response.ok) {
+    if (response.status === 401 && retryOnUnauthorized && clientCredential()) {
+      cachedToken = null
+      return request<T>(path, init, false)
+    }
+
+    throw new PbxControlError(response.status, problemFromUnknown(response.status, json))
+  }
+
   return json as T
 }
 
@@ -189,9 +208,37 @@ function idempotencyHeaders() {
   return { "idempotency-key": randomUUID() }
 }
 
+function withOwnerClassification(owner: ExtensionOwner | null): ExtensionOwner | null {
+  if (!owner) return null
+  return {
+    ...owner,
+    classification: owner.classification ?? classifyExtension(owner.extension),
+  }
+}
+
+function withMutationOwnerClassification(result: ExtensionMutationResponse): ExtensionMutationResponse {
+  return {
+    ...result,
+    owner: withOwnerClassification(result.owner),
+  }
+}
+
+export function assertSelfServiceCredentialAllowed(owner: ExtensionOwner): void {
+  const classification = owner.classification ?? classifyExtension(owner.extension)
+  if (classification.managedByControlPlane) return
+
+  throw new PbxControlError(409, {
+    type: "https://seasonalnet.org/problems/reserved-extension-credentials-unavailable",
+    title: "Reserved extension credentials unavailable",
+    status: 409,
+    detail: `Extension ${owner.extension} is ${classification.classification}: ${classification.reason}. Self-service credential reveal and rotation are only exposed for managed-pool extensions.`,
+    classification,
+  })
+}
+
 export async function getExtensionByDiscordId(discordId: string): Promise<ExtensionOwner | null> {
   try {
-    return await request<ExtensionOwner>(`/v1/discord-users/${encodeURIComponent(discordId)}/extension`)
+    return withOwnerClassification(await request<ExtensionOwner>(`/v1/discord-users/${encodeURIComponent(discordId)}/extension`))
   } catch (error) {
     if (error instanceof PbxControlError && error.status === 404) return null
     throw error
@@ -212,7 +259,7 @@ export async function listOperationsForDiscordId(discordId: string, limit = 8): 
 }
 
 export async function claimExtension(input: { discordId: string; displayName?: string | null }) {
-  return request<ExtensionMutationResponse>("/v1/extension-claims", {
+  const result = await request<ExtensionMutationResponse>("/v1/extension-claims", {
     method: "POST",
     headers: idempotencyHeaders(),
     body: JSON.stringify({
@@ -221,10 +268,11 @@ export async function claimExtension(input: { discordId: string; displayName?: s
       reason: "PBX self-service dashboard claim",
     }),
   })
+  return withMutationOwnerClassification(result)
 }
 
 export async function updateExtensionProfile(input: { extension: string; displayName?: string | null }) {
-  return request<ExtensionMutationResponse>(`/v1/extensions/${encodeURIComponent(input.extension)}/profile`, {
+  const result = await request<ExtensionMutationResponse>(`/v1/extensions/${encodeURIComponent(input.extension)}/profile`, {
     method: "PATCH",
     headers: idempotencyHeaders(),
     body: JSON.stringify({
@@ -232,18 +280,20 @@ export async function updateExtensionProfile(input: { extension: string; display
       reason: "PBX self-service dashboard profile update",
     }),
   })
+  return withMutationOwnerClassification(result)
 }
 
 export async function revealExtensionCredentials(extension: string) {
-  return request<ExtensionMutationResponse>(`/v1/extensions/${encodeURIComponent(extension)}/credentials/reveal`, {
+  const result = await request<ExtensionMutationResponse>(`/v1/extensions/${encodeURIComponent(extension)}/credentials/reveal`, {
     method: "POST",
     headers: idempotencyHeaders(),
     body: JSON.stringify({ reason: "PBX self-service dashboard credential reveal" }),
   })
+  return withMutationOwnerClassification(result)
 }
 
 export async function rotateExtensionCredentials(extension: string, resetVoicemailPin: boolean) {
-  return request<ExtensionMutationResponse>(`/v1/extensions/${encodeURIComponent(extension)}/credentials/rotate`, {
+  const result = await request<ExtensionMutationResponse>(`/v1/extensions/${encodeURIComponent(extension)}/credentials/rotate`, {
     method: "POST",
     headers: idempotencyHeaders(),
     body: JSON.stringify({
@@ -251,15 +301,16 @@ export async function rotateExtensionCredentials(extension: string, resetVoicema
       resetVoicemailPin,
     }),
   })
+  return withMutationOwnerClassification(result)
 }
 
 export function problemResponse(error: unknown) {
   if (error instanceof PbxControlError) {
-    return Response.json(error.problem, { status: error.status })
+    return pbxJsonResponse(error.problem, { status: error.status })
   }
 
   const message = error instanceof Error ? error.message : String(error)
-  return Response.json(
+  return pbxJsonResponse(
     {
       type: "https://seasonalnet.org/problems/pbx-spa-upstream-error",
       title: "PBX dashboard request failed",
