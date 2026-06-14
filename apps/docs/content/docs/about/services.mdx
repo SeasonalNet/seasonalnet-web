@@ -27,7 +27,7 @@ Boundary: SeasonalWeather is one subsystem within SeasonalNet, not a synonym for
 
 ### SeasonalPBX, CME, and phone services
 
-Role: telephony, call control, phone provisioning, and related communications functions. SeasonalPBX is the current FreePBX/Asterisk VM and Phone-LAN gateway at `192.168.1.12` / `192.168.56.1`; it replaced the retired legacy FreePBX17 VM.
+Role: telephony, call control, phone provisioning, and related communications functions. SeasonalPBX is the current FreePBX/Asterisk service VM at `192.168.1.12`; it is no longer the Phone-LAN router or gateway. Phone-LAN has moved to `10.30.0.0/24` and `fd42:30::/64`, with routing ownership to be documented after the managed-switch/trunk cutover.
 
 Boundary: voice systems are part of SeasonalNet's communications domain.
 
@@ -41,7 +41,7 @@ Boundary: `pbx-controld` is intended to prevent the SPA, Discord bot, and FreePB
 
 ### Auth, Git, DNS, mail, and platform support services
 
-Role: identity, code hosting, internal DNS, mail, and supporting service infrastructure. SeasonalAuth provides the Authentik identity layer at `192.168.1.6`; SeasonalForge provides Forgejo/git service at `192.168.1.7` / `git.seasonalnet.org`; SeasonalMail is the mailcow-backed mail server at `192.168.1.13` for `mail.seasonalnet.org`.
+Role: identity, code hosting, internal DNS, LAN private CA, mail, and supporting service infrastructure. SeasonalAuth provides the Authentik identity layer at `192.168.1.6`; SeasonalForge provides Forgejo/git service at `192.168.1.7` / `git.seasonalnet.org`; SeasonalMail is the mailcow-backed mail server at `192.168.1.13` for `mail.seasonalnet.org`; SeasonalCA provides the LAN private CA at `192.168.1.21`.
 
 Boundary: these services support operator workflows and platform administration.
 
@@ -52,6 +52,15 @@ Role: internal Main-LAN DNS resolver and local DNS management service running Te
 SeasonalDNS runs at `192.168.1.14` on SeasonalR230. It manages internal records under `lan.seasonalnet.org`. Cloudflare remains authoritative for public `seasonalnet.org` DNS. Admin/static hosts should prefer SeasonalDNS directly for internal DNS lookups to avoid stale router-side local-name answers.
 
 Boundary: SeasonalDNS is not public authoritative DNS for `seasonalnet.org`; Cloudflare remains authoritative for public SeasonalNet DNS.
+
+
+### SeasonalCA
+
+Role: LAN private certificate authority for internal SeasonalNet TLS.
+
+SeasonalCA runs at `192.168.1.21` and provides the SeasonalCA / Smallstep step-ca service for LAN trust. Internal DNS names include `seasonalca.lan.seasonalnet.org` and `ca.lan.seasonalnet.org`.
+
+Boundary: SeasonalCA is an internal trust service for LAN/private TLS. It is not a public WebPKI CA and should not be documented as authoritative for public `seasonalnet.org` certificates.
 
 ### SeasonalMonitor
 

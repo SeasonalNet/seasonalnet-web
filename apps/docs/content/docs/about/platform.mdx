@@ -42,11 +42,11 @@ SeasonalWeather is an important subsystem within SeasonalNet, but it does not de
 
 These include PBX, CME, phone provisioning, and related communications services.
 
-SeasonalPBX is the current FreePBX/Asterisk VM at `192.168.1.12` and the Phone-LAN gateway at `192.168.56.1`. `pbx-controld` is the new PBX control-plane daemon for coordinating bot-managed and portal-managed extension state.
+SeasonalPBX is the current FreePBX/Asterisk service VM at `192.168.1.12`. It is no longer the Phone-LAN router or gateway; Phone-LAN has moved to `10.30.0.0/24` and `fd42:30::/64`, with the managed-switch/trunk routing boundary still pending documentation. `pbx-controld` is the PBX control-plane daemon for coordinating bot-managed and portal-managed extension state.
 
 ### Web and platform services
 
-These include public front doors, authentication-related services, Git services, DNS, mail, documentation, and supporting utilities.
+These include public front doors, authentication-related services, Git services, DNS, LAN private CA, mail, documentation, and supporting utilities.
 
 ### Control-plane services
 

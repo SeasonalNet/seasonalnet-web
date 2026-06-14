@@ -14,7 +14,7 @@ Top-level index of all SeasonalNet network segments. For full topology detail, s
 | Main LAN | `192.168.1.0/24` | ISP-assigned (native) | `192.168.1.1` | [`LANs/seasonalnet-lan-map.md`](/docs/topology/lans/main-lan) |
 | SeasonalCME Voice | `10.42.0.0/24` (VLAN 10) | `FD42:42::/64` | `10.42.0.1` | [`LANs/seasonalcme-network-map.md`](/docs/topology/lans/seasonalcme) |
 | SeasonalCME Management | `10.42.2.0/24` (VLAN 42) | `FD42:42:2::/64` | `10.42.2.1` | [`LANs/seasonalcme-network-map.md`](/docs/topology/lans/seasonalcme) |
-| Phone-LAN | `192.168.56.0/24` | `FD42:56::/64` | `192.168.56.1` | [`LANs/phonelan-map.md`](/docs/topology/lans/phone-lan) |
+| Phone-LAN | `10.30.0.0/24` | `fd42:30::/64` | `10.30.0.1` reserved; owner TBD | [`LANs/phonelan-map.md`](/docs/topology/lans/phone-lan) |
 
 ---
 
@@ -45,9 +45,11 @@ Main LAN (192.168.1.0/24)
     |       |-- SeasonalCME Voice VLAN (10.42.0.0/24, VLAN 10)
     |       `-- SeasonalCME Management VLAN (10.42.2.0/24, VLAN 42)
     |
-    `-- SeasonalPBX (192.168.1.12)
-            |
-            `-- Phone-LAN (192.168.56.0/24, gateway 192.168.56.1)
+    |-- SeasonalPBX (192.168.1.12)
+    |       `-- PBX/Asterisk service VM only; no longer Phone-LAN router
+    |
+    `-- Phone-LAN (10.30.0.0/24, fd42:30::/64)
+            `-- Gateway reservation 10.30.0.1 / fd42:30::1; owner TBD after Cisco switch/trunk cutover
 ```
 
 ---
@@ -58,7 +60,8 @@ Main LAN (192.168.1.0/24)
 |---|---|
 | `192.168.1.1` | Gateway |
 | `192.168.1.2` – `192.168.1.5` | Network infrastructure / reserved infrastructure |
-| `192.168.1.6` – `192.168.1.29` | Servers and service VMs |
+| `192.168.1.6` – `192.168.1.21` | Active servers and service VMs |
+| `192.168.1.22` – `192.168.1.29` | Reserved future servers / service VMs |
 | `192.168.1.30` – `192.168.1.39` | Hypervisors and BMC/OOB management |
 | `192.168.1.40` – `192.168.1.49` | Admin workstations / fixed laptops |
 | `192.168.1.50` – `192.168.1.99` | Static non-server devices |
@@ -89,13 +92,13 @@ SeasonalWeb performs hostname-based routing for public web services behind the s
 
 ## DNS / DHCP
 
-Cloudflare remains authoritative public DNS for `seasonalnet.org`. SeasonalDNS is for internal LAN recursion/local records only. Current internal aliases include `wx.lan.seasonalnet.org`, `seasonalwx.lan.seasonalnet.org`, and `seasonalweather.lan.seasonalnet.org` for SeasonalWX (`192.168.1.10`), plus `seasonalback.lan.seasonalnet.org` with `back.lan.seasonalnet.org` as a service alias for SeasonalBack (`192.168.1.16`). SeasonalNAS uses `seasonalnas.lan.seasonalnet.org` (`192.168.1.17`), SeasonalSand uses `seasonalsand.lan.seasonalnet.org` (`192.168.1.18`), SeasonalDB uses `seasonaldb.lan.seasonalnet.org` (`192.168.1.19`), and SeasonalDock uses `seasonaldock.lan.seasonalnet.org` (`192.168.1.20`). SeasonalR230 and SeasonalR340 moved to the hypervisor/BMC band at `.30` and `.31` respectively.
+Cloudflare remains authoritative public DNS for `seasonalnet.org`. SeasonalDNS is for internal LAN recursion/local records only. Current internal aliases include `wx.lan.seasonalnet.org`, `seasonalwx.lan.seasonalnet.org`, and `seasonalweather.lan.seasonalnet.org` for SeasonalWX (`192.168.1.10`), plus `seasonalback.lan.seasonalnet.org` with `back.lan.seasonalnet.org` as a service alias for SeasonalBack (`192.168.1.16`). SeasonalNAS uses `seasonalnas.lan.seasonalnet.org` (`192.168.1.17`), SeasonalSand uses `seasonalsand.lan.seasonalnet.org` (`192.168.1.18`), SeasonalDB uses `seasonaldb.lan.seasonalnet.org` (`192.168.1.19`), and SeasonalDock uses `seasonaldock.lan.seasonalnet.org` (`192.168.1.20`). SeasonalR230 and SeasonalR340 moved to the hypervisor/BMC band at `.30` and `.31` respectively. SeasonalCA uses `seasonalca.lan.seasonalnet.org` and `ca.lan.seasonalnet.org` at `192.168.1.21`.
 
 | Segment | DNS | DHCP |
 |---|---|---|
 | Main LAN | SeasonalDNS / Technitium (`192.168.1.14`) for internal DNS; WNC-CR200A (`192.168.1.1`) remains DHCP/default gateway | Verizon WNC-CR200A |
 | SeasonalCME | SeasonalEDGE-R1 (OSPF 42 domain) | SeasonalEDGE-R1 |
-| Phone-LAN | `dnsmasq` on SeasonalPBX (`192.168.56.1`, `FD42:56::1`) | `dnsmasq` on SeasonalPBX |
+| Phone-LAN | DNS/DHCP owner TBD after PBX-router removal; clients should reach SeasonalPBX as routed service at `192.168.1.12` | DHCP owner TBD; previous PBX `dnsmasq` model retired |
 
 Admin/static hosts should prefer SeasonalDNS (`192.168.1.14`) directly for DNS to avoid router-side stale or empty local answers for `lan.seasonalnet.org` records.
 
