@@ -93,6 +93,7 @@ function renderStatusIcon(label: string) {
   if (key === "mode") return <Gauge className={className} />
   if (key === "liquidsoap") return <RadioTower className={className} />
   if (key === "queues") return <ListOrdered className={className} />
+  if (key === "cycle inserts") return <Repeat2 className={className} />
   if (key === "live time") return <Clock3 className={className} />
   if (key === "rebroadcast") return <Repeat2 className={className} />
   if (key === "last product") return <FileText className={className} />

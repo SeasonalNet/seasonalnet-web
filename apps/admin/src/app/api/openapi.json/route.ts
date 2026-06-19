@@ -28,6 +28,16 @@ const moduleParameter = {
   },
 }
 
+const insertIdParameter = {
+  name: "insert_id",
+  in: "path",
+  required: true,
+  schema: {
+    type: "string",
+    pattern: "^[A-Za-z0-9_-]+$",
+  },
+}
+
 function seasonalWeatherActionPath(summary: string) {
   return {
     post: {
@@ -82,6 +92,25 @@ function seasonalWeatherDeleteActionPath(summary: string) {
   }
 }
 
+function seasonalWeatherGetPath(summary: string) {
+  return {
+    get: {
+      tags: ["seasonalweather"],
+      summary,
+      responses: {
+        "200": jsonResponse("Upstream SeasonalWeather result.", { $ref: "#/components/schemas/ActionResult" }),
+        "400": { $ref: "#/components/responses/BadRequest" },
+        "401": { $ref: "#/components/responses/Unauthorized" },
+        "403": { $ref: "#/components/responses/Forbidden" },
+        "404": { $ref: "#/components/responses/NotFound" },
+        "422": { $ref: "#/components/responses/BadRequest" },
+        "500": { $ref: "#/components/responses/InternalServerError" },
+        "502": { $ref: "#/components/responses/BadGateway" },
+      },
+    },
+  }
+}
+
 
 const actionResultSchema = {
   type: "object",
@@ -122,6 +151,14 @@ const document = openApiDocument({
     "/api/modules/seasonalweather/uploads/audio": seasonalWeatherActionPath("Upload SeasonalWeather audio."),
     "/api/modules/seasonalweather/originate/text": seasonalWeatherActionPath("Originate SeasonalWeather text."),
     "/api/modules/seasonalweather/originate/audio": seasonalWeatherActionPath("Originate SeasonalWeather audio."),
+    "/api/modules/seasonalweather/inserts": seasonalWeatherGetPath("List SeasonalWeather cycle inserts."),
+    "/api/modules/seasonalweather/inserts/text": seasonalWeatherActionPath("Schedule a SeasonalWeather text cycle insert."),
+    "/api/modules/seasonalweather/inserts/audio": seasonalWeatherActionPath("Schedule a SeasonalWeather audio cycle insert."),
+    "/api/modules/seasonalweather/inserts/{insert_id}": {
+      ...seasonalWeatherGetPath("Return one SeasonalWeather cycle insert."),
+      ...seasonalWeatherDeleteActionPath("Cancel a SeasonalWeather cycle insert."),
+      parameters: [insertIdParameter],
+    },
     "/api/modules/seasonalweather/config/reload": seasonalWeatherActionPath("Reload SeasonalWeather configuration."),
     "/api/openapi.json": {
       get: {

@@ -6,6 +6,7 @@ export type SeasonalWeatherCapability =
   | "read"
   | "control"
   | "originate"
+  | "inserts"
   | "config"
 
 const BASE_URL = process.env.SEASONALWEATHER_API_BASE?.trim().replace(/\/+$/, "")
@@ -14,6 +15,7 @@ const TOKENS: Record<SeasonalWeatherCapability, string | undefined> = {
   read: process.env.SEASONALWEATHER_READ_TOKEN,
   control: process.env.SEASONALWEATHER_CONTROL_TOKEN,
   originate: process.env.SEASONALWEATHER_ORIGINATE_TOKEN,
+  inserts: process.env.SEASONALWEATHER_INSERTS_TOKEN || process.env.SEASONALWEATHER_CONTROL_TOKEN,
   config: process.env.SEASONALWEATHER_CONFIG_TOKEN || process.env.SEASONALWEATHER_CONTROL_TOKEN,
 }
 

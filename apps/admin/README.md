@@ -41,6 +41,7 @@ SEASONALWEATHER_API_BASE=http://wx.lan.seasonalnet.org
 SEASONALWEATHER_READ_TOKEN=...
 SEASONALWEATHER_CONTROL_TOKEN=...
 SEASONALWEATHER_ORIGINATE_TOKEN=...
+SEASONALWEATHER_INSERTS_TOKEN=... # optional; falls back to CONTROL token
 SEASONALWEATHER_CONFIG_TOKEN=... # optional; falls back to CONTROL token
 ```
 
@@ -50,3 +51,5 @@ the SeasonalWX nginx proxy or another internal reverse proxy that can reach the 
 SeasonalWeather daemon.
 
 SeasonalWeather now publishes OpenAPI 3.1 at `/openapi.json` and returns RFC 9457 Problem Details for API errors (`application/problem+json`). The admin BFF accepts that media type from the upstream API and maps upstream problem metadata into its own Problem Details response for browser callers.
+
+Cycle insert controls use the authenticated `/v1/inserts/*` SeasonalWeather API. The admin UI can schedule bounded text inserts, schedule previously uploaded WAV assets as audio inserts, list active/inactive inserts, and cancel active inserts without using the manual alert origination path.

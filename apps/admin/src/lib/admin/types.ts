@@ -14,6 +14,9 @@ export type AdminActionDialogType =
   | "originate-text"
   | "upload-audio"
   | "originate-audio"
+  | "cycle-insert-text"
+  | "cycle-insert-audio"
+  | "cycle-inserts-manager"
 
 export type AdminAction = {
   label: string

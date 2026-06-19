@@ -32,6 +32,13 @@ function queueSummary(overview: SeasonalWeatherOverview) {
   return `NWWS ${nwws} · CAP ${cap} · ERN ${ern}`
 }
 
+function insertSummary(overview: SeasonalWeatherOverview) {
+  const active = overview.inserts.active
+  if (active === null) return "Unknown"
+  const base = `${active} active`
+  return overview.inserts.nextAirAt ? `${base} · next ${overview.inserts.nextAirAt}` : base
+}
+
 function shortHash(hash: string | null) {
   if (!hash) return "Unknown"
   return `${hash.slice(0, 12)}…`
@@ -70,6 +77,11 @@ function seasonalWeatherStatus(overview: SeasonalWeatherOverview): AdminStatusIt
       label: "Queues",
       value: queueSummary(overview),
       tone: "muted",
+    },
+    {
+      label: "Cycle inserts",
+      value: insertSummary(overview),
+      tone: overview.inserts.active && overview.inserts.active > 0 ? "warning" : "muted",
     },
     {
       label: "Live time",
@@ -132,6 +144,33 @@ export function buildSeasonalWeatherModule(
             href: "/api/modules/seasonalweather/cycle/rebuild",
             method: "POST",
             confirm: "Rebuild the SeasonalWeather cycle now?",
+          },
+          {
+            label: "Schedule text insert",
+            summary: "Add bounded spoken text into the normal cycle.",
+            icon: AudioLines,
+            state: liveActionState,
+            href: "/api/modules/seasonalweather/inserts/text",
+            method: "POST",
+            dialogType: "cycle-insert-text",
+          },
+          {
+            label: "Schedule audio insert",
+            summary: "Add staged WAV audio into the normal cycle.",
+            icon: Upload,
+            state: liveActionState,
+            href: "/api/modules/seasonalweather/inserts/audio",
+            method: "POST",
+            dialogType: "cycle-insert-audio",
+          },
+          {
+            label: "Manage inserts",
+            summary: "List and cancel active cycle inserts.",
+            icon: Activity,
+            state: liveActionState,
+            href: "/api/modules/seasonalweather/inserts",
+            method: "GET",
+            dialogType: "cycle-inserts-manager",
           },
           {
             label: "Enable heightened mode",

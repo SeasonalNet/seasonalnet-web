@@ -18,6 +18,10 @@ export type SeasonalWeatherOverview = {
     cap: number | null
     ern: number | null
   }
+  inserts: {
+    active: number | null
+    nextAirAt: string | null
+  }
   configHash: string | null
   error?: string
 }
@@ -26,9 +30,10 @@ const API_BASE = process.env.SEASONALWEATHER_API_BASE?.trim().replace(/\/+$/, ""
 const READ_TOKEN = process.env.SEASONALWEATHER_READ_TOKEN
 const CONTROL_TOKEN = process.env.SEASONALWEATHER_CONTROL_TOKEN
 const ORIGINATE_TOKEN = process.env.SEASONALWEATHER_ORIGINATE_TOKEN
+const INSERTS_TOKEN = process.env.SEASONALWEATHER_INSERTS_TOKEN || CONTROL_TOKEN
 const CONFIG_TOKEN = process.env.SEASONALWEATHER_CONFIG_TOKEN || CONTROL_TOKEN
 
-type TokenKind = "read" | "control" | "originate" | "config"
+type TokenKind = "read" | "control" | "originate" | "inserts" | "config"
 
 type ProblemDetails = {
   type?: string
@@ -66,6 +71,8 @@ function getToken(kind: TokenKind) {
       return CONTROL_TOKEN
     case "originate":
       return ORIGINATE_TOKEN
+    case "inserts":
+      return INSERTS_TOKEN
     case "config":
       return CONFIG_TOKEN
     case "read":
@@ -117,16 +124,26 @@ async function getSeasonalWeatherOverviewFresh(): Promise<SeasonalWeatherOvervie
       liveTimeEnabled: null,
       rebroadcastEnabled: null,
       queueSizes: { nwws: null, cap: null, ern: null },
+      inserts: { active: null, nextAirAt: null },
       configHash: null,
       error: "Backend wiring not configured yet.",
     }
   }
 
   try {
-    const [health, status] = await Promise.all([
+    const [health, status, insertList] = await Promise.all([
       seasonalWeatherFetch("/v1/health"),
       seasonalWeatherFetch("/v1/status"),
+      INSERTS_TOKEN
+        ? seasonalWeatherFetch("/v1/inserts?limit=25", {}, "inserts").catch(() => null)
+        : Promise.resolve(null),
     ])
+
+    const inserts = Array.isArray(insertList?.inserts) ? insertList.inserts : null
+    const nextAirAt = inserts
+      ?.map((item: { estimated_next_air_at?: unknown }) => item.estimated_next_air_at)
+      .filter((value: unknown): value is string => typeof value === "string" && value.length > 0)
+      .sort()[0] ?? null
 
     return {
       configured: true,
@@ -144,6 +161,10 @@ async function getSeasonalWeatherOverviewFresh(): Promise<SeasonalWeatherOvervie
         cap: typeof status?.cap_queue_size === "number" ? status.cap_queue_size : null,
         ern: typeof status?.ern_queue_size === "number" ? status.ern_queue_size : null,
       },
+      inserts: {
+        active: inserts ? inserts.length : null,
+        nextAirAt,
+      },
       configHash: status?.config_sha256 ?? null,
     }
   } catch (error) {
@@ -159,6 +180,7 @@ async function getSeasonalWeatherOverviewFresh(): Promise<SeasonalWeatherOvervie
       liveTimeEnabled: null,
       rebroadcastEnabled: null,
       queueSizes: { nwws: null, cap: null, ern: null },
+      inserts: { active: null, nextAirAt: null },
       configHash: null,
       error: error instanceof Error ? error.message : "Unable to reach SeasonalWeather.",
     }

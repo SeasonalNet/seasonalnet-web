@@ -11,9 +11,10 @@ import {
 type RouteDef = {
   upstreamPath: string
   capability: SeasonalWeatherCapability
-  methods: Array<"POST" | "DELETE">
+  methods: Array<"GET" | "POST" | "DELETE">
   forwardJsonBody?: boolean
   forwardFormData?: boolean
+  forwardSearchParams?: boolean
   defaultBody?: unknown
 }
 
@@ -64,6 +65,24 @@ const ROUTES: Record<string, RouteDef> = {
     methods: ["POST"],
     forwardJsonBody: true,
   },
+  "inserts": {
+    upstreamPath: "/v1/inserts",
+    capability: "inserts",
+    methods: ["GET"],
+    forwardSearchParams: true,
+  },
+  "inserts/text": {
+    upstreamPath: "/v1/inserts/text",
+    capability: "inserts",
+    methods: ["POST"],
+    forwardJsonBody: true,
+  },
+  "inserts/audio": {
+    upstreamPath: "/v1/inserts/audio",
+    capability: "inserts",
+    methods: ["POST"],
+    forwardJsonBody: true,
+  },
   "config/reload": {
     upstreamPath: "/v1/config/reload",
     capability: "config",
@@ -80,9 +99,28 @@ async function handle(
 ) {
   const { path } = await paramsPromise
   const key = path.join("/")
-  const def = ROUTES[key]
+  let def = ROUTES[key]
 
-  if (!def || !def.methods.includes(req.method as "POST" | "DELETE")) {
+  if (!def && path[0] === "inserts" && path.length === 2) {
+    const insertId = path[1]
+
+    if (!/^[A-Za-z0-9_-]{1,96}$/.test(insertId)) {
+      return problemJson({
+        type: "/problems/bad-request",
+        title: "Bad request",
+        status: 400,
+        detail: "Unsupported SeasonalWeather insert id.",
+      })
+    }
+
+    def = {
+      upstreamPath: `/v1/inserts/${encodeURIComponent(insertId)}`,
+      capability: "inserts",
+      methods: ["GET", "DELETE"],
+    }
+  }
+
+  if (!def || !def.methods.includes(req.method as "GET" | "POST" | "DELETE")) {
     return problemJson({
       type: "/problems/not-found",
       title: "Not found",
@@ -108,8 +146,12 @@ async function handle(
       headers = { "Content-Type": "application/json" }
     }
 
+    const upstreamPath = def.forwardSearchParams
+      ? `${def.upstreamPath}${req.nextUrl.search}`
+      : def.upstreamPath
+
     const result = await seasonalWeatherApi(
-      def.upstreamPath,
+      upstreamPath,
       {
         method: req.method,
         headers,
@@ -144,6 +186,13 @@ async function handle(
       detail: message,
     })
   }
+}
+
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ path: string[] }> }
+) {
+  return handle(req, params)
 }
 
 export async function POST(

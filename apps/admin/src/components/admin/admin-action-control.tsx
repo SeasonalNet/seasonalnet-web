@@ -738,6 +738,589 @@ function OriginateAudioDialog({ action }: { action: AdminActionControlProps }) {
   )
 }
 
+
+type InsertKind = "text" | "audio"
+type InsertPlacement = "after_time" | "after_status" | "end_of_rotation"
+type InsertRepeatMode = "once" | "every_n_rotations"
+
+type CycleInsertFormState = {
+  title: string
+  text: string
+  audioAssetId: string
+  placement: InsertPlacement
+  startAfter: string
+  expiresAt: string
+  repeatMode: InsertRepeatMode
+  everyNRotations: number
+  maxAirings: number
+  deferDuringActiveAlerts: boolean
+}
+
+type CycleInsertSnapshot = {
+  insert_id: string
+  kind: InsertKind
+  title: string
+  placement: InsertPlacement
+  start_after: string | null
+  expires_at: string
+  repeat: {
+    mode?: InsertRepeatMode
+    every_n_rotations?: number
+    max_airings?: number
+  }
+  defer_during_active_alerts: boolean
+  status: string
+  actor: string
+  created_at: string
+  updated_at: string
+  last_aired_at: string | null
+  airing_count: number
+  max_airings: number
+  duration_seconds: number
+  estimated_next_air_at: string | null
+  estimate_confidence: string | null
+  estimate_window_seconds: number | null
+  audio_asset_id: string | null
+}
+
+function pad2(value: number) {
+  return String(value).padStart(2, "0")
+}
+
+function dateTimeLocalValue(date: Date) {
+  return `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}T${pad2(date.getHours())}:${pad2(date.getMinutes())}`
+}
+
+function minutesFromNowLocalValue(minutes: number) {
+  return dateTimeLocalValue(new Date(Date.now() + minutes * 60_000))
+}
+
+function defaultCycleInsertForm(): CycleInsertFormState {
+  return {
+    title: "",
+    text: "",
+    audioAssetId: "",
+    placement: "after_time",
+    startAfter: "",
+    expiresAt: minutesFromNowLocalValue(120),
+    repeatMode: "once",
+    everyNRotations: 1,
+    maxAirings: 1,
+    deferDuringActiveAlerts: true,
+  }
+}
+
+function localDateTimeToIso(value: string, label: string) {
+  if (!value.trim()) {
+    toast.error(`${label} is required.`)
+    return null
+  }
+
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    toast.error(`${label} is not a valid date/time.`)
+    return null
+  }
+
+  return date.toISOString()
+}
+
+function optionalLocalDateTimeToIso(value: string, label: string) {
+  if (!value.trim()) return undefined
+  return localDateTimeToIso(value, label) ?? null
+}
+
+function formatDateTime(value: string | null | undefined) {
+  if (!value) return "Not set"
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleString()
+}
+
+function formatDuration(seconds: number | null | undefined) {
+  if (typeof seconds !== "number" || Number.isNaN(seconds)) return "unknown length"
+  if (seconds < 60) return `${seconds.toFixed(1)}s`
+  const minutes = Math.floor(seconds / 60)
+  const remainder = Math.round(seconds % 60)
+  return `${minutes}m ${remainder}s`
+}
+
+function placementLabel(value: InsertPlacement | string) {
+  switch (value) {
+    case "after_time":
+      return "After time marker"
+    case "after_status":
+      return "After status segment"
+    case "end_of_rotation":
+      return "End of rotation"
+    default:
+      return value
+  }
+}
+
+function repeatLabel(insert: CycleInsertSnapshot) {
+  const mode = insert.repeat?.mode || "once"
+  if (mode === "every_n_rotations") {
+    const every = insert.repeat?.every_n_rotations || 1
+    return `Every ${every} rotation${every === 1 ? "" : "s"}`
+  }
+  return "Once"
+}
+
+function CycleInsertFields({
+  form,
+  setForm,
+  kind,
+}: {
+  form: CycleInsertFormState
+  setForm: React.Dispatch<React.SetStateAction<CycleInsertFormState>>
+  kind: InsertKind
+}) {
+  function setField<K extends keyof CycleInsertFormState>(
+    key: K,
+    value: CycleInsertFormState[K]
+  ) {
+    setForm((prev) => ({ ...prev, [key]: value }))
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="space-y-2">
+        <Label htmlFor={`cycle-insert-${kind}-title`}>Title</Label>
+        <Input
+          id={`cycle-insert-${kind}-title`}
+          value={form.title}
+          maxLength={160}
+          placeholder="Cycle insert title"
+          onChange={(e) => setField("title", e.target.value)}
+        />
+      </div>
+
+      {kind === "text" ? (
+        <div className="space-y-2">
+          <Label htmlFor="cycle-insert-text">Spoken text</Label>
+          <Textarea
+            id="cycle-insert-text"
+            value={form.text}
+            rows={7}
+            maxLength={2000}
+            onChange={(e) => setField("text", e.target.value)}
+          />
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <Label htmlFor="cycle-insert-audio-asset-id">Audio asset ID</Label>
+          <Input
+            id="cycle-insert-audio-asset-id"
+            value={form.audioAssetId}
+            onChange={(e) => setField("audioAssetId", e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">
+            Upload audio first and this field will prefill from the last staged asset.
+          </p>
+        </div>
+      )}
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="space-y-2">
+          <Label htmlFor={`cycle-insert-${kind}-placement`}>Placement</Label>
+          <select
+            id={`cycle-insert-${kind}-placement`}
+            className={selectClassName}
+            value={form.placement}
+            onChange={(e) => setField("placement", e.target.value as InsertPlacement)}
+          >
+            <option value="after_time">After time marker</option>
+            <option value="after_status">After status segment</option>
+            <option value="end_of_rotation">End of rotation</option>
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor={`cycle-insert-${kind}-start-after`}>Start after</Label>
+          <Input
+            id={`cycle-insert-${kind}-start-after`}
+            type="datetime-local"
+            value={form.startAfter}
+            onChange={(e) => setField("startAfter", e.target.value)}
+          />
+          <p className="text-xs text-muted-foreground">Optional. Blank means eligible now.</p>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor={`cycle-insert-${kind}-expires-at`}>Expires at</Label>
+          <Input
+            id={`cycle-insert-${kind}-expires-at`}
+            type="datetime-local"
+            value={form.expiresAt}
+            onChange={(e) => setField("expiresAt", e.target.value)}
+          />
+        </div>
+      </div>
+
+      <div className="grid gap-4 md:grid-cols-3">
+        <div className="space-y-2">
+          <Label htmlFor={`cycle-insert-${kind}-repeat-mode`}>Repeat</Label>
+          <select
+            id={`cycle-insert-${kind}-repeat-mode`}
+            className={selectClassName}
+            value={form.repeatMode}
+            onChange={(e) => setField("repeatMode", e.target.value as InsertRepeatMode)}
+          >
+            <option value="once">Once</option>
+            <option value="every_n_rotations">Every N rotations</option>
+          </select>
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor={`cycle-insert-${kind}-every-rotations`}>Every rotations</Label>
+          <Input
+            id={`cycle-insert-${kind}-every-rotations`}
+            type="number"
+            min={1}
+            max={1440}
+            disabled={form.repeatMode === "once"}
+            value={form.everyNRotations}
+            onChange={(e) => setField("everyNRotations", Number(e.target.value || 1))}
+          />
+        </div>
+
+        <div className="space-y-2">
+          <Label htmlFor={`cycle-insert-${kind}-max-airings`}>Max airings</Label>
+          <Input
+            id={`cycle-insert-${kind}-max-airings`}
+            type="number"
+            min={1}
+            max={100}
+            disabled={form.repeatMode === "once"}
+            value={form.maxAirings}
+            onChange={(e) => setField("maxAirings", Number(e.target.value || 1))}
+          />
+        </div>
+      </div>
+
+      <label className="flex items-start gap-3 rounded-xl border bg-background/40 px-3 py-3 text-sm">
+        <input
+          type="checkbox"
+          className="mt-1"
+          checked={form.deferDuringActiveAlerts}
+          onChange={(e) => setField("deferDuringActiveAlerts", e.target.checked)}
+        />
+        <span>
+          <span className="font-medium">Defer during active alerts</span>
+          <span className="mt-1 block text-xs text-muted-foreground">
+            Keep this enabled for routine inserts so alert-focused cycle behavior stays clean.
+          </span>
+        </span>
+      </label>
+    </div>
+  )
+}
+
+function buildCycleInsertPayload(form: CycleInsertFormState, kind: InsertKind) {
+  const title = form.title.trim()
+  if (!title) {
+    toast.error("Insert title is required.")
+    return null
+  }
+
+  if (kind === "text" && !form.text.trim()) {
+    toast.error("Text insert content is required.")
+    return null
+  }
+
+  if (kind === "audio" && !form.audioAssetId.trim()) {
+    toast.error("Audio asset ID is required.")
+    return null
+  }
+
+  const startAfter = optionalLocalDateTimeToIso(form.startAfter, "Start after")
+  if (startAfter === null) return null
+
+  const expiresAt = localDateTimeToIso(form.expiresAt, "Expiration")
+  if (!expiresAt) return null
+
+  const repeat = {
+    mode: form.repeatMode,
+    every_n_rotations: form.repeatMode === "once" ? 1 : form.everyNRotations,
+    max_airings: form.repeatMode === "once" ? 1 : form.maxAirings,
+  }
+
+  return {
+    title,
+    placement: form.placement,
+    ...(startAfter ? { start_after: startAfter } : {}),
+    expires_at: expiresAt,
+    repeat,
+    defer_during_active_alerts: form.deferDuringActiveAlerts,
+    ...(kind === "text"
+      ? { text: form.text.trim() }
+      : { audio_asset_id: form.audioAssetId.trim() }),
+  }
+}
+
+function CycleInsertDialog({
+  action,
+  kind,
+}: {
+  action: AdminActionControlProps
+  kind: InsertKind
+}) {
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
+  const [pending, setPending] = useState(false)
+  const [form, setForm] = useState<CycleInsertFormState>(defaultCycleInsertForm())
+
+  function onOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen)
+
+    if (!nextOpen) return
+
+    setForm((prev) => ({
+      ...prev,
+      expiresAt: prev.expiresAt || minutesFromNowLocalValue(120),
+    }))
+
+    if (kind !== "audio" || typeof window === "undefined") return
+
+    const assetId = window.localStorage.getItem(LAST_UPLOADED_AUDIO_ASSET_KEY)
+    if (assetId) {
+      setForm((prev) => ({ ...prev, audioAssetId: prev.audioAssetId || assetId }))
+    }
+  }
+
+  async function onSubmit() {
+    if (!action.href || pending) return
+
+    const payload = buildCycleInsertPayload(form, kind)
+    if (!payload) return
+
+    setPending(true)
+    const ok = await postJsonAction({
+      href: action.href,
+      method: "POST",
+      payload,
+      loadingMessage: `Scheduling ${kind} insert...`,
+      successMessage: `${kind === "text" ? "Text" : "Audio"} cycle insert accepted.`,
+    })
+    setPending(false)
+
+    if (ok) {
+      setOpen(false)
+      setForm(defaultCycleInsertForm())
+      router.refresh()
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogTrigger asChild>
+        <TriggerButton label="Schedule" />
+      </DialogTrigger>
+
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{action.label}</DialogTitle>
+          <DialogDescription>{action.summary}</DialogDescription>
+        </DialogHeader>
+
+        <CycleInsertFields form={form} setForm={setForm} kind={kind} />
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={pending}>
+            Cancel
+          </Button>
+          <Button onClick={onSubmit} disabled={pending}>
+            {pending ? "Working..." : "Schedule"}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
+function CycleInsertManagerDialog({ action }: { action: AdminActionControlProps }) {
+  const router = useRouter()
+  const [open, setOpen] = useState(false)
+  const [includeInactive, setIncludeInactive] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [inserts, setInserts] = useState<CycleInsertSnapshot[]>([])
+  const [cancellingId, setCancellingId] = useState<string | null>(null)
+
+  async function loadInserts(nextIncludeInactive = includeInactive) {
+    if (!action.href) return
+
+    setLoading(true)
+    setError(null)
+
+    try {
+      const res = await fetch(
+        `${action.href}?include_inactive=${nextIncludeInactive ? "true" : "false"}&limit=100`,
+        { cache: "no-store" }
+      )
+
+      if (!res.ok) {
+        setError(await getErrorMessage(res))
+        setInserts([])
+        return
+      }
+
+      const data = await res.json() as { inserts?: CycleInsertSnapshot[] }
+      setInserts(Array.isArray(data.inserts) ? data.inserts : [])
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Failed to load inserts.")
+      setInserts([])
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  function onOpenChange(nextOpen: boolean) {
+    setOpen(nextOpen)
+    if (nextOpen) void loadInserts()
+  }
+
+  async function cancelInsert(insertId: string) {
+    if (!action.href || cancellingId) return
+
+    setCancellingId(insertId)
+    const toastId = toast.loading("Cancelling insert...")
+
+    try {
+      const res = await fetch(`${action.href}/${encodeURIComponent(insertId)}`, {
+        method: "DELETE",
+        cache: "no-store",
+      })
+
+      if (!res.ok) {
+        toast.error(await getErrorMessage(res), { id: toastId })
+        return
+      }
+
+      toast.success("Insert cancelled.", { id: toastId })
+      await loadInserts()
+      router.refresh()
+    } catch (cancelError) {
+      const message = cancelError instanceof Error ? cancelError.message : "Cancel failed."
+      toast.error(message, { id: toastId })
+    } finally {
+      setCancellingId(null)
+    }
+  }
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogTrigger asChild>
+        <TriggerButton label="Open" />
+      </DialogTrigger>
+
+      <DialogContent className="max-h-[85vh] overflow-y-auto sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>{action.label}</DialogTitle>
+          <DialogDescription>{action.summary}</DialogDescription>
+        </DialogHeader>
+
+        <div className="space-y-4">
+          <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border bg-background/40 px-3 py-3">
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={includeInactive}
+                onChange={(e) => {
+                  const next = e.target.checked
+                  setIncludeInactive(next)
+                  void loadInserts(next)
+                }}
+              />
+              Include inactive inserts
+            </label>
+
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => void loadInserts()}
+              disabled={loading}
+              className="rounded-full"
+            >
+              {loading ? "Loading..." : "Refresh"}
+            </Button>
+          </div>
+
+          {error ? (
+            <div className="rounded-xl border bg-background/40 px-3 py-3 text-sm text-destructive">
+              {error}
+            </div>
+          ) : null}
+
+          {!error && loading ? (
+            <div className="rounded-xl border bg-background/40 px-3 py-3 text-sm text-muted-foreground">
+              Loading cycle inserts...
+            </div>
+          ) : null}
+
+          {!error && !loading && inserts.length === 0 ? (
+            <div className="rounded-xl border bg-background/40 px-3 py-3 text-sm text-muted-foreground">
+              No cycle inserts matched this view.
+            </div>
+          ) : null}
+
+          {!error && !loading && inserts.length > 0 ? (
+            <div className="space-y-2">
+              {inserts.map((insert) => (
+                <div key={insert.insert_id} className="rounded-xl border bg-background/40 p-3">
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="min-w-0 flex-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <div className="font-medium leading-tight">{insert.title}</div>
+                        <span className="rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                          {insert.kind}
+                        </span>
+                        <span className="rounded-full border px-2 py-0.5 text-[10px] uppercase tracking-wide text-muted-foreground">
+                          {insert.status}
+                        </span>
+                      </div>
+
+                      <div className="mt-2 grid gap-1 text-xs text-muted-foreground md:grid-cols-2">
+                        <div>ID: {insert.insert_id}</div>
+                        <div>Placement: {placementLabel(insert.placement)}</div>
+                        <div>Repeat: {repeatLabel(insert)}</div>
+                        <div>Airings: {insert.airing_count} / {insert.max_airings}</div>
+                        <div>Eligible: {formatDateTime(insert.start_after)}</div>
+                        <div>Expires: {formatDateTime(insert.expires_at)}</div>
+                        <div>Next estimate: {formatDateTime(insert.estimated_next_air_at)}</div>
+                        <div>Duration: {formatDuration(insert.duration_seconds)}</div>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => void cancelInsert(insert.insert_id)}
+                      disabled={insert.status !== "active" || cancellingId === insert.insert_id}
+                      className="rounded-full"
+                    >
+                      {cancellingId === insert.insert_id ? "Cancelling..." : "Cancel"}
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : null}
+        </div>
+
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setOpen(false)}>
+            Close
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  )
+}
+
 export function AdminActionControl(action: AdminActionControlProps) {
   switch (action.dialogType) {
     case "heightened-mode":
@@ -750,6 +1333,12 @@ export function AdminActionControl(action: AdminActionControlProps) {
       return <UploadAudioDialog action={action} />
     case "originate-audio":
       return <OriginateAudioDialog action={action} />
+    case "cycle-insert-text":
+      return <CycleInsertDialog action={action} kind="text" />
+    case "cycle-insert-audio":
+      return <CycleInsertDialog action={action} kind="audio" />
+    case "cycle-inserts-manager":
+      return <CycleInsertManagerDialog action={action} />
     default:
       return (
         <AdminActionButton
