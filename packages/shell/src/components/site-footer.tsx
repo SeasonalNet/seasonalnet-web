@@ -17,11 +17,29 @@ type ShellFooterProps = {
   site: FooterSite
 }
 
+const policyLinks: ReadonlyArray<FooterPortal> = [
+  {
+    key: "privacy",
+    title: "Privacy",
+    href: "https://docs.seasonalnet.org/docs/policies/privacy",
+  },
+  {
+    key: "terms",
+    title: "Terms",
+    href: "https://docs.seasonalnet.org/docs/policies/terms",
+  },
+  {
+    key: "acceptable-use",
+    title: "Acceptable Use",
+    href: "https://docs.seasonalnet.org/docs/policies/acceptable-use",
+  },
+]
+
 export function ShellFooter({ site }: ShellFooterProps) {
   return (
     <footer className="mx-auto max-w-6xl px-4 pb-10">
       <div className="mt-12 rounded-2xl border bg-card">
-        <div className="grid gap-6 p-6 md:grid-cols-3">
+        <div className="grid gap-6 p-6 md:grid-cols-2 lg:grid-cols-4">
           <div>
             <div className="text-sm font-semibold">{site.name}</div>
             <div className="mt-2 text-sm text-muted-foreground">{site.description}</div>
@@ -40,6 +58,24 @@ export function ShellFooter({ site }: ShellFooterProps) {
                   target="_blank"
                 >
                   {p.title}
+                </a>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <div className="text-sm font-semibold">Policies</div>
+            <Separator className="my-3" />
+            <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
+              {policyLinks.map((policy) => (
+                <a
+                  key={policy.key}
+                  className="transition-colors hover:text-foreground"
+                  href={policy.href}
+                  rel="noreferrer noopener"
+                  target="_blank"
+                >
+                  {policy.title}
                 </a>
               ))}
             </div>
