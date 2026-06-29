@@ -9,6 +9,7 @@ import {
   PUBLIC_DOCS_DENY_PREFIXES,
   PUBLIC_DOCS_LANS_META,
   PUBLIC_DOCS_MANAGED_OUTPUTS,
+  PUBLIC_DOCS_POLICIES_META,
   PUBLIC_DOCS_ROOT_META,
   PUBLIC_DOCS_SOURCE_DEFAULT_PATH,
   PUBLIC_DOCS_SOURCE_REPO,
@@ -37,34 +38,43 @@ function buildRouteMap() {
   return new Map(PUBLIC_DOCS_ALLOWLIST.map((entry) => [entry.sourcePath, entry.routePath]));
 }
 
-function rewriteInternalLinks(text, routeMap) {
-  let next = text;
+function rewriteInternalLinks(text, routeMap, sourcePath) {
+  const sourceDirectory = path.posix.dirname(sourcePath);
 
-  for (const [sourcePath, routePath] of routeMap) {
-    const escaped = sourcePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-    next = next.replace(new RegExp(`\\]\\(${escaped}\\)`, 'g'), `](${routePath})`);
-  }
+  return text.replace(/\]\(([^)]+)\)/g, (match, rawHref) => {
+    const href = rawHref.trim();
 
-  next = next.replace(/\]\((\.\/)?LANs\/seasonalnet-lan-map\.md\)/g, '](/docs/topology/lans/main-lan)');
-  next = next.replace(/\]\((\.\/)?LANs\/seasonalcme-network-map\.md\)/g, '](/docs/topology/lans/seasonalcme)');
-  next = next.replace(/\]\((\.\/)?LANs\/phonelan-map\.md\)/g, '](/docs/topology/lans/phone-lan)');
-  next = next.replace(/\]\(README\.md\)/g, '](/docs)');
-  next = next.replace(/\]\(PLATFORM\.md\)/g, '](/docs/about/platform)');
-  next = next.replace(/\]\(SERVICES\.md\)/g, '](/docs/about/services)');
-  next = next.replace(/\]\(NETWORK\.md\)/g, '](/docs/topology)');
-  next = next.replace(/\]\(PROJECTS\.md\)/g, '](/docs/projects)');
+    if (/^(?:[a-z][a-z0-9+.-]*:|\/|#)/i.test(href)) {
+      return match;
+    }
 
-  return next;
+    const hashIndex = href.indexOf('#');
+    const target = hashIndex === -1 ? href : href.slice(0, hashIndex);
+    const fragment = hashIndex === -1 ? '' : href.slice(hashIndex);
+
+    if (!target.toLowerCase().endsWith('.md')) {
+      return match;
+    }
+
+    const normalizedTarget = target.replace(/\\/g, '/');
+    const resolvedSourcePath = path.posix.normalize(
+      path.posix.join(sourceDirectory, normalizedTarget),
+    );
+    const routePath = routeMap.get(resolvedSourcePath);
+
+    return routePath ? `](${routePath}${fragment})` : match;
+  });
 }
 
 function stripHtmlComments(text) {
   return text.replace(/^<!--.*?-->\n*/gms, '').replace(/\n<!--.*?-->\n/gms, '\n\n');
 }
 
-function toMdx({ title, description }, rawText, routeMap) {
+function toMdx({ sourcePath, title, description }, rawText, routeMap) {
   const body = rewriteInternalLinks(
     stripHtmlComments(stripLeadingTitle(normalizeText(rawText))),
     routeMap,
+    sourcePath,
   ).trim();
 
   return [
@@ -175,6 +185,7 @@ async function main() {
   await writeJson('about/meta.json', PUBLIC_DOCS_ABOUT_META);
   await writeJson('topology/meta.json', PUBLIC_DOCS_TOPOLOGY_META);
   await writeJson('topology/lans/meta.json', PUBLIC_DOCS_LANS_META);
+  await writeJson('policies/meta.json', PUBLIC_DOCS_POLICIES_META);
   await writeText('about/index.mdx', generateAboutIndex());
   await writeText('topology/lans/index.mdx', generateLanIndex());
 

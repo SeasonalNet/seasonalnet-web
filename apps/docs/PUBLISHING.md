@@ -22,8 +22,12 @@ Only the following source files may be copied into `apps/docs/content/docs`:
 | `LANs/seasonalcme-network-map.md` | `/docs/topology/lans/seasonalcme` | `topology/lans/seasonalcme.mdx` |
 | `LANs/phonelan-map.md` | `/docs/topology/lans/phone-lan` | `topology/lans/phone-lan.mdx` |
 | `PROJECTS.md` | `/docs/projects` | `projects/index.mdx` |
+| `POLICIES.md` | `/docs/policies` | `policies/index.mdx` |
+| `Policies/privacy.md` | `/docs/policies/privacy` | `policies/privacy.mdx` |
+| `Policies/terms.md` | `/docs/policies/terms` | `policies/terms.mdx` |
+| `Policies/acceptable-use.md` | `/docs/policies/acceptable-use` | `policies/acceptable-use.mdx` |
 
-Generated section indexes under `/docs/about` and `/docs/topology/lans` are controlled by `public-docs-policy.mjs` and are not copied from arbitrary source files.
+Generated section indexes under `/docs/about` and `/docs/topology/lans`, together with section metadata such as `/docs/policies/meta.json`, are controlled by `public-docs-policy.mjs` and are not copied from arbitrary source files.
 
 Any new public page requires an intentional policy edit before it may be synced or published.
 

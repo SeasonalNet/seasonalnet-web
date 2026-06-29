@@ -27,6 +27,11 @@ export const PUBLIC_DOCS_MANAGED_OUTPUTS = [
   'topology/lans/meta.json',
   'topology/meta.json',
   'projects/index.mdx',
+  'policies/index.mdx',
+  'policies/privacy.mdx',
+  'policies/terms.mdx',
+  'policies/acceptable-use.mdx',
+  'policies/meta.json',
   'network/index.mdx',
   'network/lans/index.mdx',
   'network/lans/main-lan.mdx',
@@ -43,7 +48,7 @@ export const PUBLIC_DOCS_ALLOWLIST = [
     outputPath: 'index.mdx',
     routePath: '/docs',
     title: 'SeasonalNet Documentation',
-    description: 'Public documentation index for SeasonalNet platform, topology, and project guides.',
+    description: 'Public documentation index for SeasonalNet platform, topology, project guides, and policies.',
   },
   {
     sourcePath: 'PLATFORM.md',
@@ -99,11 +104,42 @@ export const PUBLIC_DOCS_ALLOWLIST = [
     title: 'Projects',
     description: 'Scalable public documentation for SeasonalNet-originated FOSS projects, guides, and reusable systems.',
   },
+  {
+    sourcePath: 'POLICIES.md',
+    outputPath: 'policies/index.mdx',
+    routePath: '/docs/policies',
+    title: 'SeasonalNet Policies',
+    description: 'Platform-wide privacy, service, and acceptable-use policies for SeasonalNet-operated services.',
+  },
+  {
+    sourcePath: 'Policies/privacy.md',
+    outputPath: 'policies/privacy.mdx',
+    routePath: '/docs/policies/privacy',
+    section: 'policies',
+    title: 'Privacy Notice',
+    description: 'How SeasonalNet processes operational, account, service, and security information.',
+  },
+  {
+    sourcePath: 'Policies/terms.md',
+    outputPath: 'policies/terms.mdx',
+    routePath: '/docs/policies/terms',
+    section: 'policies',
+    title: 'Terms of Service',
+    description: 'Conditions for accessing and using SeasonalNet-operated services.',
+  },
+  {
+    sourcePath: 'Policies/acceptable-use.md',
+    outputPath: 'policies/acceptable-use.mdx',
+    routePath: '/docs/policies/acceptable-use',
+    section: 'policies',
+    title: 'Acceptable Use Policy',
+    description: 'Prohibited activity and the controls SeasonalNet may use to protect the platform.',
+  },
 ];
 
 export const PUBLIC_DOCS_ROOT_META = {
   title: 'Documentation',
-  pages: ['index', 'about', 'topology', 'projects'],
+  pages: ['index', 'about', 'topology', 'projects', 'policies'],
 };
 
 export const PUBLIC_DOCS_ABOUT_META = {
@@ -119,4 +155,9 @@ export const PUBLIC_DOCS_TOPOLOGY_META = {
 export const PUBLIC_DOCS_LANS_META = {
   title: 'LAN Maps',
   pages: ['index', 'main-lan', 'seasonalcme', 'phone-lan'],
+};
+
+export const PUBLIC_DOCS_POLICIES_META = {
+  title: 'Policies',
+  pages: ['index', 'privacy', 'terms', 'acceptable-use'],
 };

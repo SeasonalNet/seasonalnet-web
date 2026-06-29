@@ -45,5 +45,6 @@ This app already has:
 - Fumadocs rendering with local seed content
 - shared shell integration
 - a defined public publishing policy
+- an allowlisted Policies section sourced from `seasonalnet-docs`
 
 The app now has a build/deploy-time sync script for `seasonalnet-docs`, but live deployment wiring remains separate.
