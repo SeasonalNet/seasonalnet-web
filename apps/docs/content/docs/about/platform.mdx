@@ -7,7 +7,7 @@ description: "High-level definition of SeasonalNet, its operating model, and maj
 
 SeasonalNet is the overall solo-operated homelab and service platform run by Seasonal_Currency.
 
-It includes infrastructure, communications systems, web front doors, operational tooling, development services, control-plane services, and weather-related systems.
+It includes infrastructure, communications systems, web front doors, operational tooling, development services, control-plane services, VPN access, and weather-related systems.
 
 SeasonalNet is the platform as a whole. It is not limited to weather operations.
 
@@ -40,9 +40,17 @@ SeasonalWeather is an important subsystem within SeasonalNet, but it does not de
 
 ### Voice and communications systems
 
-These include PBX, CME, phone provisioning, and related communications services.
+These include SeasonalPBX, Cisco Unified Communications Manager Express, phone provisioning, and related communications services.
 
-SeasonalPBX is the current FreePBX/Asterisk service VM at `192.168.1.12`. It is no longer the Phone-LAN router or gateway; Phone-LAN has moved to `10.30.0.0/24` and `fd42:30::/64`, with the managed-switch/trunk routing boundary still pending documentation. `pbx-controld` is the PBX control-plane daemon for coordinating bot-managed and portal-managed extension state.
+SeasonalPBX is the current FreePBX/Asterisk service VM at `192.168.1.12`. It is no longer the Phone-LAN router or gateway. Phone-LAN uses `10.30.0.0/24` and `fd97:418:22dd:30::/64`, with the managed-switch/trunk routing boundary still pending implementation. SeasonalCME operates dual-stack on Voice VLAN 10 using `10.42.0.0/24` and `fd97:418:22dd:10::/64`.
+
+`pbx-controld` is the PBX control-plane daemon for coordinating bot-managed and portal-managed extension state.
+
+### VPN and remote administration
+
+SeasonalVPN is the Defguard/WireGuard remote-access platform at `192.168.1.22`. Its routed VPN LANs are `10.88.0.0/24` and `fd97:418:22dd:88::/64`.
+
+The VPN is an authenticated remote administration plane. Access to internal networks remains subject to Defguard/MFA and routing policy rather than treating the VPN as an unrestricted extension of Main LAN.
 
 ### Web and platform services
 
@@ -56,15 +64,21 @@ The current first dedicated control-plane daemon is `pbx-controld`, hosted on Se
 
 ### Infrastructure and operations
 
-These include VM hosts, network topology, observability checks, backup systems, storage systems, database services, Docker/container services, sandbox execution services, and supporting operational tooling.
+These include VM hosts, network topology, observability checks, backup systems, storage systems, database services, Docker/container services, sandbox execution services, VPN services, and supporting operational tooling.
 
 SeasonalR230 and SeasonalR340 are the active Proxmox hosts. SeasonalR230 is the primary VM host for the main service fleet. SeasonalR340 hosts backup, storage, sandbox, database, and Docker/control-plane support VMs.
 
-The active R230 service fleet is SeasonalDNS (VMID 101), SeasonalAuth (102), SeasonalForge (103), SeasonalMail (104), SeasonalMonitor (105), SeasonalPBX (106), SeasonalWX (107), SeasonalRain (108), and SeasonalWeb / SeasonalNet (109). The active R340 support VM set is SeasonalBack (VMID 100), SeasonalNAS (VMID 110), SeasonalSand (VMID 111), SeasonalDB (VMID 112), and SeasonalDock (VMID 113). These VMs have QEMU Guest Agent enabled/responding where configured, Proxmox autostart configured, and verified PBS backups on SeasonalBack where applicable.
+The active R230 service fleet is SeasonalDNS (VMID 101), SeasonalAuth (102), SeasonalForge (103), SeasonalMail (104), SeasonalMonitor (105), SeasonalPBX (106), SeasonalWX (107), SeasonalRain (108), SeasonalWeb / SeasonalNet (109), SeasonalCA (114), and SeasonalVPN (115). The active R340 support VM set is SeasonalBack (VMID 100), SeasonalNAS (110), SeasonalSand (111), SeasonalDB (112), and SeasonalDock (113).
 
 SeasonalMonitor is the current observability spine for infrastructure reachability, dashboards, SNMP, and Redfish collection. Grafana is exposed publicly at `grafana.seasonalnet.org` through SeasonalWeb with Authentik OAuth/OIDC; Prometheus remains a private backend service.
 
 Admin workstations such as seasonal-victus (`192.168.1.40`) and seasonal-teal-laptop (`192.168.1.41`) are admin clients. They should not become long-lived application deployment hosts or accumulate project dependency trees when a service VM is more appropriate.
+
+## Network addressing model
+
+Main LAN uses native ISP-assigned IPv6. Routed private IPv6 segments use the SeasonalNet ULA allocation `fd97:418:22dd::/48`, subdivided into one `/64` per LAN or functional segment.
+
+OSPFv2 and OSPFv3 process 42 provide IPv4 and IPv6 routing between SeasonalEDGE-R1 and SeasonalCME-R1. The WNC-CR200A uses explicit static return routes for routed internal IPv4 and ULA prefixes.
 
 ## Grounding and truth rules
 

@@ -3,18 +3,45 @@ title: "SeasonalNet Topology"
 description: "Top-level index of SeasonalNet network segments and routing boundaries."
 ---
 
-Top-level index of all SeasonalNet network segments. For full topology detail, see the per-segment map files in `LANs/`.
+Top-level index of SeasonalNet network segments. For full topology detail, see the per-segment map files in `LANs/`.
 
 ---
 
 ## Segment Index
 
-| Segment | Subnet(s) | IPv6 ULA | Gateway | Map |
+| Segment | IPv4 subnet | IPv6 prefix | Gateway / owner | Map |
 |---|---|---|---|---|
-| Main LAN | `192.168.1.0/24` | ISP-assigned (native) | `192.168.1.1` | [`LANs/seasonalnet-lan-map.md`](/docs/topology/lans/main-lan) |
-| SeasonalCME Voice | `10.42.0.0/24` (VLAN 10) | `FD42:42::/64` | `10.42.0.1` | [`LANs/seasonalcme-network-map.md`](/docs/topology/lans/seasonalcme) |
-| SeasonalCME Management | `10.42.2.0/24` (VLAN 42) | `FD42:42:2::/64` | `10.42.2.1` | [`LANs/seasonalcme-network-map.md`](/docs/topology/lans/seasonalcme) |
-| Phone-LAN | `10.30.0.0/24` | `fd42:30::/64` | `10.30.0.1` reserved; owner TBD | [`LANs/phonelan-map.md`](/docs/topology/lans/phone-lan) |
+| Main LAN | `192.168.1.0/24` | Native ISP-assigned GUA | `192.168.1.1` / WNC-CR200A | [`LANs/seasonalnet-lan-map.md`](/docs/topology/lans/main-lan) |
+| SeasonalCME Voice | `10.42.0.0/24` (VLAN 10) | `fd97:418:22dd:10::/64` | `10.42.0.1` / `fd97:418:22dd:10::1` | [`LANs/seasonalcme-network-map.md`](/docs/topology/lans/seasonalcme) |
+| SeasonalCME Management | `10.42.2.0/24` (VLAN 42) | `fd97:418:22dd:42::/64` | `10.42.2.1` / `fd97:418:22dd:42::1` | [`LANs/seasonalcme-network-map.md`](/docs/topology/lans/seasonalcme) |
+| Phone-LAN | `10.30.0.0/24` | `fd97:418:22dd:30::/64` | `.1` / `::1` reserved; owner pending | [`LANs/phonelan-map.md`](/docs/topology/lans/phone-lan) |
+| SeasonalVPN | `10.88.0.0/24` | `fd97:418:22dd:88::/64` | `10.88.0.1` / `fd97:418:22dd:88::1` | [`LANs/seasonalvpn-network-map.md`](LANs/seasonalvpn-network-map.md) |
+
+---
+
+## SeasonalNet ULA Allocation
+
+SeasonalNet uses one randomly generated site ULA allocation:
+
+```text
+fd97:418:22dd::/48
+```
+
+The fourth hextet is the 16-bit subnet identifier. SeasonalNet writes that identifier as the human-readable VLAN or functional segment number rather than converting the printed decimal label to hexadecimal.
+
+| Segment ID | Prefix | Assignment |
+|---:|---|---|
+| `10` | `fd97:418:22dd:10::/64` | SeasonalCME Voice / VLAN 10 |
+| `30` | `fd97:418:22dd:30::/64` | Phone-LAN / planned VLAN 30 |
+| `42` | `fd97:418:22dd:42::/64` | SeasonalCME Management / VLAN 42 |
+| `88` | `fd97:418:22dd:88::/64` | SeasonalVPN routed VPN LAN |
+
+Rules:
+
+- Each ordinary LAN receives a `/64`.
+- `::1` is reserved for the segment router/gateway.
+- Main LAN remains native ISP IPv6 and does not consume a ULA `/64`.
+- Do not route the complete `/48` through one next hop while different `/64`s are owned by different routers.
 
 ---
 
@@ -25,31 +52,30 @@ Internet
     |
 Verizon WNC-CR200A (192.168.1.1)
     |
-Main LAN (192.168.1.0/24)
+Main LAN (192.168.1.0/24 + native ISP IPv6)
     |
     |-- SeasonalR230 (192.168.1.30; iDRAC 192.168.1.32)
-    |       `-- Core Proxmox VM host for SeasonalDNS/Auth/Forge/Mail/Monitor/PBX/WX/Rain/Web
+    |       |-- Core service VM fleet (VMIDs 101-109)
+    |       |-- SeasonalCA (VMID 114, 192.168.1.21)
+    |       `-- SeasonalVPN (VMID 115, 192.168.1.22)
+    |               `-- 10.88.0.0/24 + fd97:418:22dd:88::/64
     |
     |-- SeasonalR340 (192.168.1.31; iDRAC 192.168.1.33)
-    |       |-- SeasonalBack PBS VM (192.168.1.16)
-    |       |-- SeasonalNAS storage VM (192.168.1.17)
-    |       |-- SeasonalSand sandbox VM (192.168.1.18)
-    |       |-- SeasonalDB PostgreSQL VM (192.168.1.19)
-    |       `-- SeasonalDock Docker/control-plane VM (192.168.1.20)
-    |
-    |-- SeasonalWX (192.168.1.10)
-    |       `-- Current SeasonalWeather VM / weather radio API
+    |       |-- SeasonalBack (192.168.1.16)
+    |       |-- SeasonalNAS (192.168.1.17)
+    |       |-- SeasonalSand (192.168.1.18)
+    |       |-- SeasonalDB (192.168.1.19)
+    |       `-- SeasonalDock (192.168.1.20)
     |
     |-- SeasonalEDGE-R1 (192.168.1.4)
-    |       |
-    |       |-- SeasonalCME Voice VLAN (10.42.0.0/24, VLAN 10)
-    |       `-- SeasonalCME Management VLAN (10.42.2.0/24, VLAN 42)
+    |       |-- Voice VLAN 10: 10.42.0.0/24 + fd97:418:22dd:10::/64
+    |       `-- Management VLAN 42: 10.42.2.0/24 + fd97:418:22dd:42::/64
     |
     |-- SeasonalPBX (192.168.1.12)
-    |       `-- PBX/Asterisk service VM only; no longer Phone-LAN router
+    |       `-- PBX/Asterisk service only; not Phone-LAN router
     |
-    `-- Phone-LAN (10.30.0.0/24, fd42:30::/64)
-            `-- Gateway reservation 10.30.0.1 / fd42:30::1; owner TBD after Cisco switch/trunk cutover
+    `-- Phone-LAN (10.30.0.0/24 + fd97:418:22dd:30::/64)
+            `-- Gateway reserved pending managed-switch/trunk cutover
 ```
 
 ---
@@ -60,12 +86,41 @@ Main LAN (192.168.1.0/24)
 |---|---|
 | `192.168.1.1` | Gateway |
 | `192.168.1.2` – `192.168.1.5` | Network infrastructure / reserved infrastructure |
-| `192.168.1.6` – `192.168.1.21` | Active servers and service VMs |
-| `192.168.1.22` – `192.168.1.29` | Reserved future servers / service VMs |
+| `192.168.1.6` – `192.168.1.22` | Active servers and service VMs |
+| `192.168.1.23` – `192.168.1.29` | Reserved future servers / service VMs |
 | `192.168.1.30` – `192.168.1.39` | Hypervisors and BMC/OOB management |
 | `192.168.1.40` – `192.168.1.49` | Admin workstations / fixed laptops |
 | `192.168.1.50` – `192.168.1.99` | Static non-server devices |
 | `192.168.1.100` – `192.168.1.254` | DHCP clients |
+
+---
+
+## Routing
+
+### Dynamic routing
+
+SeasonalEDGE-R1 and SeasonalCME-R1 use process ID `42` for both protocol families:
+
+| Protocol | Address family | Purpose |
+|---|---|---|
+| OSPFv2 process 42 | IPv4 | Routes the SeasonalCME IPv4 domain and originates the IPv4 default from SeasonalEDGE-R1 |
+| OSPFv3 process 42 | IPv6 | Forms a FULL adjacency over Voice VLAN 10 and originates the IPv6 default from SeasonalEDGE-R1 |
+
+SeasonalCME-R1 has `fd97:418:22dd:10::10/64` on `Gi0/0` and learns `::/0` through OSPFv3. SeasonalEDGE-R1 advertises Management VLAN 42 when its SVI is operational.
+
+### WNC-CR200A static routes
+
+Primary static routes use metric `10`. Future alternate or backup routes use metric `50` or higher.
+
+| Destination | Next hop | Metric | Purpose |
+|---|---|---:|---|
+| `10.42.0.0/24` | `192.168.1.4` | `10` | SeasonalCME Voice IPv4 return route |
+| `10.88.0.0/24` | `192.168.1.22` | `10` | SeasonalVPN IPv4 return route |
+| `fd97:418:22dd:10::/64` | SeasonalEDGE-R1 `Gi0/0` link-local | `10` | SeasonalCME Voice ULA return route |
+| `fd97:418:22dd:42::/64` | SeasonalEDGE-R1 `Gi0/0` link-local | `10` | SeasonalCME Management ULA return route |
+| `fd97:418:22dd:88::/64` | SeasonalVPN Main-LAN link-local | `10` | SeasonalVPN ULA return route |
+
+The Phone-LAN `/64` will receive a return route after its gateway owner is implemented.
 
 ---
 
@@ -86,34 +141,25 @@ Main LAN (192.168.1.0/24)
 | POP3 | 110 | TCP | SeasonalMail (`192.168.1.13`) |
 | POP3S | 995 | TCP | SeasonalMail (`192.168.1.13`) |
 
-SeasonalWeb performs hostname-based routing for public web services behind the shared 80/443 forwards. `grafana.seasonalnet.org` is routed by SeasonalWeb to Grafana on SeasonalMonitor (`192.168.1.15:3000`) and uses Authentik OAuth/OIDC. Prometheus on SeasonalMonitor (`192.168.1.15:9090`) remains private and is not exposed as a public hostname.
+SeasonalWeb performs hostname-based routing for public web services behind the shared 80/443 forwards. `grafana.seasonalnet.org` is routed to Grafana on SeasonalMonitor; Prometheus remains private.
 
 ---
 
 ## DNS / DHCP
 
-Cloudflare remains authoritative public DNS for `seasonalnet.org`. SeasonalDNS is for internal LAN recursion/local records only. Current internal aliases include `wx.lan.seasonalnet.org`, `seasonalwx.lan.seasonalnet.org`, and `seasonalweather.lan.seasonalnet.org` for SeasonalWX (`192.168.1.10`), plus `seasonalback.lan.seasonalnet.org` with `back.lan.seasonalnet.org` as a service alias for SeasonalBack (`192.168.1.16`). SeasonalNAS uses `seasonalnas.lan.seasonalnet.org` (`192.168.1.17`), SeasonalSand uses `seasonalsand.lan.seasonalnet.org` (`192.168.1.18`), SeasonalDB uses `seasonaldb.lan.seasonalnet.org` (`192.168.1.19`), and SeasonalDock uses `seasonaldock.lan.seasonalnet.org` (`192.168.1.20`). SeasonalR230 and SeasonalR340 moved to the hypervisor/BMC band at `.30` and `.31` respectively. SeasonalCA uses `seasonalca.lan.seasonalnet.org` and `ca.lan.seasonalnet.org` at `192.168.1.21`.
+Cloudflare remains authoritative public DNS for `seasonalnet.org`. SeasonalDNS provides internal recursion and `lan.seasonalnet.org` records. SeasonalVPN uses `seasonalvpn.lan.seasonalnet.org` with `vpn.lan.seasonalnet.org` as an internal alias at `192.168.1.22`.
 
-| Segment | DNS | DHCP |
+| Segment | DNS | DHCP / address assignment |
 |---|---|---|
-| Main LAN | SeasonalDNS / Technitium (`192.168.1.14`) for internal DNS; WNC-CR200A (`192.168.1.1`) remains DHCP/default gateway | Verizon WNC-CR200A |
-| SeasonalCME | SeasonalEDGE-R1 (OSPF 42 domain) | SeasonalEDGE-R1 |
-| Phone-LAN | DNS/DHCP owner TBD after PBX-router removal; clients should reach SeasonalPBX as routed service at `192.168.1.12` | DHCP owner TBD; previous PBX `dnsmasq` model retired |
+| Main LAN | SeasonalDNS (`192.168.1.14`) for internal DNS | WNC-CR200A for IPv4 DHCP and native IPv6 RA/DHCPv6 |
+| SeasonalCME | SeasonalEDGE-R1 supplies DHCPv4/DHCPv6; clients use configured resolvers | SeasonalEDGE-R1 |
+| SeasonalVPN | Routed through SeasonalVPN/Defguard policy | Defguard assigns VPN client addresses |
+| Phone-LAN | Owner pending managed-switch/trunk implementation | DHCPv4 and IPv6 RA/DHCPv6 owner pending |
 
-Admin/static hosts should prefer SeasonalDNS (`192.168.1.14`) directly for DNS to avoid router-side stale or empty local answers for `lan.seasonalnet.org` records.
+Admin/static hosts should prefer SeasonalDNS directly for internal DNS.
 
 ---
 
 ## Proxmox Bridge Cutover Note
 
-During the 2026-06-07 LAN reshuffle, restarting networking on live Proxmox hosts detached VM tap interfaces from `vmbr0`. The host management addresses remained reachable, but the guest VMs could not reach the LAN until the tap interfaces were reattached.
-
-Avoid `systemctl restart networking` on Proxmox hosts while VMs are live. Prefer a maintenance reboot or use `ifreload -a` where appropriate. If tap interfaces detach, reattach them carefully:
-
-```bash
-for dev in /sys/class/net/tap*; do
-  dev="${dev##*/}"
-  ip link set "$dev" master vmbr0
-  ip link set "$dev" up
-done
-```
+During the 2026-06-07 LAN reshuffle, restarting networking on live Proxmox hosts detached VM tap interfaces from `vmbr0`. Host management remained reachable, but guests were isolated until their tap interfaces were reattached. Avoid live `systemctl restart networking` on Proxmox hosts unless prepared to repair bridge membership or reboot during maintenance.

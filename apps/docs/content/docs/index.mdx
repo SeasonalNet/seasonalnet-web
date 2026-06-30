@@ -24,10 +24,11 @@ Where SeasonalNet systems live and how the network is connected. This section co
 
 Pages:
 
-- [Topology overview](/docs/topology) — top-level topology and segment index
-- [Main LAN](/docs/topology/lans/main-lan) — Main LAN (`192.168.1.0/24`)
-- [SeasonalCME](/docs/topology/lans/seasonalcme) — SeasonalCME lab (`10.42.0.0/24`, `10.42.2.0/24`)
-- [Phone-LAN](/docs/topology/lans/phone-lan) — Phone-LAN (`10.30.0.0/24`)
+- [Topology overview](/docs/topology) — top-level topology, ULA allocation, routing, and segment index
+- [Main LAN](/docs/topology/lans/main-lan) — Main LAN (`192.168.1.0/24`, native ISP IPv6)
+- [SeasonalCME](/docs/topology/lans/seasonalcme) — SeasonalCME lab (`10.42.0.0/24`, `10.42.2.0/24`, routed ULA)
+- [Phone-LAN](/docs/topology/lans/phone-lan) — Phone-LAN (`10.30.0.0/24`, `fd97:418:22dd:30::/64`)
+- [SeasonalVPN](LANs/seasonalvpn-network-map.md) — Defguard/WireGuard VPN LAN (`10.88.0.0/24`, `fd97:418:22dd:88::/64`)
 
 ### Projects
 
@@ -58,20 +59,21 @@ SeasonalNet-Documentation/
 ├── AGENTS.md          # Agent/machine reference for this documentation set
 ├── PLATFORM.md        # About / platform overview
 ├── SERVICES.md        # About / service catalog
-├── NETWORK.md         # Topology overview and segment index
+├── NETWORK.md         # Topology overview, ULA allocation, and segment index
 ├── PROJECTS.md        # Projects and guides section root
 ├── POLICIES.md        # Platform policies section root
 ├── Policies/
-│   ├── privacy.md      # Privacy Notice
-│   ├── terms.md        # Terms of Service
-│   └── acceptable-use.md # Acceptable Use Policy
+│   ├── privacy.md
+│   ├── terms.md
+│   └── acceptable-use.md
 └── LANs/
-    ├── seasonalnet-lan-map.md     # Main LAN (192.168.1.0/24)
-    ├── seasonalcme-network-map.md # SeasonalCME lab (10.42.0.0/24, 10.42.2.0/24)
-    └── phonelan-map.md            # Phone-LAN (10.30.0.0/24)
+    ├── seasonalnet-lan-map.md
+    ├── seasonalcme-network-map.md
+    ├── phonelan-map.md
+    └── seasonalvpn-network-map.md
 ```
 
-> `VMs/` exists locally but is excluded from any repository or published documentation. It contains host-level credentials and per-VM configuration detail that must not be committed or shared.
+> `VMs/` exists locally but is excluded from the repository and published documentation. It contains host-level credentials and per-VM configuration detail that must not be committed or shared.
 
 ---
 
@@ -81,8 +83,8 @@ This documentation may cover:
 
 - Platform identity, public-safe service inventory, and subsystem boundaries
 - Layer 2 / Layer 3 topology for SeasonalNet network segments
-- Device inventory, static address assignments, and address band purpose
-- Routing, NAT, and services boundaries
+- Device inventory, static address assignments, and address-band purpose
+- Routing protocols, static routes, NAT, and service boundaries
 - Physical switch port maps where applicable
 - Public FOSS project reference material and deployment/customization guides
 - Platform-wide privacy, terms-of-service, and acceptable-use policies
@@ -100,4 +102,4 @@ It does **not** cover:
 
 This documentation is published through the SeasonalWeb / SeasonalNet Next.js docs deployment at `docs.seasonalnet.org`. The rendered site must continue to conform to the uniform SeasonalNet SPA design: shared header/footer and black-and-white theming.
 
-`VMs/` remains local-only and must stay excluded from the repository and from the published documentation source.
+`VMs/` remains local-only and must stay excluded from the repository and published documentation source.

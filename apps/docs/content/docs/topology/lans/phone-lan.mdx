@@ -4,9 +4,10 @@ description: "Routing, services, and attached-device map for the Phone-LAN segme
 ---
 
 **IPv4 subnet:** `10.30.0.0/24`
-**IPv6 ULA:** `fd42:30::/64`
-**Gateway reservation:** `10.30.0.1` / `fd42:30::1` (Phone-LAN routing boundary; not SeasonalPBX)
-**Last updated:** 2026-06-13
+**IPv6 ULA:** `fd97:418:22dd:30::/64`
+**Gateway reservation:** `10.30.0.1` / `fd97:418:22dd:30::1`
+**Planned segment/VLAN ID:** `30`
+**Last updated:** 2026-06-29
 
 ---
 
@@ -14,48 +15,36 @@ description: "Routing, services, and attached-device map for the Phone-LAN segme
 
 | Range / Prefix | Purpose |
 |---|---|
-| `10.30.0.1` | Reserved Phone-LAN IPv4 gateway / routed SVI address; owner to be confirmed after managed-switch/trunk cutover |
-| `10.30.0.2 – .9` | Reserved network infrastructure, switch management, APs, and future routing-adjacent devices |
-| `10.30.0.10 – .49` | Reserved static infrastructure / manually assigned voice devices |
-| `10.30.0.50 – .99` | Static or semi-static Phone-LAN devices |
-| `10.30.0.100 – .200` | DHCP pool / dynamic phone clients |
-| `10.30.0.201 – .254` | Reserved DHCP expansion / static headroom |
-| `fd42:30::/64` | Phone-LAN IPv6 ULA space; `fd42:30::1` is reserved for the segment gateway / RA source |
+| `10.30.0.1` | Reserved Phone-LAN IPv4 gateway / routed SVI address |
+| `10.30.0.2 – 10.30.0.9` | Network infrastructure, switch management, APs, and routing-adjacent devices |
+| `10.30.0.10 – 10.30.0.49` | Reserved static infrastructure / manually assigned voice devices |
+| `10.30.0.50 – 10.30.0.99` | Static or semi-static Phone-LAN devices |
+| `10.30.0.100 – 10.30.0.200` | DHCP pool / dynamic phone clients |
+| `10.30.0.201 – 10.30.0.254` | Reserved DHCP expansion / static headroom |
+| `fd97:418:22dd:30::/64` | Phone-LAN IPv6 ULA; `::1` is reserved for the future gateway / RA source |
 
 ---
 
 ## Infrastructure Band
 
-| IP / Prefix | Device | Interface | Notes |
+| Address | Device | Interface | Notes |
 |---|---|---|---|
-| `10.30.0.1` | Phone-LAN routing boundary | TBD | Reserved IPv4 gateway/SVI address for the readdressed Phone-LAN. This is explicitly **not** a SeasonalPBX interface. |
-| `fd42:30::1/64` | Phone-LAN routing boundary | TBD | Reserved IPv6 ULA gateway / RA source for the readdressed Phone-LAN. This is explicitly **not** a SeasonalPBX interface. |
-| `192.168.1.12` | SeasonalPBX | Main-LAN interface | Main-LAN service address for FreePBX/Asterisk. SeasonalPBX is now a service VM only, not the Phone-LAN router. |
-| `10.30.0.4` | SeasonalAP-2702E (AIR-SAP2702E-A-K9) | `BVI1` | Readdressed/static reservation for the Phone-LAN wireless AP; validate on-device after the 10.30 cutover. |
-| `fd42:30::4/64` | SeasonalAP-2702E (AIR-SAP2702E-A-K9) | `BVI1` | Readdressed/static ULA reservation for the AP; validate on-device after the 10.30 cutover. |
-| TBD | Cisco Catalyst C2960CX or C3560CX | switch management / uplink | Planned replacement for the TL-SF1005P dumb PoE+ switch. Final model, management IP, VLAN ID, and uplink port are not yet captured. |
+| `10.30.0.1` | Phone-LAN routing boundary | TBD | Reserved IPv4 gateway/SVI; explicitly not a SeasonalPBX interface |
+| `fd97:418:22dd:30::1/64` | Phone-LAN routing boundary | TBD | Reserved IPv6 gateway / RA source |
+| `192.168.1.12` | SeasonalPBX | Main-LAN interface | FreePBX/Asterisk service only; no longer Phone-LAN router |
+| `10.30.0.4` | SeasonalAP-2702E | `BVI1` | Verified static IPv4 management address |
+| `fd97:418:22dd:30::4/64` | SeasonalAP-2702E | `BVI1` | Verified static ULA management address |
+| TBD | Cisco Catalyst C2960CX or C3560CX | switch management / uplink | Planned replacement for the current TL-SF1005P |
+
+The AP has `ipv6 nd autoconfig default-route` enabled. It can communicate on-link immediately and will learn an IPv6 default router when the future Phone-LAN gateway begins sending Router Advertisements.
 
 ---
 
-## Attached / Observed Clients
+## Attached infrastructure
 
-| IP / Prefix | Device | Notes |
+| Addressing | Device | Notes |
 |---|---|---|
-| DHCP from `10.30.0.100 – .200` | Cisco IP phones / ATAs | Current leases should be treated as live DHCP state, not stable documentation identity. |
-| legacy `192.168.56.118` / `fd42:56::158` | Cisco IP Phone 7841 (`SEP74860B8F0B94`) | Previously observed before the Phone-LAN readdress; legacy address is retired. |
-| legacy `192.168.56.181` | Cisco IP Phone SPA525G2 (`SIP4C008292D234`) | Previously observed before the Phone-LAN readdress; legacy address is retired. |
-| additional phones / ATAs | Phone-LAN segment | Active device set includes SeasonalPBX-registered phones/ATAs; exact DHCP leases should be read from live state. |
-
----
-
-## Upstream / Adjacent Networks
-
-| Network | Relationship | Notes |
-|---|---|---|
-| `192.168.1.0/24` | Main LAN / upstream service network | SeasonalPBX lives on Main LAN at `192.168.1.12`. Phone-LAN clients reach PBX services across routing rather than through PBX acting as their router. |
-| Main-LAN IPv6 | Upstream IPv6 path | Main LAN uses native ISP-assigned IPv6 where available. Phone-LAN uses ULA `fd42:30::/64`; any routed IPv6 policy should be documented after the gateway owner is finalized. |
-| `10.42.0.0/24` | SeasonalCME voice VLAN | Reached through Main-LAN routing via `192.168.1.4` when permitted by routing policy. |
-| `10.42.2.0/24` | SeasonalCME management VLAN | Reached through Main-LAN routing via `192.168.1.4` when permitted by routing policy. |
+| Static | SeasonalAP-2702E | On new planned subnet |
 
 ---
 
@@ -63,15 +52,16 @@ description: "Routing, services, and attached-device map for the Phone-LAN segme
 
 | Item | Value | Notes |
 |---|---|---|
-| Phone-LAN router | Not SeasonalPBX | SeasonalPBX is now purely the PBX/Asterisk service VM on Main LAN. Do not document it as the Phone-LAN gateway, NAT boundary, DHCP server, or RA source. |
-| Gateway reservation | `10.30.0.1` / `fd42:30::1` | Reserved for the Phone-LAN routing boundary. Exact owner/interface should be captured after the Cisco switch/trunk migration is implemented. |
-| Current physical switching | TP-Link TL-SF1005P dumb PoE+ switch | Temporary unmanaged desk switch. No VLAN trunking, managed port telemetry, or switch-side L3 services. |
-| Planned physical switching | Cisco Catalyst C2960CX or C3560CX | Planned managed replacement, trunked back to the main rack switches over Ethernet. Final model, VLAN ID, uplink, and port map are pending. |
-| PBX service | SeasonalPBX (`192.168.1.12`) | Phones should register to SeasonalPBX as a routed service endpoint rather than using SeasonalPBX as their local gateway. |
-| DHCPv4 service | TBD / rehome away from SeasonalPBX | Previous `dnsmasq`-on-SeasonalPBX model is retired. Document the new DHCP owner after implementation. |
-| IPv6 RA / DHCPv6 service | TBD / rehome away from SeasonalPBX | Previous `fd42:56::/64` RA/stateless DHCPv6 model from SeasonalPBX is retired. |
-| IPv4 NAT | Not on SeasonalPBX | The retired `192.168.56.0/24` PBX masquerade model is stale. The 10.30 Phone-LAN should be documented as a routed segment once the gateway owner is finalized. |
-| IPv6 forwarding | TBD | Document routed ULA policy after the Phone-LAN gateway/RA owner is finalized. |
+| Phone-LAN router | Not SeasonalPBX | Gateway ownership remains pending the managed-switch/trunk migration |
+| Gateway reservation | `10.30.0.1` / `fd97:418:22dd:30::1` | Reserved for the future routed boundary |
+| Current physical switching | TP-Link TL-SF1005P, hardware label `UN/5.6` / likely V5.60 | Temporary unmanaged 10/100 PoE+ switch with no management address or querier role |
+| Planned physical switching | Cisco Catalyst C2960CX or C3560CX | Planned compact managed replacement with an Ethernet uplink to the rack |
+| PBX service | SeasonalPBX (`192.168.1.12`) | Phones reach it as a routed service endpoint after the gateway is implemented |
+| DHCPv4 service | Pending | Previous SeasonalPBX `dnsmasq` router model is retired |
+| IPv6 RA / DHCPv6 service | Pending | Future gateway will advertise `fd97:418:22dd:30::/64` |
+| IPv4 NAT | Not on SeasonalPBX | Phone-LAN is intended to be routed, not hidden behind the PBX VM |
+
+The unmanaged switch may flood IPv6 multicast to all forwarding ports because MLD snooping is not documented. This is acceptable for the small temporary segment and does not prevent IPv6 operation.
 
 ---
 
@@ -79,28 +69,25 @@ description: "Routing, services, and attached-device map for the Phone-LAN segme
 
 | Item | Value | Notes |
 |---|---|---|
-| AP | SeasonalAP-2702E | Cisco AIR-SAP2702E-A-K9 |
-| AP IPv4 | `10.30.0.4` | Readdressed/static reservation for `BVI1`; validate on-device after cutover |
-| AP IPv6 ULA | `fd42:30::4/64` | Readdressed/static reservation for `BVI1`; validate on-device after cutover |
-| AP SSID | `SeasonalPhone` | Advertised on both radios |
+| AP | SeasonalAP-2702E | Cisco AIR-CAP2702E-A-K9 |
+| IOS | `15.3(3)JPI4` | Autonomous AP image |
+| AP IPv4 | `10.30.0.4/24` | Static on `BVI1` |
+| AP IPv6 ULA | `fd97:418:22dd:30::4/64` | Static on `BVI1`|
+| IPv6 default-router behavior | RA-derived | `ipv6 nd autoconfig default-route` configured |
 | Security | WPA2-PSK | `authentication key-management wpa version 2` |
-| 2.4 GHz channel | `2462` | Dot11Radio0 |
-| 5 GHz channel | `5825` | Dot11Radio1 |
-| AP role | `station-role root` | Standard AP role on both radios |
-| Bridge model | `bridge-group 1` | BVI1 / radio subinterfaces / Gi0.1 all tied into bridge group 1 |
-| Wireless clients at capture | none shown by `show dot11 associations all-client` | AP was up and advertising, but no associated wireless clients were listed in that command output |
+| Bridge model | `bridge-group 1` | BVI1, radio subinterfaces, and Gi0.1 bridged |
 
 ---
 
 ## Current Physical Switch Port Map
 
-| TL-SF1005P Port | Connected device | Notes |
+| TL-SF1005P port | Connected device | Notes |
 |---|---|---|
-| `1` | Cisco IP Phone SPA525G2 | Endpoint on Phone-LAN |
-| `2` | Cisco IP Phone 7841 | Endpoint on Phone-LAN |
+| `1` | Cisco SPA525G2 | IPv4-only Phone-LAN endpoint |
+| `2` | Cisco IP Phone 7841 | DHCPv4; dual-stack-capable after IPv4 initialization |
 | `3` | SeasonalAP-2702E | AP uplink |
 | `4` | unused | Spare port |
-| `5` | `seasonal-victus` `eno1` | Non-PoE connection into the temporary Phone-LAN segment |
+| `5` | temporary admin attachment as needed | Used for direct maintenance before the managed-switch cutover |
 
 ---
 
@@ -108,56 +95,53 @@ description: "Routing, services, and attached-device map for the Phone-LAN segme
 
 | Item | Planned state | Notes |
 |---|---|---|
-| Replacement switch | Cisco Catalyst C2960CX or C3560CX | Compact managed Cisco switch planned to replace the TL-SF1005P dumb PoE+ switch. |
-| Uplink | Ethernet trunk/backhaul to the main rack switches | Final rack-side switch, port, native VLAN, allowed VLANs, and Phone-LAN VLAN ID are pending. |
-| Phone-LAN addressing | `10.30.0.0/24` and `fd42:30::/64` | The old `192.168.56.0/24` / `fd42:56::/64` numbering is retired. |
-| Routing boundary | TBD; not SeasonalPBX | Document the actual gateway/SVI owner after the trunked Cisco design is implemented. |
-| Port map | TBD | Replace the temporary TL-SF1005P table with a Catalyst port map after installation. |
+| Replacement switch | Cisco Catalyst C2960CX or C3560CX | Installation expected no earlier than mid-July 2026 |
+| Uplink | Ethernet trunk/backhaul to rack switching | Carry Phone-LAN plus Main-LAN VLAN 99 as required |
+| Phone-LAN VLAN | VLAN 30 | Planned segment label aligned with IPv4 and ULA numbering |
+| Victus port | Access VLAN 99 | Preferred wired Main-LAN access when the new switch is installed |
+| Phone/AP ports | Access VLAN 30 | Ordinary endpoint access ports |
+| Routing boundary | TBD; not SeasonalPBX | Capture the actual router/SVI owner after implementation |
 
 ---
 
 ## Topology Summary
 
 ```text
-Main LAN / SeasonalNet upstream (192.168.1.0/24)
-        |
-        |  SeasonalPBX service VM = 192.168.1.12
-        |  PBX/Asterisk service only; not Phone-LAN router
-        |
-        +-- SeasonalPBX (VMID 106 on SeasonalR230)
-        |
-        `-- Main rack switching / routing boundary
-                |
-                |  planned Ethernet trunk/backhaul
-                |  gateway reservation: 10.30.0.1 / fd42:30::1
-                |
-          Planned Cisco C2960CX/C3560CX desk switch
-                |
-                `-- Phone-LAN (10.30.0.0/24, fd42:30::/64)
-                    |- SeasonalAP-2702E = 10.30.0.4 / fd42:30::4 (reserved)
-                    |- Cisco IP Phone 7841 = DHCP / live lease
-                    `- Cisco IP Phone SPA525G2 = DHCP / live lease
+Current temporary state:
 
-Temporary physical state until managed switch migration:
-  TL-SF1005P dumb PoE+ switch provides flat unmanaged L2 only.
+SeasonalAP-2702E (10.30.0.4 / fd97:418:22dd:30::4)
+Cisco 7841 (DHCP)
+Cisco SPA525G2 (DHCP, IPv4-only)
+        |
+        `-- TL-SF1005P unmanaged PoE+ switch
+                `-- flat isolated Phone-LAN; no active gateway
+
+Planned state:
+
+Main rack switching
+        |
+        | Ethernet trunk
+        |
+Cisco C2960CX/C3560CX
+        |- VLAN 30: phones and SeasonalAP-2702E
+        `- VLAN 99: seasonal-victus wired Main-LAN access
 ```
 
 ---
 
 ## Notes and Constraints
 
-- Phone-LAN has been readdressed from `192.168.56.0/24` to `10.30.0.0/24`, and from `fd42:56::/64` to `fd42:30::/64`.
-- SeasonalPBX replaces the retired legacy FreePBX17 VM as the active PBX service, but it no longer routes Phone-LAN. FreePBX17-era and PBX-router references to `192.168.56.1`, `192.168.56.10`, `fd42:56::1`, Main-LAN on `enp0s9`, Phone-LAN on `enp0s8`, PBX `dnsmasq`, or PBX NAT/masquerade are stale.
-- Phone-LAN is currently documented as a readdressed segment with a pending managed-switch/trunk migration. Do not invent final Catalyst port mappings or gateway ownership until captured from the installed configuration.
-- Native global IPv6/SLAAC addresses should be treated as live state rather than stable public documentation identity.
-- Treat exact phone/ATA client leases as live DHCP state.
+- Phone-LAN has moved from `192.168.56.0/24` / `fd42:56::/64` to `10.30.0.0/24` / `fd97:418:22dd:30::/64`.
+- SeasonalPBX remains the active PBX service but no longer routes Phone-LAN.
+- Same-link IPv6 reachability to SeasonalAP-2702E was verified directly before returning the maintenance host to IPv4 link-local state.
+- Main-LAN native GUA addresses are live ISP state and are not stable Phone-LAN identity.
 
 ---
 
 ## Known Remaining Items
 
-- Install/identify the final Cisco Catalyst C2960CX or C3560CX replacement for the TL-SF1005P and document its hostname, management address, software train, and port map.
-- Document the rack-side trunk port, Phone-LAN VLAN ID, native VLAN, allowed VLANs, and STP role after the managed-switch uplink is implemented.
-- Confirm the actual `10.30.0.1` / `fd42:30::1` gateway owner and update the routing/services boundary accordingly.
-- Document the new DHCPv4 and IPv6 RA/DHCPv6 owner after the PBX-router model is fully removed.
-- Validate the SeasonalAP-2702E static IPv4/ULA assignments after the readdress/cutover.
+- Install and document the final Cisco Catalyst C2960CX or C3560CX.
+- Capture the rack-side trunk port, native VLAN, allowed VLANs, STP role, and final access-port map.
+- Implement and document the `10.30.0.1` / `fd97:418:22dd:30::1` gateway.
+- Implement and document DHCPv4 plus IPv6 RA/DHCPv6 services.
+- Add the CR200A return route for `fd97:418:22dd:30::/64` after the gateway exists.

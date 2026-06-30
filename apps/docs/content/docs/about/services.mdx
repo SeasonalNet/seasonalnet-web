@@ -27,9 +27,18 @@ Boundary: SeasonalWeather is one subsystem within SeasonalNet, not a synonym for
 
 ### SeasonalPBX, CME, and phone services
 
-Role: telephony, call control, phone provisioning, and related communications functions. SeasonalPBX is the current FreePBX/Asterisk service VM at `192.168.1.12`; it is no longer the Phone-LAN router or gateway. Phone-LAN has moved to `10.30.0.0/24` and `fd42:30::/64`, with routing ownership to be documented after the managed-switch/trunk cutover.
+Role: telephony, call control, phone provisioning, and related communications functions. SeasonalPBX is the current FreePBX/Asterisk service VM at `192.168.1.12`; it is no longer the Phone-LAN router or gateway. Phone-LAN uses `10.30.0.0/24` and `fd97:418:22dd:30::/64`, with routing ownership to be documented after the managed-switch/trunk cutover. SeasonalCME operates dual-stack on Voice VLAN 10, and SeasonalCME-R1 uses `10.42.0.10` plus `fd97:418:22dd:10::10` as its CME source addresses.
 
 Boundary: voice systems are part of SeasonalNet's communications domain.
+
+
+### SeasonalVPN
+
+Role: authenticated remote-access VPN and routed administration plane.
+
+SeasonalVPN is a Debian 13 VM hosted on SeasonalR230 as Proxmox VMID `115`. It uses `192.168.1.22` on Main LAN and runs Defguard/WireGuard services. The VPN overlay uses `10.88.0.0/24` for IPv4 and `fd97:418:22dd:88::/64` for IPv6 ULA addressing, with gateway addresses `10.88.0.1` and `fd97:418:22dd:88::1`.
+
+Boundary: SeasonalVPN provides controlled remote access. It does not replace Main-LAN routing policy, and VPN clients remain subject to Defguard/MFA and routed access controls.
 
 ### PBX control plane / pbx-controld
 
@@ -76,7 +85,7 @@ Boundary: SeasonalMonitor is observability infrastructure. It does not replace S
 
 Role: primary Proxmox host for the active SeasonalNet service VM fleet.
 
-SeasonalR230 is the Dell PowerEdge R230 Proxmox host at `192.168.1.30`, with iDRAC at `192.168.1.32`. It is connected through the CME rack VLAN 99 Main-LAN transit path. The current R230 service VM fleet is SeasonalDNS (VMID 101), SeasonalAuth (102), SeasonalForge (103), SeasonalMail (104), SeasonalMonitor (105), SeasonalPBX (106), SeasonalWX (107), SeasonalRain (108), and SeasonalWeb / SeasonalNet (109). These VMs have QEMU Guest Agent enabled/responding, Proxmox autostart configured, and verified PBS backups on SeasonalBack.
+SeasonalR230 is the Dell PowerEdge R230 Proxmox host at `192.168.1.30`, with iDRAC at `192.168.1.32`. It is connected through the CME rack VLAN 99 Main-LAN transit path. The current R230 service VM fleet is SeasonalDNS (VMID 101), SeasonalAuth (102), SeasonalForge (103), SeasonalMail (104), SeasonalMonitor (105), SeasonalPBX (106), SeasonalWX (107), SeasonalRain (108), SeasonalWeb / SeasonalNet (109), SeasonalCA (114), and SeasonalVPN (115). These VMs have QEMU Guest Agent enabled/responding, Proxmox autostart configured, and verified PBS backups on SeasonalBack.
 
 Boundary: SeasonalR230 is the primary VM host, not the backup service. Backup service ownership remains with SeasonalBack.
 
