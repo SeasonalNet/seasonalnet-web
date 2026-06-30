@@ -1,0 +1,103 @@
+---
+title: "SeasonalNet VPN LAN"
+description: "Network topology for the SeasonalNet VPN segment."
+---
+
+- **Main-LAN host:** `192.168.1.22`
+- **IPv4 VPN subnet:** `10.88.0.0/24`
+- **IPv6 VPN ULA:** `fd97:418:22dd:88::/64`
+- **VPN gateways:** `10.88.0.1` / `fd97:418:22dd:88::1`
+- **Last updated:** 2026-06-29
+
+---
+
+## Purpose
+
+SeasonalVPN is the Defguard/WireGuard remote-access and administration plane for SeasonalNet. It provides authenticated routed access to permitted internal networks without making the VPN overlay an unrestricted Layer-2 extension of Main LAN.
+
+---
+
+## Address Bands
+
+| Range / Prefix | Purpose |
+|---|---|
+| `10.88.0.1` | SeasonalVPN IPv4 gateway on `wg0` |
+| `10.88.0.2 – 10.88.0.254` | Defguard-assigned VPN client addresses |
+| `fd97:418:22dd:88::1` | SeasonalVPN IPv6 ULA gateway on `wg0` |
+| `fd97:418:22dd:88::2 – fd97:418:22dd:88:ffff:ffff:ffff:ffff` | VPN client ULA assignments |
+
+Defguard may assign host routes such as `/32` and `/128` to individual clients even though the routed overlay is documented as a `/24` and `/64`.
+
+---
+
+## Infrastructure
+
+| Address | Device / service | Interface | Notes |
+|---|---|---|---|
+| `192.168.1.22` | SeasonalVPN VM | `ens18` | Debian 13 VM hosted on SeasonalR230 as VMID `115` |
+| `10.88.0.1/24` | Defguard gateway | `wg0` | VPN IPv4 gateway |
+| `fd97:418:22dd:88::1/64` | Defguard gateway | `wg0` | VPN IPv6 ULA gateway |
+
+Internal DNS names:
+
+- `seasonalvpn.lan.seasonalnet.org` → `192.168.1.22`
+- `vpn.lan.seasonalnet.org` → alias for SeasonalVPN
+
+---
+
+## Components
+
+| Component | Role |
+|---|---|
+| Defguard core | User, device, network, and MFA policy management |
+| Defguard gateway | WireGuard data-plane gateway |
+| Defguard proxy / Edge | Remote device activation and web-facing VPN workflow |
+| Authentik | External OIDC/MFA provider |
+
+The public Edge URL is `https://web-vpn.seasonalnet.org`. VPN policy can quarantine clients until external MFA is completed.
+
+---
+
+## Routing
+
+| Route / relationship | Owner | Notes |
+|---|---|---|
+| `10.88.0.0/24` via `192.168.1.22` | WNC-CR200A | Main-LAN IPv4 return route; metric `10` |
+| `fd97:418:22dd:88::/64` via SeasonalVPN Main-LAN link-local | WNC-CR200A | Main-LAN IPv6 ULA return route; metric `10` |
+| `10.88.0.0/24` via `192.168.1.22` | SeasonalEDGE-R1 | Static route redistributed into OSPFv2 under the VPN-client route policy |
+| Internal SeasonalNet prefixes | SeasonalVPN / upstream routing policy | Routed access is permitted according to Defguard and host/router policy |
+
+The VPN ULA is private routed space. It is not advertised to the public Internet and is not translated into a public IPv6 prefix.
+
+---
+
+## Security Boundary
+
+- WireGuard transport alone is not treated as sufficient authorization when Defguard quarantine/MFA policy applies.
+- VPN clients receive routed access, not automatic membership in every LAN broadcast domain.
+- Per-client tunnel addresses preserve client attribution better than a generic SSH bastion or shared NAT identity.
+- Main-LAN, SeasonalCME, Phone-LAN, and service access remain subject to routing and firewall policy.
+
+---
+
+## Topology Summary
+
+```text
+Remote client
+    |
+    | WireGuard / Defguard + MFA policy
+    |
+SeasonalVPN VM (192.168.1.22, VMID 115)
+    |- wg0 IPv4: 10.88.0.1/24
+    `- wg0 IPv6: fd97:418:22dd:88::1/64
+            |
+            `-- Routed SeasonalNet access where policy permits
+```
+
+---
+
+## Known Remaining Items
+
+- Keep the CR200A static routes aligned with the active SeasonalVPN Main-LAN IPv4 and link-local IPv6 next hops.
+- Document additional stable client assignments only when they are intentionally reserved rather than ephemeral Defguard state.
+- Revalidate full-tunnel IPv6 behavior whenever Defguard client routing policy or the VPN overlay design changes.

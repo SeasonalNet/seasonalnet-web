@@ -24,6 +24,7 @@ export const PUBLIC_DOCS_MANAGED_OUTPUTS = [
   'topology/lans/main-lan.mdx',
   'topology/lans/seasonalcme.mdx',
   'topology/lans/phone-lan.mdx',
+  'topology/lans/seasonalvpn.mdx',
   'topology/lans/meta.json',
   'topology/meta.json',
   'projects/index.mdx',
@@ -32,12 +33,6 @@ export const PUBLIC_DOCS_MANAGED_OUTPUTS = [
   'policies/terms.mdx',
   'policies/acceptable-use.mdx',
   'policies/meta.json',
-  'network/index.mdx',
-  'network/lans/index.mdx',
-  'network/lans/main-lan.mdx',
-  'network/lans/seasonalcme.mdx',
-  'network/lans/phone-lan.mdx',
-  'network/lans/meta.json',
 ];
 
 // Explicit allowlist of publishable docs and their destination routes.
@@ -98,6 +93,14 @@ export const PUBLIC_DOCS_ALLOWLIST = [
     description: 'Routing, services, and attached-device map for the Phone-LAN segment.',
   },
   {
+    sourcePath: 'LANs/seasonalvpn-network-map.md',
+    outputPath: 'topology/lans/seasonalvpn.mdx',
+    routePath:  '/docs/topology/lans/seasonalvpn',
+    section: 'topology-lans',
+    title: 'SeasonalNet VPN LAN',
+    description: 'Network topology for the SeasonalNet VPN segment.',
+  },
+  {
     sourcePath: 'PROJECTS.md',
     outputPath: 'projects/index.mdx',
     routePath: '/docs/projects',
@@ -154,7 +157,7 @@ export const PUBLIC_DOCS_TOPOLOGY_META = {
 
 export const PUBLIC_DOCS_LANS_META = {
   title: 'LAN Maps',
-  pages: ['index', 'main-lan', 'seasonalcme', 'phone-lan'],
+  pages: ['index', 'main-lan', 'seasonalcme', 'phone-lan', 'seasonalvpn'],
 };
 
 export const PUBLIC_DOCS_POLICIES_META = {
