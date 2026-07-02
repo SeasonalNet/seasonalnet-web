@@ -7,7 +7,7 @@ import { SiteAnnouncements } from "@seasonalnet/shell/src/components/site-announ
 
 export const metadata: Metadata = {
   title: "SeasonalNet",
-  description: "Unified front doors for SeasonalNet services.",
+  description: "A personal platform for everything Seasonal.",
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

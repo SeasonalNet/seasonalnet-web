@@ -5,5 +5,14 @@ import { site } from "@/lib/site"
 import { ModeToggle } from "@/components/mode-toggle"
 
 export function SiteHeader() {
-  return <ShellHeader site={site} rightSlot={<ModeToggle />} />
+  return (
+    <ShellHeader
+      site={{
+        name: site.name,
+        subtitle: site.subtitle,
+        portals: site.navigation,
+      }}
+      rightSlot={<ModeToggle />}
+    />
+  )
 }
