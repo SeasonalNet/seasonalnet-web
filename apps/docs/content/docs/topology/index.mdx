@@ -12,8 +12,8 @@ Top-level index of SeasonalNet network segments. For full topology detail, see t
 | Segment | IPv4 subnet | IPv6 prefix | Gateway / owner | Map |
 |---|---|---|---|---|
 | Main LAN | `192.168.1.0/24` | Native ISP-assigned GUA | `192.168.1.1` / WNC-CR200A | [`LANs/seasonalnet-lan-map.md`](/docs/topology/lans/main-lan) |
-| SeasonalCME Voice | `10.42.0.0/24` (VLAN 10) | `fd97:418:22dd:10::/64` | `10.42.0.1` / `fd97:418:22dd:10::1` | [`LANs/seasonalcme-network-map.md`](/docs/topology/lans/seasonalcme) |
-| SeasonalCME Management | `10.42.2.0/24` (VLAN 42) | `fd97:418:22dd:42::/64` | `10.42.2.1` / `fd97:418:22dd:42::1` | [`LANs/seasonalcme-network-map.md`](/docs/topology/lans/seasonalcme) |
+| SeasonalCME Voice | `10.10.0.0/24` (VLAN 10) | `fd97:418:22dd:10::/64` | `10.10.0.1` / `fd97:418:22dd:10::1` | [`LANs/seasonalcme-network-map.md`](/docs/topology/lans/seasonalcme) |
+| SeasonalCME Management | `10.42.0.0/24` (VLAN 42) | `fd97:418:22dd:42::/64` | `10.42.0.1` / `fd97:418:22dd:42::1` | [`LANs/seasonalcme-network-map.md`](/docs/topology/lans/seasonalcme) |
 | Phone-LAN | `10.30.0.0/24` | `fd97:418:22dd:30::/64` | `.1` / `::1` reserved; owner pending | [`LANs/phonelan-map.md`](/docs/topology/lans/phone-lan) |
 | SeasonalVPN | `10.88.0.0/24` | `fd97:418:22dd:88::/64` | `10.88.0.1` / `fd97:418:22dd:88::1` | [`LANs/seasonalvpn-network-map.md`](/docs/topology/lans/seasonalvpn) |
 
@@ -68,8 +68,8 @@ Main LAN (192.168.1.0/24 + native ISP IPv6)
     |       `-- SeasonalDock (192.168.1.20)
     |
     |-- SeasonalEDGE-R1 (192.168.1.4)
-    |       |-- Voice VLAN 10: 10.42.0.0/24 + fd97:418:22dd:10::/64
-    |       `-- Management VLAN 42: 10.42.2.0/24 + fd97:418:22dd:42::/64
+    |       |-- Voice VLAN 10: 10.10.0.0/24 + fd97:418:22dd:10::/64
+    |       `-- Management VLAN 42: 10.42.0.0/24 + fd97:418:22dd:42::/64
     |
     |-- SeasonalPBX (192.168.1.12)
     |       `-- PBX/Asterisk service only; not Phone-LAN router
@@ -106,7 +106,7 @@ SeasonalEDGE-R1 and SeasonalCME-R1 use process ID `42` for both protocol familie
 | OSPFv2 process 42 | IPv4 | Routes the SeasonalCME IPv4 domain and originates the IPv4 default from SeasonalEDGE-R1 |
 | OSPFv3 process 42 | IPv6 | Forms a FULL adjacency over Voice VLAN 10 and originates the IPv6 default from SeasonalEDGE-R1 |
 
-SeasonalCME-R1 has `fd97:418:22dd:10::10/64` on `Gi0/0` and learns `::/0` through OSPFv3. SeasonalEDGE-R1 advertises Management VLAN 42 when its SVI is operational.
+SeasonalCME-R1 has `fd97:418:22dd:10::10/64` on `Gi0/0` and learns `::/0` through OSPFv3. SeasonalEDGE-R1 terminates Management VLAN 42 on `Gi0/1.42` and advertises it into OSPFv2 and OSPFv3.
 
 ### WNC-CR200A static routes
 
@@ -114,7 +114,8 @@ Primary static routes use metric `10`. Future alternate or backup routes use met
 
 | Destination | Next hop | Metric | Purpose |
 |---|---|---:|---|
-| `10.42.0.0/24` | `192.168.1.4` | `10` | SeasonalCME Voice IPv4 return route |
+| `10.10.0.0/24` | `192.168.1.4` | `10` | SeasonalCME Voice IPv4 return route |
+| `10.42.0.0/24` | `192.168.1.4` | `10` | SeasonalCME Management IPv4 return route |
 | `10.88.0.0/24` | `192.168.1.22` | `10` | SeasonalVPN IPv4 return route |
 | `fd97:418:22dd:10::/64` | SeasonalEDGE-R1 `Gi0/0` link-local | `10` | SeasonalCME Voice ULA return route |
 | `fd97:418:22dd:42::/64` | SeasonalEDGE-R1 `Gi0/0` link-local | `10` | SeasonalCME Management ULA return route |
@@ -152,7 +153,7 @@ Cloudflare remains authoritative public DNS for `seasonalnet.org`. SeasonalDNS p
 | Segment | DNS | DHCP / address assignment |
 |---|---|---|
 | Main LAN | SeasonalDNS (`192.168.1.14`) for internal DNS | WNC-CR200A for IPv4 DHCP and native IPv6 RA/DHCPv6 |
-| SeasonalCME | SeasonalEDGE-R1 supplies DHCPv4/DHCPv6; clients use configured resolvers | SeasonalEDGE-R1 |
+| SeasonalCME | SeasonalEDGE-R1 supplies Voice VLAN 10 DHCPv4/DHCPv6; clients use configured resolvers | Voice VLAN 10 uses EDGE-R1 DHCP; Management VLAN 42 uses static IPv4 and RA/static IPv6 |
 | SeasonalVPN | Routed through SeasonalVPN/Defguard policy | Defguard assigns VPN client addresses |
 | Phone-LAN | Owner pending managed-switch/trunk implementation | DHCPv4 and IPv6 RA/DHCPv6 owner pending |
 

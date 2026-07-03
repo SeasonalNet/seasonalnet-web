@@ -5,7 +5,7 @@ description: "Address bands, infrastructure inventory, and routing notes for the
 
 - **Subnet:** `192.168.1.0/24`
 - **Gateway:** `192.168.1.1` (Verizon WNC-CR200A)
-- **Last updated:** 2026-06-29
+- **Last updated:** 2026-07-02
 
 ---
 
@@ -97,8 +97,8 @@ VMs in this band are static-addressed service hosts. SeasonalR230 hosts the orig
 
 | Network | Purpose | Gateway |
 |---|---|---|
-| `10.42.0.0/24` / `fd97:418:22dd:10::/64` | SeasonalCME Voice VLAN 10 | SeasonalEDGE-R1 `Gi0/1` |
-| `10.42.2.0/24` / `fd97:418:22dd:42::/64` | SeasonalCME Management VLAN 42 | SeasonalEDGE-R1 `Vlan42` |
+| `10.10.0.0/24` / `fd97:418:22dd:10::/64` | SeasonalCME Voice VLAN 10 | SeasonalEDGE-R1 `Gi0/1` |
+| `10.42.0.0/24` / `fd97:418:22dd:42::/64` | SeasonalCME Management VLAN 42 | SeasonalEDGE-R1 `Gi0/1.42` |
 | `10.30.0.0/24` / `fd97:418:22dd:30::/64` | Phone-LAN | Gateway `.1` / `::1` reserved; owner pending |
 | `10.88.0.0/24` / `fd97:418:22dd:88::/64` | SeasonalVPN routed VPN LAN | SeasonalVPN (`192.168.1.22`) |
 
@@ -134,7 +134,8 @@ Primary static routes use metric `10`; future alternate or backup routes use met
 
 | Destination | Next hop | Metric | Notes |
 |---|---|---:|---|
-| `10.42.0.0/24` | `192.168.1.4` | `10` | SeasonalCME Voice IPv4 return route |
+| `10.10.0.0/24` | `192.168.1.4` | `10` | SeasonalCME Voice IPv4 return route |
+| `10.42.0.0/24` | `192.168.1.4` | `10` | SeasonalCME Management IPv4 return route |
 | `10.88.0.0/24` | `192.168.1.22` | `10` | SeasonalVPN IPv4 return route |
 | `fd97:418:22dd:10::/64` | SeasonalEDGE-R1 Main-LAN link-local | `10` | SeasonalCME Voice ULA return route |
 | `fd97:418:22dd:42::/64` | SeasonalEDGE-R1 Main-LAN link-local | `10` | SeasonalCME Management ULA return route |

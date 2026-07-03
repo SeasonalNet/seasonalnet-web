@@ -42,7 +42,7 @@ SeasonalWeather is an important subsystem within SeasonalNet, but it does not de
 
 These include SeasonalPBX, Cisco Unified Communications Manager Express, phone provisioning, and related communications services.
 
-SeasonalPBX is the current FreePBX/Asterisk service VM at `192.168.1.12`. It is no longer the Phone-LAN router or gateway. Phone-LAN uses `10.30.0.0/24` and `fd97:418:22dd:30::/64`, with the managed-switch/trunk routing boundary still pending implementation. SeasonalCME operates dual-stack on Voice VLAN 10 using `10.42.0.0/24` and `fd97:418:22dd:10::/64`.
+SeasonalPBX is the current FreePBX/Asterisk service VM at `192.168.1.12`. It is no longer the Phone-LAN router or gateway. Phone-LAN uses `10.30.0.0/24` and `fd97:418:22dd:30::/64`, with the managed-switch/trunk routing boundary still pending implementation. SeasonalCME operates dual-stack on Voice VLAN 10 using `10.10.0.0/24` and `fd97:418:22dd:10::/64`; infrastructure management uses VLAN 42 at `10.42.0.0/24` and `fd97:418:22dd:42::/64`.
 
 `pbx-controld` is the PBX control-plane daemon for coordinating bot-managed and portal-managed extension state.
 

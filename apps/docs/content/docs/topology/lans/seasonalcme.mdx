@@ -3,13 +3,13 @@ title: "SeasonalCME Network Map"
 description: "Voice and management VLAN topology for the SeasonalCME lab."
 ---
 
-- **Voice subnet:** `10.42.0.0/24` (VLAN 10)
-- **Management subnet:** `10.42.2.0/24` (VLAN 42)
+- **Voice subnet:** `10.10.0.0/24` (VLAN 10)
+- **Management subnet:** `10.42.0.0/24` (VLAN 42)
 - **Voice IPv6 ULA:** `fd97:418:22dd:10::/64`
 - **Management IPv6 ULA:** `fd97:418:22dd:42::/64`
-- **Voice gateway:** `10.42.0.1` / `fd97:418:22dd:10::1` (SeasonalEDGE-R1 `Gi0/1`)
-- **Management gateway:** `10.42.2.1` / `fd97:418:22dd:42::1` (SeasonalEDGE-R1 `Vlan42`)
-- **Last updated:** 2026-06-29
+- **Voice gateway:** `10.10.0.1` / `fd97:418:22dd:10::1` (SeasonalEDGE-R1 `Gi0/1`)
+- **Management gateway:** `10.42.0.1` / `fd97:418:22dd:42::1` (SeasonalEDGE-R1 `Gi0/1.42`)
+- **Last updated:** 2026-07-02
 
 ---
 
@@ -17,42 +17,40 @@ description: "Voice and management VLAN topology for the SeasonalCME lab."
 
 | VLAN / network | Purpose | Gateway | Notes |
 |---|---|---|---|
-| VLAN 10 / `10.42.0.0/24` | SeasonalCME voice / endpoint IPv4 | `10.42.0.1` | Carries CME router, phones, AP, and voice clients |
+| VLAN 10 / `10.10.0.0/24` | SeasonalCME voice / endpoint IPv4 | `10.10.0.1` | Carries CME-R1, phones, the AP, and voice clients |
 | VLAN 10 / `fd97:418:22dd:10::/64` | SeasonalCME voice IPv6 ULA | `fd97:418:22dd:10::1` | RA and stateful DHCPv6 served by SeasonalEDGE-R1 |
-| VLAN 42 / `10.42.2.0/24` | SeasonalCME management IPv4 | `10.42.2.1` | Routed through SeasonalEDGE-R1 `Vlan42` |
-| VLAN 42 / `fd97:418:22dd:42::/64` | SeasonalCME management IPv6 ULA | `fd97:418:22dd:42::1` | Configured on `Vlan42`; active when the SVI is up |
-| VLAN 99 | Main-LAN / transit VLAN | Main-LAN gateway | Native VLAN on SW1↔SW2 trunk; carries rack-local Main-LAN endpoints |
+| VLAN 42 / `10.42.0.0/24` | SeasonalCME infrastructure management IPv4 | `10.42.0.1` | Tagged subinterface on SeasonalEDGE-R1 `Gi0/1.42` |
+| VLAN 42 / `fd97:418:22dd:42::/64` | SeasonalCME infrastructure management IPv6 ULA | `fd97:418:22dd:42::1` | RA served by SeasonalEDGE-R1; static infrastructure assignments where supported |
+| VLAN 99 | Main-LAN / transit VLAN | Main-LAN gateway | Native VLAN on the SW1↔SW2 trunk; carries rack-local Main-LAN endpoints |
 
-The prior `fd42:42::/64` and `fd42:42:2::/64` prefixes are retired legacy allocations.
+The former Voice VLAN 10 IPv4 subnet `10.42.0.0/24` was moved to Management VLAN 42, and Voice VLAN 10 was renumbered to `10.10.0.0/24`. The former management subnet `10.42.2.0/24` and legacy `fd42:42::/64` / `fd42:42:2::/64` prefixes are retired.
 
 ---
 
 ## Address Bands
 
-### Voice VLAN 10 (`10.42.0.0/24`)
+### Voice VLAN 10 (`10.10.0.0/24`)
 
 | Range | Purpose |
 |---|---|
 | `.1` | Gateway |
-| `.2 – .9` | Network infrastructure |
+| `.2 – .9` | Network infrastructure and reserved addresses |
 | `.10 – .19` | Core voice infrastructure |
-| `.20 – .49` | Reserved static voice devices / important endpoints |
-| `.50 – .99` | Static or semi-static lab endpoints |
+| `.20 – .99` | Reserved static voice devices / important endpoints |
 | `.100 – .254` | DHCP pool / dynamic clients |
 
-Fixed IPv4 assignments include `10.42.0.1` (SeasonalEDGE-R1), `.2` (SW1), `.3` (SW2), `.4` (SeasonalAP-3602i), and `.10` (SeasonalCME-R1).
+Fixed assignments include `10.10.0.1` (SeasonalEDGE-R1), `10.10.0.4` (SeasonalAP-3602i), and `10.10.0.10` (SeasonalCME-R1). `10.10.0.2` is reserved as the SW1 IGMP snooping querier source address.
 
-### Management VLAN 42 (`10.42.2.0/24`)
+### Management VLAN 42 (`10.42.0.0/24`)
 
 | Range | Purpose |
 |---|---|
 | `.1` | Gateway |
 | `.2 – .19` | Static management infrastructure |
-| `.20 – .49` | Reserved static managed devices |
-| `.50 – .99` | Static management expansion |
-| `.100 – .254` | Reserved for future DHCP if needed |
+| `.20 – .99` | Reserved static managed devices / expansion |
+| `.100 – .254` | Reserved for future use |
 
-VLAN 42 is trunked between the switches, but SeasonalEDGE-R1 `Vlan42` remains down until an active EHWIC VLAN 42 access port is present.
+Management VLAN 42 uses static infrastructure addressing. It does not currently provide a DHCPv4 pool.
 
 ---
 
@@ -60,22 +58,24 @@ VLAN 42 is trunked between the switches, but SeasonalEDGE-R1 `Vlan42` remains do
 
 | Address | Device | Interface(s) | Notes |
 |---|---|---|---|
-| `192.168.1.4` | SeasonalEDGE-R1 (Cisco 1921) | `Gi0/0` | Main-LAN uplink |
-| `10.42.0.1` | SeasonalEDGE-R1 | `Gi0/1` | Voice IPv4 gateway |
+| `192.168.1.4` | SeasonalEDGE-R1 (Cisco 1921) | `Gi0/0` | Main-LAN uplink and IPv4 NAT outside interface |
+| `10.10.0.1` | SeasonalEDGE-R1 | `Gi0/1` | Voice IPv4 gateway; untagged/native VLAN 10 toward SW1 |
 | `fd97:418:22dd:10::1/64` | SeasonalEDGE-R1 | `Gi0/1` | Voice ULA gateway |
-| `10.42.2.1` | SeasonalEDGE-R1 | `Vlan42` | Management IPv4 gateway |
-| `fd97:418:22dd:42::1/64` | SeasonalEDGE-R1 | `Vlan42` | Management ULA gateway |
-| `10.42.0.10` | SeasonalCME-R1 (Cisco 2901) | `Gi0/0` | CME call-control node |
+| `10.42.0.1` | SeasonalEDGE-R1 | `Gi0/1.42` | Management IPv4 gateway; tagged VLAN 42 |
+| `fd97:418:22dd:42::1/64` | SeasonalEDGE-R1 | `Gi0/1.42` | Management ULA gateway |
+| `10.10.0.10` | SeasonalCME-R1 (Cisco 2901) | `Gi0/0` | CME call-control node and SCCP source address |
 | `fd97:418:22dd:10::10/64` | SeasonalCME-R1 | `Gi0/0` | Static IPv6 address and CME IPv6 source address |
-| `10.42.0.2` | SeasonalCME-SW1 | `Vlan10` | Primary non-PoE switch; STP root for VLANs 10/42/99 |
-| `fd42:42::2/64` | SeasonalCME-SW1 | `Vlan10` | Legacy static ULA still pending readdress/removal; do not use for new assignments |
-| `10.42.0.3` | SeasonalCME-SW2 | `Vlan10` | Secondary PoE switch |
-| `10.42.0.4` | SeasonalAP-3602i | `BVI1` | Static IPv4 management address |
-| dynamic `fd97:418:22dd:10::/64` | SeasonalAP-3602i | `BVI1` | SLAAC plus stateful DHCPv6 |
+| `10.42.0.2` | SeasonalNet-SW1 | `Vlan42` | Primary non-PoE switch; IPv4-only routed management |
+| `10.42.0.3` | SeasonalNet-SW2 | `Vlan42` | Secondary PoE switch |
+| `fd97:418:22dd:42::3/64` | SeasonalNet-SW2 | `Vlan42` | Static management ULA; default router learned through RA |
+| `10.10.0.4` | SeasonalAP-3602i | `BVI1` | Static IPv4 management address on Voice VLAN 10 |
+| dynamic `fd97:418:22dd:10::/64` | SeasonalAP-3602i | `BVI1` | SLAAC plus DHCPv6 client behavior |
 | `192.168.1.30` | SeasonalR230 | SW2 access VLAN 99 | Primary Proxmox host |
 | `192.168.1.31` | SeasonalR340 | SW2 access VLAN 99 | Secondary Proxmox host |
 | `192.168.1.32` | SeasonalR230-iDRAC | SW2 access VLAN 99 | R230 out-of-band management |
 | `192.168.1.33` | SeasonalR340-iDRAC | SW2 access VLAN 99 | R340 out-of-band management |
+
+SeasonalNet-SW1 is a `WS-C2960X-24TS-LL` LAN Lite chassis. It can bridge IPv6 and communicate with on-link IPv6 neighbors, but it does not provide usable off-link IPv6 management in this deployment, so its routed management address is IPv4-only. SeasonalNet-SW2 is a LAN Base chassis and remains dual-stack on VLAN 42.
 
 ---
 
@@ -83,10 +83,10 @@ VLAN 42 is trunked between the switches, but SeasonalEDGE-R1 `Vlan42` remains do
 
 | Device | Role | Key uplink(s) | Notes |
 |---|---|---|---|
-| SeasonalCME-SW1 | Root switch | `Gi0/23` trunk to SW2 | Root bridge for VLANs 10, 42, and 99 |
-| SeasonalCME-SW2 | Secondary / access PoE switch | `Gi1/0/24` trunk to SW1 | Uses SW1 as root |
-| SeasonalEDGE-R1 | Lab edge router | `Gi0/0` to Main LAN; `Gi0/1` to SW1 `Gi0/24` | Originates IPv4 and IPv6 defaults into OSPF |
-| SeasonalCME-R1 | CME router / UC node | `Gi0/0` to SW1 `Gi0/21` | Dual-stack on VLAN 10 |
+| SeasonalNet-SW1 | Root / aggregation switch | `Gi0/23` trunk to SW2; `Gi0/24` trunk to EDGE-R1 | Verified root bridge for VLANs 10 and 42; primary rack switch |
+| SeasonalNet-SW2 | Secondary / access PoE switch | `Gi1/0/24` trunk to SW1 | Uses SW1 as its root path for VLANs 10 and 42 |
+| SeasonalEDGE-R1 | Lab edge router | `Gi0/0` to Main LAN; `Gi0/1` trunk to SW1 `Gi0/24` | Terminates Voice VLAN 10 natively and Management VLAN 42 on a tagged subinterface |
+| SeasonalCME-R1 | CME router / UC node | `Gi0/0` to SW1 `Gi0/21` | Dual-stack on Voice VLAN 10 |
 
 ---
 
@@ -98,8 +98,8 @@ VLAN 42 is trunked between the switches, but SeasonalEDGE-R1 `Vlan42` remains do
 | `Gi0/4` | Access VLAN 10 | seasonal-teal-laptop wired adapter when connected | Direct lab/client attachment |
 | `Gi0/21` | Access VLAN 10 | SeasonalCME-R1 `Gi0/0` | CME router uplink |
 | `Gi0/22` | Access VLAN 99 | SeasonalEDGE-R1 `Gi0/0` | Main-LAN transit side |
-| `Gi0/23` | 802.1Q trunk, native VLAN 99 | SeasonalCME-SW2 `Gi1/0/24` | Allows VLANs `10,42,99` |
-| `Gi0/24` | Access VLAN 10 | SeasonalEDGE-R1 `Gi0/1` | Voice gateway uplink |
+| `Gi0/23` | 802.1Q trunk, native VLAN 99 | SeasonalNet-SW2 `Gi1/0/24` | Allows VLANs `10,30,42,99` |
+| `Gi0/24` | 802.1Q trunk, native VLAN 10 | SeasonalEDGE-R1 `Gi0/1` | Allows VLANs `10,42`; VLAN 42 is tagged |
 
 ---
 
@@ -121,7 +121,7 @@ VLAN 42 is trunked between the switches, but SeasonalEDGE-R1 `Vlan42` remains do
 | `Gi1/0/15` | Access VLAN 99 | SeasonalR340-iDRAC | R340 OOB management |
 | `Gi1/0/16` | Access VLAN 99 | SeasonalR340 | Proxmox host attachment |
 | `Gi1/0/17 – Gi1/0/23` | Access VLAN 10 | Voice/endpoint access | Currently unused |
-| `Gi1/0/24` | 802.1Q trunk, native VLAN 99 | SeasonalCME-SW1 `Gi0/23` | Allows VLANs `10,42,99` |
+| `Gi1/0/24` | 802.1Q trunk, native VLAN 99 | SeasonalNet-SW1 `Gi0/23` | Allows VLANs `10,30,42,99` |
 
 ---
 
@@ -129,29 +129,32 @@ VLAN 42 is trunked between the switches, but SeasonalEDGE-R1 `Vlan42` remains do
 
 | Item | Value | Notes |
 |---|---|---|
-| IPv4 dynamic routing | OSPFv2 process 42 | FULL adjacency between SeasonalEDGE-R1 and SeasonalCME-R1 |
-| IPv6 dynamic routing | OSPFv3 process 42 | FULL adjacency over VLAN 10; EDGE is DR and CME is BDR |
-| IPv4 default source | SeasonalEDGE-R1 | `default-information originate` |
-| IPv6 default source | SeasonalEDGE-R1 | OSPFv3 external default originated from its Main-LAN static default |
+| IPv4 dynamic routing | OSPFv2 process 42 | FULL adjacency between SeasonalEDGE-R1 and SeasonalCME-R1 over Voice VLAN 10 |
+| OSPFv2 router IDs | EDGE `10.10.0.1`; CME `10.10.0.10` | EDGE interface priority `255` and DR; CME priority `0` and DROTHER |
+| IPv6 dynamic routing | OSPFv3 process 42 | FULL adjacency over Voice VLAN 10 using link-local next hops |
+| IPv4 default source | SeasonalEDGE-R1 | `default-information originate` toward SeasonalCME-R1 |
+| IPv6 default source | SeasonalEDGE-R1 | OSPFv3 external default originated from its Main-LAN IPv6 default |
 | SeasonalEDGE-R1 IPv4 default | `0.0.0.0/0 via 192.168.1.1` | Upstream CR200A |
 | SeasonalEDGE-R1 IPv6 default | `::/0` via CR200A link-local on `Gi0/0` | Native Main-LAN IPv6 upstream |
-| CME-R1 learned IPv6 default | OSPFv3 `OE2 ::/0` | Next hop is SeasonalEDGE-R1 link-local on `Gi0/0` |
+| CR200A IPv4 return routes | `10.10.0.0/24` and `10.42.0.0/24` via `192.168.1.4` | Primary route metric `10` |
 | CR200A ULA return routes | `:10::/64` and `:42::/64` via SeasonalEDGE-R1 | Primary route metric `10` |
-| NAT boundary | SeasonalEDGE-R1 | IPv4 NAT only; `Gi0/0` outside, CME interfaces inside |
+| NAT boundary | SeasonalEDGE-R1 | IPv4 NAT only; `Gi0/0` outside, `Gi0/1` and `Gi0/1.42` inside |
 
-OSPFv3 forms its adjacency using link-local addresses.
+The `NAT_INSIDE` policy bypasses translation for traffic from either SeasonalCME IPv4 subnet to Main LAN (`192.168.1.0/24`) and SeasonalVPN (`10.88.0.0/24`). Other matching IPv4 traffic is overloaded through SeasonalEDGE-R1 `Gi0/0`.
 
 ---
 
-## IPv6 Address Assignment
+## Address Assignment
 
-| Segment | Method | Notes |
+| Segment / device | Method | Notes |
 |---|---|---|
-| Voice VLAN 10 | RA + stateful DHCPv6 | SeasonalEDGE-R1 advertises the `/64` and serves DHCPv6 IA_NA addresses |
-| Management VLAN 42 | RA + stateful DHCPv6 | Configured |
-| SeasonalCME-R1 | Static | `fd97:418:22dd:10::10/64` |
-| SeasonalAP-3602i | SLAAC + DHCPv6 | DHCPv6 client |
-| Phones / lab clients | SLAAC and/or DHCPv6 by device capability | DHCPv6 client |
+| Voice VLAN 10 IPv4 | DHCPv4 | SeasonalEDGE-R1 serves `.100 – .254`; gateway `.1`, option 150 `.10`, and NTP option 42 `.1` |
+| Voice VLAN 10 IPv6 | RA + stateful DHCPv6 | SeasonalEDGE-R1 advertises the `/64` and serves DHCPv6 IA_NA addresses |
+| Management VLAN 42 IPv4 | Static | Gateway and switch management addresses are configured on-device |
+| Management VLAN 42 IPv6 | RA + static infrastructure addresses | EDGE-R1 advertises the prefix; SW2 is static; SW1 is IPv4-only for routed management |
+| SeasonalCME-R1 | Static dual-stack | `10.10.0.10` and `fd97:418:22dd:10::10/64` |
+| SeasonalAP-3602i | Static IPv4 + dynamic IPv6 | `10.10.0.4`; SLAAC/DHCPv6 client behavior |
+| Phones / lab clients | DHCPv4 and IPv6 by device capability | Voice clients use the VLAN 10 services |
 
 ---
 
@@ -161,9 +164,9 @@ OSPFv3 forms its adjacency using link-local addresses.
 |---|---|---|
 | CME node | SeasonalCME-R1 | Cisco 2901 / CME 10.5 |
 | Protocol mode | `dual-stack` | CME and supported phones operate with IPv4 and IPv6 enabled |
-| IPv4 CME source | `10.42.0.10:2000` | SCCP source address |
-| IPv6 CME source | `fd97:418:22dd:10::10` | Added on 2026-06-29 |
-| Registered SCCP phones | `3` | Fully functional |
+| IPv4 CME source | `10.10.0.10:2000` | SCCP source address |
+| IPv6 CME source | `fd97:418:22dd:10::10` | Static ULA source address |
+| SCCP DSP services | `10.10.0.10` | MTP and conferencing profiles register to the local CME address |
 | Services URL | `http://192.168.1.8/cme/services/` | SeasonalWeb-hosted phone services |
 | MOH multicast | `239.42.0.42:16384` | IPv4 multicast MOH configuration |
 
@@ -173,9 +176,9 @@ OSPFv3 forms its adjacency using link-local addresses.
 
 | VLAN | Root bridge | Notes |
 |---|---|---|
-| `10` | SeasonalCME-SW1 | SW2 uses `Gi1/0/24` as root port |
-| `42` | SeasonalCME-SW1 | Trunked between SW1 and SW2 |
-| `99` | SeasonalCME-SW1 | Transit/native VLAN across the trunk |
+| `10` | SeasonalNet-SW1 | SW2 uses `Gi1/0/24` as its root port |
+| `42` | SeasonalNet-SW1 | SW2 uses `Gi1/0/24` as its root port |
+| `99` | SeasonalNet-SW1 | Native Main-LAN transit VLAN across the SW1↔SW2 trunk |
 
 ---
 
@@ -185,29 +188,32 @@ OSPFv3 forms its adjacency using link-local addresses.
 Main LAN / native IPv6
         |
         | SeasonalEDGE-R1 Gi0/0 = 192.168.1.4
-        | CR200A return routes for fd97:...:10::/64 and :42::/64
+        | CR200A return routes for 10.10.0.0/24, 10.42.0.0/24,
+        | fd97:...:10::/64, and fd97:...:42::/64
         |
-SeasonalEDGE-R1
-  |- Gi0/1 = 10.42.0.1 / fd97:418:22dd:10::1
-  `- Vlan42 = 10.42.2.1 / fd97:418:22dd:42::1 (currently down)
+SeasonalEDGE-R1 Gi0/1
+  |- native VLAN 10 = 10.10.0.1 / fd97:418:22dd:10::1
+  `- tagged Gi0/1.42 = 10.42.0.1 / fd97:418:22dd:42::1
         |
-        | OSPFv2 + OSPFv3 process 42
+        | 802.1Q trunk to SeasonalNet-SW1 Gi0/24
+        | native VLAN 10; tagged VLAN 42
         |
-SeasonalCME-R1 Gi0/0
-  |- 10.42.0.10
-  `- fd97:418:22dd:10::10
+SeasonalNet-SW1 (root) <== trunk VLANs 10,30,42,99 ==> SeasonalNet-SW2 (PoE)
+        |                                                       |- AP-3602i
+        |                                                       |- Cisco/Yealink phones
+        |                                                       `- R230/R340 Main-LAN VLAN 99 attachments
+        |
+        `-- SeasonalCME-R1 Gi0/0
+              |- 10.10.0.10
+              `- fd97:418:22dd:10::10
 
-SW1 (root) <== trunk VLANs 10,42,99 ==> SW2 (PoE)
-                                              |- AP-3602i
-                                              |- Cisco/Yealink phones
-                                              `- R230/R340 Main-LAN VLAN 99 attachments
+Management VLAN 42:
+  SeasonalEDGE-R1 .1 <-> SeasonalNet-SW1 .2 <-> SeasonalNet-SW2 .3
 ```
 
 ---
 
-## Known Remaining Items
+## Known Limitations / Remaining Items
 
-- Readdress or remove SeasonalCME-SW1's legacy `fd42:42::2/64` static address.
-- Bring VLAN 42 up with an active management attachment and verify its OSPFv3 advertisement and CR200A return route end to end.
-- Correct the stale SW1 `Gi0/24` interface description if it still references SeasonalCME-R1 rather than SeasonalEDGE-R1.
+- SeasonalNet-SW1 remains IPv4-only for routed management because its LAN Lite feature set does not install a usable off-link IPv6 default-router state in this deployment.
 - Keep the disabled Aironet and powerline paths documented as retired/quarantined unless deliberately restored.

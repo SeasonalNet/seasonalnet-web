@@ -27,7 +27,7 @@ Boundary: SeasonalWeather is one subsystem within SeasonalNet, not a synonym for
 
 ### SeasonalPBX, CME, and phone services
 
-Role: telephony, call control, phone provisioning, and related communications functions. SeasonalPBX is the current FreePBX/Asterisk service VM at `192.168.1.12`; it is no longer the Phone-LAN router or gateway. Phone-LAN uses `10.30.0.0/24` and `fd97:418:22dd:30::/64`, with routing ownership to be documented after the managed-switch/trunk cutover. SeasonalCME operates dual-stack on Voice VLAN 10, and SeasonalCME-R1 uses `10.42.0.10` plus `fd97:418:22dd:10::10` as its CME source addresses.
+Role: telephony, call control, phone provisioning, and related communications functions. SeasonalPBX is the current FreePBX/Asterisk service VM at `192.168.1.12`; it is no longer the Phone-LAN router or gateway. Phone-LAN uses `10.30.0.0/24` and `fd97:418:22dd:30::/64`, with routing ownership to be documented after the managed-switch/trunk cutover. SeasonalCME operates dual-stack on Voice VLAN 10, and SeasonalCME-R1 uses `10.10.0.10` plus `fd97:418:22dd:10::10` as its CME source addresses. SeasonalCME infrastructure management uses VLAN 42 at `10.42.0.0/24` and `fd97:418:22dd:42::/64`.
 
 Boundary: voice systems are part of SeasonalNet's communications domain.
 
@@ -75,7 +75,7 @@ Boundary: SeasonalCA is an internal trust service for LAN/private TLS. It is not
 
 Role: first-pass observability spine for SeasonalNet infrastructure.
 
-SeasonalMonitor runs on `192.168.1.15` and provides Prometheus, Grafana, blackbox_exporter, snmp_exporter, Redfish/iDRAC monitoring, and host-native node_exporter. Its current targets include SeasonalMonitor itself, SeasonalDNS, SeasonalR230, R230 iDRAC, SeasonalR340 / R340 iDRAC, SeasonalCME-SW2, and CME rack backhaul reachability.
+SeasonalMonitor runs on `192.168.1.15` and provides Prometheus, Grafana, blackbox_exporter, snmp_exporter, Redfish/iDRAC monitoring, and host-native node_exporter. Its current targets include SeasonalMonitor itself, SeasonalDNS, SeasonalR230, R230 iDRAC, SeasonalR340 / R340 iDRAC, SeasonalNet-SW1, SeasonalNet-SW2, and CME rack backhaul reachability.
 
 Grafana is publicly reachable at `https://grafana.seasonalnet.org` through SeasonalWeb and uses Authentik OAuth/OIDC. A local Grafana admin account is retained as break-glass access. Prometheus remains private and should not be published directly.
 
