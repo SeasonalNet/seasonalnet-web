@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  web:
+    runs-on: node20
+    steps:
+      - uses: actions/checkout@v6
+      - name: Install dependencies
+        run: |
+          if [ -f package-lock.json ]; then
+            npm ci
+          elif [ -f pnpm-lock.yaml ]; then
+            corepack enable
+            pnpm install --frozen-lockfile
+          elif [ -f yarn.lock ]; then
+            corepack enable
+            yarn install --frozen-lockfile
+          elif [ -f package.json ]; then
+            npm install
+          else
+            echo "No package manifest found."
+          fi
+      - name: Lint workspaces
+        run: npm run lint --workspaces --if-present
+      - name: Verify package metadata
+        run: |
+          node -e "const pkg=require('./package.json'); if (!pkg.workspaces?.length) throw new Error('expected npm workspaces'); console.log('workspaces:', pkg.workspaces.join(', '))"
