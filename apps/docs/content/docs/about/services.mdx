@@ -27,7 +27,7 @@ Boundary: SeasonalWeather is one subsystem within SeasonalNet, not a synonym for
 
 ### SeasonalPBX, CME, and phone services
 
-Role: telephony, call control, phone provisioning, and related communications functions. SeasonalPBX is the current FreePBX/Asterisk service VM at `192.168.1.12`; it is no longer the Phone-LAN router or gateway. Phone-LAN uses `10.30.0.0/24` and `fd97:418:22dd:30::/64`, with routing ownership to be documented after the managed-switch/trunk cutover. SeasonalCME operates dual-stack on Voice VLAN 10, and SeasonalCME-R1 uses `10.10.0.10` plus `fd97:418:22dd:10::10` as its CME source addresses. SeasonalCME infrastructure management uses VLAN 42 at `10.42.0.0/24` and `fd97:418:22dd:42::/64`.
+Role: telephony, call control, phone provisioning, and related communications functions. SeasonalPBX is the current FreePBX/Asterisk service VM at `192.168.1.12`; it is not a Phone-LAN router or gateway. SeasonalNet-DSW1 owns the routed gateway for Phone-LAN VLAN 30 and the Voice VLAN 10 / Management VLAN 42 gateways used by SeasonalCME. SeasonalCME-R1 remains the CME application node at `10.10.0.10` plus `fd97:418:22dd:10::10`, while FW4C provides the production upstream firewall/NAT boundary.
 
 Boundary: voice systems are part of SeasonalNet's communications domain.
 

@@ -42,7 +42,7 @@ SeasonalWeather is an important subsystem within SeasonalNet, but it does not de
 
 These include SeasonalPBX, Cisco Unified Communications Manager Express, phone provisioning, and related communications services.
 
-SeasonalPBX is the current FreePBX/Asterisk service VM at `192.168.1.12`. It is no longer the Phone-LAN router or gateway. Phone-LAN uses `10.30.0.0/24` and `fd97:418:22dd:30::/64`, with the managed-switch/trunk routing boundary still pending implementation. SeasonalCME operates dual-stack on Voice VLAN 10 using `10.10.0.0/24` and `fd97:418:22dd:10::/64`; infrastructure management uses VLAN 42 at `10.42.0.0/24` and `fd97:418:22dd:42::/64`.
+SeasonalPBX is the current FreePBX/Asterisk service VM at `192.168.1.12`. It is no longer the Phone-LAN router or gateway. SeasonalNet-DSW1 owns the routed gateways for Phone-LAN VLAN 30, SeasonalCME Voice VLAN 10, and infrastructure Management VLAN 42. FW4C is the production edge firewall/router between DSW1 and Main LAN.
 
 `pbx-controld` is the PBX control-plane daemon for coordinating bot-managed and portal-managed extension state.
 
@@ -78,7 +78,7 @@ Admin workstations such as seasonal-victus (`192.168.1.40`) and seasonal-teal-la
 
 Main LAN uses native ISP-assigned IPv6. Routed private IPv6 segments use the SeasonalNet ULA allocation `fd97:418:22dd::/48`, subdivided into one `/64` per LAN or functional segment.
 
-OSPFv2 and OSPFv3 process 42 provide IPv4 and IPv6 routing between SeasonalEDGE-R1 and SeasonalCME-R1. The WNC-CR200A uses explicit static return routes for routed internal IPv4 and ULA prefixes.
+OSPFv2 and OSPFv3 provide IPv4 and IPv6 routing between SeasonalNet-DSW1, FW4C, and SeasonalCME-R1. The WNC-CR200A uses explicit static return routes through FW4C for VLANs 10, 30, and 42, while SeasonalVPN retains its own Main-LAN return path.
 
 ## Grounding and truth rules
 

@@ -7,7 +7,7 @@ description: "Network topology for the SeasonalNet VPN segment."
 - **IPv4 VPN subnet:** `10.88.0.0/24`
 - **IPv6 VPN ULA:** `fd97:418:22dd:88::/64`
 - **VPN gateways:** `10.88.0.1` / `fd97:418:22dd:88::1`
-- **Last updated:** 2026-06-29
+- **Last updated:** 2026-07-27
 
 ---
 
@@ -64,7 +64,7 @@ The public Edge URL is `https://web-vpn.seasonalnet.org`. VPN policy can quarant
 |---|---|---|
 | `10.88.0.0/24` via `192.168.1.22` | WNC-CR200A | Main-LAN IPv4 return route; metric `10` |
 | `fd97:418:22dd:88::/64` via SeasonalVPN Main-LAN link-local | WNC-CR200A | Main-LAN IPv6 ULA return route; metric `10` |
-| `10.88.0.0/24` via `192.168.1.22` | SeasonalEDGE-R1 | Static route redistributed into OSPFv2 under the VPN-client route policy |
+| DSW1/FW4C access to SeasonalVPN | DSW1 and FW4C routing policy | The former SeasonalEDGE-R1 redistribution path is retired; routed VLANs reach SeasonalVPN through the current distribution/edge design |
 | Internal SeasonalNet prefixes | SeasonalVPN / upstream routing policy | Routed access is permitted according to Defguard and host/router policy |
 
 The VPN ULA is private routed space. It is not advertised to the public Internet and is not translated into a public IPv6 prefix.
