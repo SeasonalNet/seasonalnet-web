@@ -7,20 +7,20 @@ SeasonalPBX public landing page and authenticated self-service dashboard.
 Install dependencies from the monorepo root:
 
 ```bash
-npm ci
+pnpm install --frozen-lockfile
 ```
 
 Run the PBX app:
 
 ```bash
-npm run dev --workspace @seasonalnet/pbx
+pnpm --filter @seasonalnet/pbx dev
 ```
 
 Validate the app:
 
 ```bash
-npm run lint --workspace @seasonalnet/pbx
-npm run build --workspace @seasonalnet/pbx
+pnpm --filter @seasonalnet/pbx lint
+pnpm --filter @seasonalnet/pbx build
 ```
 
 ## Self-service dashboard

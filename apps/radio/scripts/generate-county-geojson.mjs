@@ -12,7 +12,7 @@
  * Output:   public/counties-filtered.json  (~150-250 KB)
  */
 
-import { createWriteStream, mkdirSync } from "fs";
+import { mkdirSync } from "fs";
 import { writeFile } from "fs/promises";
 import { resolve } from "path";
 

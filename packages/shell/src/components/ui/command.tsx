@@ -4,7 +4,7 @@ import * as React from "react"
 import { Search } from "lucide-react"
 import { Command as CommandPrimitive } from "cmdk"
 
-import { cn } from "@seasonalnet/shell/src/lib/utils"
+import { cn } from "../../lib/utils"
 
 function Command({ className, ...props }: React.ComponentProps<typeof CommandPrimitive>) {
   return (

@@ -1,8 +1,18 @@
 {
   "name": "seasonalnet-web",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*"
-  ]
+  "packageManager": "pnpm@11.17.0",
+  "scripts": {
+    "lint": "pnpm --recursive run lint",
+    "build": "pnpm --recursive run build",
+    "check": "pnpm run lint && pnpm run build",
+    "knip": "knip",
+    "deps:audit": "knip --include dependencies,unlisted,unresolved,binaries",
+    "deps:audit:strict": "knip --strict --include dependencies,unlisted,unresolved,binaries"
+  },
+  "devDependencies": {
+    "@types/node": "^20.19.43",
+    "knip": "^6.29.0",
+    "typescript": "^5.9.3"
+  }
 }

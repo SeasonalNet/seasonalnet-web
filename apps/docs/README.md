@@ -27,17 +27,17 @@ Only explicitly allowlisted content from `seasonalnet-docs` may be synced into t
 Sync from a sibling checkout at `/opt/git-staging/seasonalnet-docs`:
 
 ```bash
-npm run docs:sync --workspace @seasonalnet/docs
+pnpm --filter @seasonalnet/docs docs:sync
 ```
 
 Build with sync first:
 
 ```bash
-npm run build:public --workspace @seasonalnet/docs
+pnpm --filter @seasonalnet/docs build:public
 ```
 
 Override the source path when needed:
 
 ```bash
-SEASONALNET_DOCS_SOURCE=/path/to/seasonalnet-docs npm run docs:sync --workspace @seasonalnet/docs
+SEASONALNET_DOCS_SOURCE=/path/to/seasonalnet-docs pnpm --filter @seasonalnet/docs docs:sync
 ```

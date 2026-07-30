@@ -8,7 +8,7 @@ import remarkGfm from "remark-gfm"
 import { codeToHtml } from "shiki/bundle/web"
 import type { BundledLanguage, BundledTheme } from "shiki/bundle/web"
 
-import { cn } from "@seasonalnet/shell/src/lib/utils"
+import { cn } from "../../lib/utils"
 
 type MarkdownContentProps = {
   content: string

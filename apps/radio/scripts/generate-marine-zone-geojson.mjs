@@ -6,13 +6,13 @@
  * public/marine-zones-filtered.json.
  *
  * Usage:
- *   npm i -D shapefile
+ *   pnpm run generate:marine-zone-geojson
  *   node scripts/generate-marine-zone-geojson.mjs
  *
  * Requires:
  *   - Node 18+ (built-in fetch)
  *   - system unzip command available
- *   - npm package: shapefile
+ *   - pnpm package: shapefile
  *
  * Source:
  *   - Official NWS Marine Zones page

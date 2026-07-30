@@ -45,7 +45,8 @@ seasonalnet-web/
 ├── AGENTS.md
 ├── README.md
 ├── package.json
-├── package-lock.json
+├── pnpm-lock.yaml
+├── pnpm-workspace.yaml
 ├── apps/
 │   ├── admin/
 │   ├── agent/
@@ -96,71 +97,71 @@ Current workspace characteristics:
 - NextAuth/Auth.js present in the admin and agent apps
 - shared shell code in `packages/shell`
 
-The root `package.json` is intentionally small and currently defines workspace membership rather than a large orchestration layer.
+The root `package.json` defines repository-wide scripts and development tooling. Workspace membership is defined in `pnpm-workspace.yaml`.
 
 ## Working in this repository
 
 Install dependencies at the repository root:
 
 ```bash
-npm install
+pnpm install
 ```
 
 Run an individual app in development:
 
 ```bash
-npm run dev --workspace @seasonalnet/www
-npm run dev --workspace @seasonalnet/radio
-npm run dev --workspace @seasonalnet/pbx
-npm run dev --workspace @seasonalnet/prov
-npm run dev --workspace @seasonalnet/admin
-npm run dev --workspace @seasonalnet/agent
-npm run dev --workspace @seasonalnet/docs
+pnpm --filter @seasonalnet/www dev
+pnpm --filter @seasonalnet/radio dev
+pnpm --filter @seasonalnet/pbx dev
+pnpm --filter @seasonalnet/prov dev
+pnpm --filter @seasonalnet/admin dev
+pnpm --filter @seasonalnet/agent dev
+pnpm --filter @seasonalnet/docs dev
 ```
 
 Build an individual app:
 
 ```bash
-npm run build --workspace @seasonalnet/www
-npm run build --workspace @seasonalnet/radio
-npm run build --workspace @seasonalnet/pbx
-npm run build --workspace @seasonalnet/prov
-npm run build --workspace @seasonalnet/admin
-npm run build --workspace @seasonalnet/agent
-npm run build --workspace @seasonalnet/docs
+pnpm --filter @seasonalnet/www build
+pnpm --filter @seasonalnet/radio build
+pnpm --filter @seasonalnet/pbx build
+pnpm --filter @seasonalnet/prov build
+pnpm --filter @seasonalnet/admin build
+pnpm --filter @seasonalnet/agent build
+pnpm --filter @seasonalnet/docs build
 ```
 
 Build the public docs app with its build-time docs sync first:
 
 ```bash
-npm run build:public --workspace @seasonalnet/docs
+pnpm --filter @seasonalnet/docs build:public
 ```
 
 Lint an individual app:
 
 ```bash
-npm run lint --workspace @seasonalnet/www
-npm run lint --workspace @seasonalnet/radio
-npm run lint --workspace @seasonalnet/pbx
-npm run lint --workspace @seasonalnet/prov
-npm run lint --workspace @seasonalnet/admin
-npm run lint --workspace @seasonalnet/agent
-npm run lint --workspace @seasonalnet/docs
+pnpm --filter @seasonalnet/www lint
+pnpm --filter @seasonalnet/radio lint
+pnpm --filter @seasonalnet/pbx lint
+pnpm --filter @seasonalnet/prov lint
+pnpm --filter @seasonalnet/admin lint
+pnpm --filter @seasonalnet/agent lint
+pnpm --filter @seasonalnet/docs lint
 ```
 
 Build all workspaces from the root when broad validation is needed:
 
 ```bash
-npm run build --workspaces --if-present
+pnpm build
 ```
 
 Lint all workspaces from the root when broad validation is needed:
 
 ```bash
-npm run lint --workspaces --if-present
+pnpm lint
 ```
 
-`--if-present` is intentional because the workspace set includes shared packages such as `packages/shell` that may not define app-style `build` or `lint` scripts.
+The root scripts use pnpm's recursive runner. Workspaces without the requested script, such as `packages/shell`, are skipped.
 
 ## Expected workflow
 
