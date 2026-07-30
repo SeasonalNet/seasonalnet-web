@@ -517,7 +517,11 @@ export function PBXDashboard() {
   }
 
   useEffect(() => {
-    load()
+    const initialId = window.setTimeout(() => void load(), 0)
+
+    return () => {
+      window.clearTimeout(initialId)
+    }
   }, [])
 
   async function mutate<T>(fn: () => Promise<T>, after?: (payload: T) => void) {
