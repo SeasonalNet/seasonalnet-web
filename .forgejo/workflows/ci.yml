@@ -43,7 +43,7 @@ jobs:
       - name: Verify dependency policy
         run: |
           pnpm ignored-builds
-          pnpm deps:audit
+          KNIP_DISABLE_RAW_TRANSFER=1 pnpm deps:audit
           pnpm --recursive list --depth -1
 
       - name: Lint currently clean workspaces
