@@ -7,7 +7,7 @@ on:
 
 jobs:
   web:
-    runs-on: node20
+    runs-on: node24
 
     steps:
       - name: Check out repository
