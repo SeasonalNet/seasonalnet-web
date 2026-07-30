@@ -8,35 +8,63 @@ on:
 jobs:
   web:
     runs-on: node20
+
     steps:
-      - uses: actions/checkout@v6
-      - name: Install dependencies
+      - name: Check out repository
+        uses: actions/checkout@v6
+
+      - name: Enable pnpm
         run: |
-          if [ -f package-lock.json ]; then
-            npm ci
-          elif [ -f pnpm-lock.yaml ]; then
-            corepack enable
-            pnpm install --frozen-lockfile
-          elif [ -f yarn.lock ]; then
-            corepack enable
-            yarn install --frozen-lockfile
-          elif [ -f package.json ]; then
-            npm install
-          else
-            echo "No package manifest found."
-          fi
+          corepack enable
+          pnpm --version
+          node --version
+
       - name: Verify package metadata
         run: |
-          node -e "const pkg=require('./package.json'); if (!pkg.workspaces?.length) throw new Error('expected npm workspaces'); console.log('workspaces:', pkg.workspaces.join(', '))"
+          node <<'NODE'
+          const pkg = require("./package.json");
+
+          if (pkg.packageManager !== "pnpm@11.17.0") {
+            throw new Error(
+              `expected packageManager pnpm@11.17.0, got ${pkg.packageManager}`
+            );
+          }
+
+          console.log("package manager:", pkg.packageManager);
+          NODE
+
+          test -f pnpm-workspace.yaml
+          test -f pnpm-lock.yaml
+          test ! -e package-lock.json
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Verify dependency policy
+        run: |
+          pnpm ignored-builds
+          pnpm deps:audit
+          pnpm --recursive list --depth -1
+
       - name: Lint currently clean workspaces
         run: |
-          npm run lint --workspace @seasonalnet/admin
-          npm run lint --workspace @seasonalnet/docs
-          npm run lint --workspace @seasonalnet/pbx
-          npm run lint --workspace @seasonalnet/prov
-          npm run lint --workspace @seasonalnet/www
-      - name: Report known lint debt without gating CI
+          pnpm --filter @seasonalnet/admin lint
+          pnpm --filter @seasonalnet/docs lint
+          pnpm --filter @seasonalnet/pbx lint
+          pnpm --filter @seasonalnet/prov lint
+          pnpm --filter @seasonalnet/www lint
+
+      - name: Report known Agent lint debt
         continue-on-error: true
-        run: |
-          npm run lint --workspace @seasonalnet/agent
-          npm run lint --workspace @seasonalnet/radio
+        run: pnpm --filter @seasonalnet/agent lint
+
+      - name: Report known Radio lint debt
+        continue-on-error: true
+        run: pnpm --filter @seasonalnet/radio lint
+
+      - name: Build all applications
+        run: pnpm build
+
+      - name: Report transitive peer advisories
+        continue-on-error: true
+        run: pnpm peers check
