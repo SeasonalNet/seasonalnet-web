@@ -50,9 +50,13 @@ export function SiteAnnouncements({ className }: { className?: string }) {
   }, [])
 
   React.useEffect(() => {
-    void load()
-    const id = window.setInterval(() => void load(), 5 * 60 * 1000)
-    return () => window.clearInterval(id)
+    const initialId = window.setTimeout(() => void load(), 0)
+    const intervalId = window.setInterval(() => void load(), 5 * 60 * 1000)
+
+    return () => {
+      window.clearTimeout(initialId)
+      window.clearInterval(intervalId)
+    }
   }, [load])
 
   if (!loaded) return null
