@@ -63,7 +63,7 @@ jobs:
         run: pnpm --filter @seasonalnet/radio lint
 
       - name: Build all applications
-        run: pnpm build
+        run: pnpm --workspace-concurrency=1 --recursive run build
 
       - name: Report transitive peer advisories
         continue-on-error: true
