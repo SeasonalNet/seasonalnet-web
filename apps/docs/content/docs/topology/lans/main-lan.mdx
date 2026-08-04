@@ -78,9 +78,10 @@ VMs in this band are static-addressed service hosts. SeasonalR230 hosts the orig
 
 | IP | Device | Notes |
 |---|---|---|
-| `192.168.1.40` | seasonal-victus (Victus by HP Gaming Laptop 15-fa1xxx) | Ubuntu desktop/admin workstation on static Wi-Fi; no longer primary service VM host or ad-hoc dependency/build host |
-| `192.168.1.41` | seasonal-teal-laptop | Ubuntu laptop / secondary admin laptop and build/test workstation; DNS `seasonal-teal-laptop.lan.seasonalnet.org` |
-| `192.168.1.42 – 192.168.1.49` | *(reserved)* | Future fixed admin clients |
+| `192.168.1.40` | victus (Victus by HP Gaming Laptop 15-fa1xxx) | Ubuntu desktop/admin workstation on static Ethernet; not an ad-hoc dependency/build host |
+| `192.168.1.41` | teal | Ubuntu laptop / secondary admin workstation and build/test host; DNS `seasonal-teal-laptop.lan.seasonalnet.org` |
+| `192.168.1.42` | cobalt | Ubuntu laptop / third admin workstation; DNS `cobalt.lan.seasonalnet.org` |
+| `192.168.1.43 – 192.168.1.49` | *(reserved)* | Future fixed admin clients |
 
 ---
 
@@ -93,6 +94,7 @@ VMs in this band are static-addressed service hosts. SeasonalR230 hosts the orig
 | `192.168.1.52` | SeasonalBridge-ROOT (AIR-AP1142N-A-K9) | Legacy wireless bridge ROOT; moved out of the infrastructure-reserved band |
 | `192.168.1.53` | SeasonalBridge-NONROOT (AIR-AP1142N-A-K9) | Legacy wireless bridge NONROOT; quarantined/disabled as a production path unless revisited |
 | `192.168.1.54` | SeasonalNet-NP-R1 (Cisco 1921) | Non-production lab router; DNS `np-r1.lan.seasonalnet.org`; Main-LAN management only, with no production NAT, DHCP, OSPF, or VLAN gateway role; SeasonalNet RSA SCEP identity installed |
+| `192.168.1.55 - .99` | *(reserved)* | Future static non-server clients |
 
 ---
 
@@ -182,10 +184,12 @@ SeasonalWeb receives public HTTP/HTTPS traffic and routes hostname-based service
 | SeasonalMail-IMAP | 143 | TCP | `192.168.1.13` (SeasonalMail) |
 | SeasonalMail-POP | 110 | TCP | `192.168.1.13` (SeasonalMail) |
 | SeasonalMail-POP3S | 995 | TCP | `192.168.1.13` (SeasonalMail) |
+
 ---
 
 ## Known Remaining Items
 
+- The FW4C NAT box has a `.5` address in Main-LAN despite lower addresses being free, re-document if changed.
 - SeasonalBack currently stores PBS data on its VM root filesystem / single virtual disk. Re-document if a separate datastore disk, passthrough disk, direct-attached storage layout, or SeasonalNAS-backed backup storage layout is added.
 - SeasonalMonitor SNMP polling and Redfish/iDRAC collection have a working foundation; continue expanding dashboards and target coverage as needed.
 - SeasonalBridge-NONROOT remains quarantined/disabled as a production path; clean up stale bridge IPv6/autoconfig details only if the Aironet bridge is revisited.
