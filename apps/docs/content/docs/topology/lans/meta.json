@@ -2,6 +2,7 @@
   "title": "LAN Maps",
   "pages": [
     "index",
+    "management-vlans",
     "main-lan",
     "seasonalcme",
     "phone-lan",

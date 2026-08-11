@@ -5,7 +5,7 @@ description: "Address bands, infrastructure inventory, and routing notes for the
 
 - **Subnet:** `192.168.1.0/24`
 - **Gateway:** `192.168.1.1` (Verizon WNC-CR200A)
-- **Last updated:** 2026-07-27
+- **Last updated:** 2026-08-11
 
 ---
 
@@ -17,7 +17,7 @@ description: "Address bands, infrastructure inventory, and routing notes for the
 | `.2 – .5` | Network infrastructure / reserved infrastructure |
 | `.6 – .22` | Active servers and service VMs (static, assigned in-guest) |
 | `.23 – .29` | Reserved future servers / service VMs |
-| `.30 – .39` | Hypervisors and BMC/OOB management interfaces |
+| `.30 – .39` | Hypervisors and reserved server infrastructure; BMC/OOB management moved to VLAN 41 |
 | `.40 – .49` | Admin workstations / fixed laptops |
 | `.50 – .99` | Static non-server devices (ATA, printers, IoT, fixed appliances, etc.) |
 | `.100 – .254` | DHCP pool (dynamic clients) |
@@ -62,15 +62,15 @@ VMs in this band are static-addressed service hosts. SeasonalR230 hosts the orig
 
 ---
 
-## Hypervisors and BMC/OOB management (`.30 – .39`)
+## Hypervisors and former Main-LAN BMC space (`.30 – .39`)
 
 | IP | Device | Notes |
 |---|---|---|
 | `192.168.1.30` | SeasonalR230 | Dell PowerEdge R230 / primary Proxmox VM host on Main LAN via CME rack VLAN 99 transit path. Owns service VMIDs `101`–`109`, `114`, and `115`. DNS aliases include `r230.lan.seasonalnet.org` and `seasonalr230.lan.seasonalnet.org`. |
 | `192.168.1.31` | SeasonalR340 | Dell PowerEdge R340 / Proxmox VE host on Main LAN via CME rack VLAN 99 transit path. Hosts SeasonalBack (`100`), SeasonalNAS (`110`), SeasonalSand (`111`), SeasonalDB (`112`), and SeasonalDock (`113`). DNS aliases include `r340.lan.seasonalnet.org` and `seasonalr340.lan.seasonalnet.org`. |
-| `192.168.1.32` | SeasonalR230-iDRAC | Dell PowerEdge R230 out-of-band management. DNS aliases include `r230-idrac.lan.seasonalnet.org` and `seasonalr230-idrac.lan.seasonalnet.org`. |
-| `192.168.1.33` | SeasonalR340-iDRAC | Dell PowerEdge R340 out-of-band management. DNS aliases include `r340-idrac.lan.seasonalnet.org` and `seasonalr340-idrac.lan.seasonalnet.org`. |
-| `192.168.1.34 – 192.168.1.39` | *(reserved)* | Future VM hosts and BMC/OOB management |
+| `192.168.1.32` | *(free)* | Former SeasonalR230-iDRAC address; BMC moved to `10.41.0.32` on VLAN 41 / BMC-MGMT |
+| `192.168.1.33` | *(free)* | Former SeasonalR340-iDRAC address; BMC moved to `10.41.0.33` on VLAN 41 / BMC-MGMT |
+| `192.168.1.34 – 192.168.1.39` | *(reserved)* | Future VM hosts and server infrastructure |
 
 ---
 
@@ -104,9 +104,14 @@ VMs in this band are static-addressed service hosts. SeasonalR230 hosts the orig
 |---|---|---|
 | `10.10.0.0/24` / `fd97:418:22dd:10::/64` | SeasonalCME Voice VLAN 10 | SeasonalNet-DSW1 `Vlan10` |
 | `10.30.0.0/24` / `fd97:418:22dd:30::/64` | Phone-LAN VLAN 30 | SeasonalNet-DSW1 `Vlan30` |
-| `10.42.0.0/24` / `fd97:418:22dd:42::/64` | SeasonalCME Management VLAN 42 | SeasonalNet-DSW1 `Vlan42` |
+| `10.40.0.0/24` / `fd97:418:22dd:40::/64` | NET-MGMT VLAN 40 | SeasonalNet-DSW1 `Vlan40` |
+| `10.41.0.0/24` / `fd97:418:22dd:41::/64` | BMC-MGMT VLAN 41 | SeasonalNet-DSW1 `Vlan41` |
+| `10.42.0.0/24` / `fd97:418:22dd:42::/64` | CME-MGMT VLAN 42 | SeasonalNet-DSW1 `Vlan42` |
+| `10.43.0.0/24` / `fd97:418:22dd:43::/64` | HOST-MGMT VLAN 43 | SeasonalNet-DSW1 `Vlan43` |
 | `10.255.255.0/30` / `fd97:418:22dd:255::/64` | DSW1–FW4C routed transit | DSW1 `.1` / `::1`; FW4C `.2` / `::2` |
 | `10.88.0.0/24` / `fd97:418:22dd:88::/64` | SeasonalVPN routed VPN LAN | SeasonalVPN (`192.168.1.22`) |
+
+The VLAN 40–43 management/control-plane family and its current migration state are documented in [`management-vlans-map.md`](/docs/topology/lans/management-vlans).
 
 ---
 
@@ -119,7 +124,7 @@ VMs in this band are static-addressed service hosts. SeasonalR230 hosts the orig
 | Static service records | SeasonalDNS | Service VM records in `lan.seasonalnet.org` are managed in Technitium. Admin/static hosts should prefer `192.168.1.14` as DNS to avoid router-side stale or empty local answers. |
 | SeasonalWX internal DNS records | SeasonalDNS | `wx.lan.seasonalnet.org`, `seasonalwx.lan.seasonalnet.org`, and `seasonalweather.lan.seasonalnet.org` → `192.168.1.10`. The `seasonalweather` alias now points at SeasonalWX, not the retired original VM. |
 | Hypervisor internal DNS records | SeasonalDNS | `r230.lan.seasonalnet.org` and `seasonalr230.lan.seasonalnet.org` → `192.168.1.30`; `r340.lan.seasonalnet.org` and `seasonalr340.lan.seasonalnet.org` → `192.168.1.31`. |
-| iDRAC internal DNS records | SeasonalDNS | `r230-idrac.lan.seasonalnet.org` / `seasonalr230-idrac.lan.seasonalnet.org` → `192.168.1.32`; `r340-idrac.lan.seasonalnet.org` / `seasonalr340-idrac.lan.seasonalnet.org` → `192.168.1.33`. |
+| iDRAC internal DNS records | SeasonalDNS | `r230-idrac.lan.seasonalnet.org` / `seasonalr230-idrac.lan.seasonalnet.org` → `10.41.0.32`; `r340-idrac.lan.seasonalnet.org` / `seasonalr340-idrac.lan.seasonalnet.org` → `10.41.0.33` on BMC-MGMT. |
 | SeasonalDB internal DNS record | SeasonalDNS | `seasonaldb.lan.seasonalnet.org` → `192.168.1.19`. |
 | SeasonalDock internal DNS record | SeasonalDNS | `seasonaldock.lan.seasonalnet.org` → `192.168.1.20`. |
 | SeasonalBack internal DNS records | SeasonalDNS | `seasonalback.lan.seasonalnet.org` → `192.168.1.16`; `back.lan.seasonalnet.org` CNAME/alias → `seasonalback.lan.seasonalnet.org`. |
@@ -130,8 +135,8 @@ VMs in this band are static-addressed service hosts. SeasonalR230 hosts the orig
 | SeasonalCA internal DNS records | SeasonalDNS | `seasonalca.lan.seasonalnet.org` and `ca.lan.seasonalnet.org` → `192.168.1.21`. |
 | SeasonalVPN internal DNS records | SeasonalDNS | `seasonalvpn.lan.seasonalnet.org` → `192.168.1.22`; `vpn.lan.seasonalnet.org` is an internal alias. |
 | FW4C internal DNS record | SeasonalDNS | `fw4c.lan.seasonalnet.org` → `192.168.1.5`. |
-| Distribution switch internal DNS record | SeasonalDNS | `seasonalnet-dsw1.lan.seasonalnet.org` → `10.42.0.1`. `dsw1.lan.seasonalnet.org` is an alias. |
-| Access switch internal DNS records | SeasonalDNS | `seasonalnet-sw1.lan.seasonalnet.org` → `10.42.0.2`; `seasonalnet-sw2.lan.seasonalnet.org` → `10.42.0.3`; `seasonalnet-sw3.lan.seasonalnet.org` → `10.42.0.4`. Shorthand `<swX.lan.seasonalnet.org>`, where X is the switch number, are aliases. |
+| Distribution switch internal DNS record | SeasonalDNS | `seasonalnet-dsw1.lan.seasonalnet.org` → current `10.42.0.1`. `dsw1.lan.seasonalnet.org` is an alias. The management identity is scheduled to move to NET-MGMT/VLAN 40. |
+| Access switch internal DNS records | SeasonalDNS | `seasonalnet-sw1.lan.seasonalnet.org` → `10.42.0.2`; `seasonalnet-sw2.lan.seasonalnet.org` → `10.42.0.3`; `seasonalnet-sw3.lan.seasonalnet.org` → `10.42.0.4`. Shorthand `<swX.lan.seasonalnet.org>`, where X is the switch number, are aliases. These are transitional CME-MGMT/VLAN 42 addresses scheduled to move to NET-MGMT/VLAN 40. |
 | NP-R1 internal DNS record | SeasonalDNS | `seasonalnet-np-r1.lan.seasonalnet.org` → `192.168.1.54`. `np-r1.lan.seasonalnet.org` is an alias. |
 | SeasonalMonitor public Grafana DNS | Cloudflare / SeasonalWeb | `grafana.seasonalnet.org` is a Cloudflare-proxied public hostname terminating at SeasonalWeb (`192.168.1.8`), then reverse-proxied to Grafana on SeasonalMonitor (`192.168.1.15:3000`). Prometheus remains private. |
 | Public docs DNS | Cloudflare / SeasonalWeb | `docs.seasonalnet.org` is served through the SeasonalWeb / SeasonalNet docs deployment. `VMs/` remains excluded from published docs. |
@@ -146,7 +151,10 @@ Primary static routes use metric `10`; future alternate or backup routes use met
 |---|---|---:|---|
 | `10.10.0.0/24` | `192.168.1.5` | `10` | SeasonalCME Voice IPv4 return route through FW4C |
 | `10.30.0.0/24` | `192.168.1.5` | `10` | Phone-LAN IPv4 return route through FW4C |
-| `10.42.0.0/24` | `192.168.1.5` | `10` | SeasonalCME Management IPv4 return route through FW4C |
+| `10.40.0.0/24` | `192.168.1.5` | `10` | NET-MGMT IPv4 return route through FW4C |
+| `10.41.0.0/24` | `192.168.1.5` | `10` | BMC-MGMT IPv4 return route through FW4C |
+| `10.42.0.0/24` | `192.168.1.5` | `10` | CME-MGMT IPv4 return route through FW4C |
+| `10.43.0.0/24` | `192.168.1.5` | `10` | HOST-MGMT IPv4 return route through FW4C |
 | `10.88.0.0/24` | `192.168.1.22` | `10` | SeasonalVPN IPv4 return route |
 | `fd97:418:22dd:10::/64` | FW4C Main-LAN link-local | `10` | SeasonalCME Voice ULA return route |
 | `fd97:418:22dd:30::/64` | FW4C Main-LAN link-local | `10` | Phone-LAN ULA return route |
@@ -155,7 +163,7 @@ Primary static routes use metric `10`; future alternate or backup routes use met
 
 The Main LAN itself uses the CR200A's native ISP-assigned IPv6 prefix. The SeasonalNet ULA `/48` is routed only as specific `/64`s because different segments have different next hops.
 
-FW4C owns the production edge/firewall role at `192.168.1.5`. SeasonalNet-DSW1 reaches it over `10.255.255.0/30` and `fd97:418:22dd:255::/64`, then routes VLANs 10, 30, and 42 through FW4C for upstream access. SeasonalNet-NP-R1 at `192.168.1.54` is not part of this path; it retains only Main-LAN management, independent IPv4/IPv6 defaults through the CR200A, and fully suppressed outbound IPv6 Router Advertisements.
+FW4C owns the production edge/firewall role at `192.168.1.5`. SeasonalNet-DSW1 reaches it over `10.255.255.0/30` and `fd97:418:22dd:255::/64`, then routes VLANs 10, 30, 40, 41, 42, and 43 through FW4C for upstream access. SeasonalNet-NP-R1 at `192.168.1.54` is not part of this path; it retains only Main-LAN management, independent IPv4/IPv6 defaults through the CR200A, and fully suppressed outbound IPv6 Router Advertisements.
 
 ---
 
@@ -191,6 +199,6 @@ SeasonalWeb receives public HTTP/HTTPS traffic and routes hostname-based service
 
 - The FW4C NAT box has a `.5` address in Main-LAN despite lower addresses being free, re-document if changed.
 - SeasonalBack currently stores PBS data on its VM root filesystem / single virtual disk. Re-document if a separate datastore disk, passthrough disk, direct-attached storage layout, or SeasonalNAS-backed backup storage layout is added.
-- SeasonalMonitor SNMP polling and Redfish/iDRAC collection have a working foundation; continue expanding dashboards and target coverage as needed.
+- SeasonalMonitor SNMP polling and Redfish/iDRAC collection now reaches the BMCs on VLAN 41 using their internal FQDNs; continue expanding dashboards and target coverage as needed.
 - SeasonalBridge-NONROOT remains quarantined/disabled as a production path; clean up stale bridge IPv6/autoconfig details only if the Aironet bridge is revisited.
 - During the 2026-06-07 LAN reshuffle, live `systemctl restart networking` on the Proxmox hosts detached VM tap interfaces from `vmbr0`; avoid that operation on live VM hosts unless prepared to reattach taps or reboot during maintenance.

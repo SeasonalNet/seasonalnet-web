@@ -7,7 +7,7 @@ description: "Routing, services, and attached-device map for the Phone-LAN segme
 - **IPv6 ULA:** `fd97:418:22dd:30::/64`
 - **Gateway:** `10.30.0.1` / `fd97:418:22dd:30::1` (SeasonalNet-DSW1 `Vlan30`)
 - **VLAN ID:** `30`
-- **Last updated:** 2026-07-27
+- **Last updated:** 2026-08-11
 
 ---
 
@@ -31,8 +31,8 @@ description: "Routing, services, and attached-device map for the Phone-LAN segme
 |---|---|---|---|
 | `10.30.0.1` | SeasonalNet-DSW1 | `Vlan30` | IPv4 gateway and inter-VLAN routing boundary |
 | `fd97:418:22dd:30::1/64` | SeasonalNet-DSW1 | `Vlan30` | IPv6 gateway and routed ULA boundary |
-| `10.42.0.4` | SeasonalNet-SW3 | `Vlan42` | Cisco WS-C2960CX-8PC-L management address |
-| `fd97:418:22dd:42::4/64` | SeasonalNet-SW3 | `Vlan42` | SW3 management ULA |
+| `10.42.0.4` | SeasonalNet-SW3 | `Vlan42` | Current transitional management address; scheduled to move to NET-MGMT/VLAN 40 |
+| `fd97:418:22dd:42::4/64` | SeasonalNet-SW3 | `Vlan42` | Current transitional management ULA; scheduled to move to NET-MGMT/VLAN 40 |
 | `192.168.1.12` | SeasonalPBX | Main-LAN interface | FreePBX/Asterisk service only; not a Phone-LAN router |
 | `10.30.0.4` | SeasonalAP-2702E | `BVI1` | Static IPv4 management address |
 | `fd97:418:22dd:30::4/64` | SeasonalAP-2702E | `BVI1` | Static ULA management address |
@@ -84,8 +84,8 @@ The retired TL-SF1005P no longer owns an active switching role in the documented
 | `Gi0/5 – Gi0/7` | Access VLAN 30 | Unused | Spare Phone-LAN access capacity |
 | `Gi0/8` | Access VLAN 1 | Unused | Default access VLAN; assign deliberately before use |
 | `Gi0/9` | Shutdown | Unused copper uplink | Administratively disabled |
-| `Gi0/10` | 802.1Q trunk, native VLAN 99 | SeasonalNet-SW2 `Gi1/0/22` | Allows VLANs 30, 42, and 99; alternate/blocking on SW3 under the normal Rapid-PVST topology |
-| `Gi0/11` | 802.1Q fiber trunk, native VLAN 99 | SeasonalNet-DSW1 `Gi1/0/10` | Allows VLANs 30, 42, and 99; root/forwarding path to DSW1 for each active VLAN |
+| `Gi0/10` | 802.1Q trunk, native VLAN 99 | SeasonalNet-SW2 `Gi1/0/22` | Allows VLANs 30, 40, 41, 42, 43, and 99; alternate/blocking on SW3 under the normal Rapid-PVST topology |
+| `Gi0/11` | 802.1Q fiber trunk, native VLAN 99 | SeasonalNet-DSW1 `Gi1/0/10` | Allows VLANs 30, 40, 41, 42, 43, and 99; root/forwarding path to DSW1 for each active VLAN |
 | `Gi0/12` | Shutdown | Unused SFP uplink | Administratively disabled |
 
 ---
@@ -96,8 +96,8 @@ SeasonalNet-DSW1 is the Rapid-PVST root for every VLAN carried by SW3. The direc
 
 | VLAN(s) | SW3 port / role | Peer | Operational state |
 |---|---|---|---|
-| `30`, `42`, `99` | `Gi0/11` — root port | DSW1 `Gi1/0/10` | Forwarding; direct fiber path to the root bridge |
-| `30`, `42`, `99` | `Gi0/10` — alternate port | SW2 `Gi1/0/22` | Blocking/discarding on SW3; SW2 is designated/forwarding on the segment |
+| `30`, `40`, `41`, `42`, `43`, `99` | `Gi0/11` — root port | DSW1 `Gi1/0/10` | Forwarding; direct fiber path to the root bridge |
+| `30`, `40`, `41`, `42`, `43`, `99` | `Gi0/10` — alternate port | SW2 `Gi1/0/22` | Blocking/discarding on SW3; SW2 is designated/forwarding on the segment |
 
 The copper trunk is not unused or administratively disabled. Rapid-PVST keeps it out of the forwarding topology during normal operation and can reconverge through it if the preferred fiber path becomes unavailable.
 
@@ -117,7 +117,7 @@ SeasonalNet-DSW1
         |
         | Gi1/0/10 ==fiber trunk== SW3 Gi0/11
         |
-SeasonalNet-SW3 (10.42.0.4 / fd97:418:22dd:42::4)
+SeasonalNet-SW3 (current mgmt 10.42.0.4 / fd97:418:22dd:42::4; VLAN 40 migration scheduled)
         |- Gi0/1 VLAN 99: seasonal-victus
         |- Gi0/2 VLAN 30: SeasonalAP-2702E
         |- Gi0/3 VLAN 30: Cisco 7841
@@ -125,7 +125,7 @@ SeasonalNet-SW3 (10.42.0.4 / fd97:418:22dd:42::4)
         |- Gi0/10 legacy copper trunk: SeasonalNet-SW2 Gi1/0/22
         |    `- alternate/blocking on SW3 under normal operation
         `- Gi0/11 fiber trunk: SeasonalNet-DSW1 Gi1/0/10
-             `- root/forwarding path for VLANs 30, 42, and 99
+             `- root/forwarding path for VLANs 30, 40, 41, 42, 43, and 99
 ```
 
 ---
@@ -135,6 +135,7 @@ SeasonalNet-SW3 (10.42.0.4 / fd97:418:22dd:42::4)
 - Phone-LAN moved from `192.168.56.0/24` / `fd42:56::/64` to `10.30.0.0/24` / `fd97:418:22dd:30::/64`.
 - SeasonalPBX remains the active PBX service but does not route Phone-LAN.
 - SeasonalNet-SW3 replaced the temporary unmanaged PoE switch and provides VLAN-aware distribution.
+- SW3 management still uses CME-MGMT/VLAN 42 during the transition; the management identity is scheduled to move to NET-MGMT/VLAN 40 with the other switches.
 - Main-LAN native GUA addresses are live ISP state and are not stable Phone-LAN identity.
 
 ---

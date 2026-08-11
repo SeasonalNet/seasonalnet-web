@@ -1,0 +1,118 @@
+---
+title: "SeasonalNet Management VLANs"
+description: "Topology documentation for the management VLAN segments."
+---
+
+- **NET-MGMT:** `10.40.0.0/24`, `fd97:418:22dd:40::/64` (VLAN 40)
+- **BMC-MGMT:** `10.41.0.0/24`, `fd97:418:22dd:41::/64` (VLAN 41)
+- **CME-MGMT:** `10.42.0.0/24`, `fd97:418:22dd:42::/64` (VLAN 42)
+- **HOST-MGMT:** `10.43.0.0/24`, `fd97:418:22dd:43::/64` (VLAN 43)
+- **Gateway owner:** SeasonalNet-DSW1
+- **Last updated:** 2026-08-11
+
+---
+
+## VLAN Family
+
+SeasonalNet reserves VLANs `40` through `49` for management and control-plane networks. VLANs 40 through 43 are allocated; VLANs 44 through 49 remain reserved for future management functions.
+
+| VLAN | Name | IPv4 | IPv6 ULA | Gateway | Current state |
+|---:|---|---|---|---|---|
+| 40 | `NET-MGMT` | `10.40.0.0/24` | `fd97:418:22dd:40::/64` | `10.40.0.1` / `fd97:418:22dd:40::1` | Routed and available; general network-device management migration is scheduled |
+| 41 | `BMC-MGMT` | `10.41.0.0/24` | `fd97:418:22dd:41::/64` | `10.41.0.1` / `fd97:418:22dd:41::1` | Active; PowerEdge iDRAC interfaces migrated here |
+| 42 | `CME-MGMT` | `10.42.0.0/24` | `fd97:418:22dd:42::/64` | `10.42.0.1` / `fd97:418:22dd:42::1` | Active; CME management plus transitional network-device management |
+| 43 | `HOST-MGMT` | `10.43.0.0/24` | `fd97:418:22dd:43::/64` | `10.43.0.1` / `fd97:418:22dd:43::1` | Routed and reserved for host/hypervisor management; no production host cutover yet |
+| 44-49 | Reserved | — | — | — | Held for future management/control-plane separation |
+
+The fourth ULA hextet follows the printed VLAN number, consistent with the site-wide `fd97:418:22dd::/48` allocation.
+
+---
+
+## Layer-3 Ownership
+
+SeasonalNet-DSW1 owns the IPv4 and IPv6 gateway SVIs for VLANs 40 through 43. The new VLAN 40, 41, and 43 SVIs are routed into the same DSW1/FW4C topology as the existing routed VLANs and are passive OSPF interfaces: their connected prefixes are advertised without forming neighbor adjacencies on the management LANs.
+
+| SVI | IPv4 | IPv6 | Role |
+|---|---|---|---|
+| `Vlan40` | `10.40.0.1/24` | `fd97:418:22dd:40::1/64` | NET-MGMT gateway |
+| `Vlan41` | `10.41.0.1/24` | `fd97:418:22dd:41::1/64` | BMC-MGMT gateway |
+| `Vlan42` | `10.42.0.1/24` | `fd97:418:22dd:42::1/64` | CME-MGMT gateway and current transitional switch-management gateway |
+| `Vlan43` | `10.43.0.1/24` | `fd97:418:22dd:43::1/64` | HOST-MGMT gateway |
+
+Main-LAN IPv4 return routes for VLANs 40, 41, 42, and 43 point through FW4C at `192.168.1.5`. FW4C learns the routed management prefixes from DSW1 over OSPF.
+
+---
+
+## BMC-MGMT
+
+The two production PowerEdge BMCs were migrated from Main LAN to VLAN 41 on 2026-08-11.
+
+| Address | Device | Attachment | Notes |
+|---|---|---|---|
+| `10.41.0.32` | SeasonalR230-iDRAC | SW2 `Gi1/0/13`, access VLAN 41 | Dell PowerEdge R230 iDRAC8 |
+| `10.41.0.33` | SeasonalR340-iDRAC | SW2 `Gi1/0/15`, access VLAN 41 | Dell PowerEdge R340 iDRAC9 |
+
+The corresponding Main-LAN addresses `192.168.1.32` and `192.168.1.33` are free again. The Proxmox host interfaces remain on Main LAN at `192.168.1.30` and `192.168.1.31`.
+
+The BMCs currently use IPv4 only. The VLAN 41 ULA and DSW1 IPv6 gateway are allocated and routed, but iDRAC IPv6 is disabled until deliberately enabled and documented.
+
+FW4C policy permits the required administrative path and a narrow HTTPS/Redfish monitoring path into BMC-MGMT rather than treating the VLAN as generally reachable from Main LAN.
+
+---
+
+## NET-MGMT Transition
+
+VLAN 40 is the target management network for switches and other general network infrastructure. The network-device management identities have **not** been renumbered yet.
+
+Current transitional assignments still on CME-MGMT/VLAN 42:
+
+| Current address | Device | Planned state |
+|---|---|---|
+| `10.42.0.1` / `fd97:418:22dd:42::1` | SeasonalNet-DSW1 | Move general network-management identity to VLAN 40 |
+| `10.42.0.2` | SeasonalNet-SW1 | Move management SVI to VLAN 40 |
+| `10.42.0.3` / `fd97:418:22dd:42::3` | SeasonalNet-SW2 | Move management SVI to VLAN 40 |
+| `10.42.0.4` / `fd97:418:22dd:42::4` | SeasonalNet-SW3 | Move management SVI to VLAN 40 |
+
+Until that cutover is performed, documentation and monitoring must continue to use the live VLAN 42 switch addresses. New general network-device management assignments should target NET-MGMT rather than extending the transitional VLAN 42 pattern.
+
+After the migration, VLAN 42 remains allocated as `CME-MGMT` for CME-specific management functions.
+
+---
+
+## Layer-2 Distribution
+
+VLANs 40, 41, and 43 were added to the existing management-capable trunks alongside VLAN 42. DSW1 remains the Rapid-PVST root for the 4x VLAN family.
+
+| Link | Management VLANs carried | Notes |
+|---|---|---|
+| DSW1 `Gi1/0/12` ↔ SW1 `Gi0/25` | 40, 41, 42, 43 | Direct fiber root path |
+| DSW1 `Gi1/0/11` ↔ SW2 `Gi1/0/25` | 40, 41, 42, 43 | Direct fiber root path |
+| DSW1 `Gi1/0/10` ↔ SW3 `Gi0/11` | 40, 41, 42, 43 | Direct fiber root path |
+| SW1 `Gi0/23` ↔ SW2 `Gi1/0/24` | 40, 41, 42, 43 | Retained redundant copper trunk |
+| SW2 `Gi1/0/22` ↔ SW3 `Gi0/10` | 40, 41, 42, 43 | Retained redundant copper trunk |
+
+The existing voice, Phone-LAN, and Main-LAN VLAN membership on these trunks remains documented in the corresponding segment maps.
+
+---
+
+## DNS and Monitoring
+
+SeasonalDNS owns the internal BMC records:
+
+- `r230-idrac.lan.seasonalnet.org` and `seasonalr230-idrac.lan.seasonalnet.org` resolve to `10.41.0.32`.
+- `r340-idrac.lan.seasonalnet.org` and `seasonalr340-idrac.lan.seasonalnet.org` resolve to `10.41.0.33`.
+
+SeasonalMonitor reaches the BMCs over HTTPS/Redfish through the restricted firewall path. Monitoring targets use the internal FQDNs rather than embedding the BMC addresses.
+
+The switch DNS records continue to resolve to their current VLAN 42 addresses until the NET-MGMT cutover is performed.
+
+---
+
+## Known Remaining Items
+
+- Migrate SeasonalNet-DSW1, SW1, SW2, SW3, and other general network-device management identities from VLAN 42/CME-MGMT to VLAN 40/NET-MGMT.
+- Update switch DNS records, monitoring targets, SSH configuration, and documentation atomically with the VLAN 40 cutover.
+- Keep VLAN 42 for CME-specific management after the network-device migration instead of reusing it as a generic management LAN.
+- Decide and document the HOST-MGMT endpoint migration plan before moving Proxmox host management off Main LAN.
+- Add/verify DSW1 inter-VLAN ACL policy for BMC-MGMT so traffic routed locally on DSW1 is subject to the intended management-source restrictions rather than relying only on FW4C policy.
+- Keep iDRAC IPv6 disabled until BMC IPv6 access policy and monitoring are intentionally enabled and tested.

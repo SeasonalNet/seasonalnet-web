@@ -22,6 +22,7 @@ export const PUBLIC_DOCS_MANAGED_OUTPUTS = [
   'topology/index.mdx',
   'topology/lans/index.mdx',
   'topology/lans/main-lan.mdx',
+  'topology/lans/management-vlans.mdx',
   'topology/lans/seasonalcme.mdx',
   'topology/lans/phone-lan.mdx',
   'topology/lans/seasonalvpn.mdx',
@@ -77,12 +78,20 @@ export const PUBLIC_DOCS_ALLOWLIST = [
     description: 'Address bands, infrastructure inventory, and routing notes for the main LAN.',
   },
   {
+    sourcePath: 'LANs/management-vlans-map.md',
+    outputPath: 'topology/lans/management-vlans.mdx',
+    routePath: '/docs/topology/lans/management-vlans',
+    section: 'topology-lans',
+    title: 'SeasonalNet Management VLANs',
+    description: 'Topology documentation for the management VLAN segments.',
+  },
+  {
     sourcePath: 'LANs/seasonalcme-network-map.md',
     outputPath: 'topology/lans/seasonalcme.mdx',
     routePath: '/docs/topology/lans/seasonalcme',
     section: 'topology-lans',
     title: 'SeasonalCME Network Map',
-    description: 'Voice and management VLAN topology for the SeasonalCME lab.',
+    description: 'Voice and management VLAN topology for the SeasonalCME segment',
   },
   {
     sourcePath: 'LANs/phonelan-map.md',
@@ -157,7 +166,7 @@ export const PUBLIC_DOCS_TOPOLOGY_META = {
 
 export const PUBLIC_DOCS_LANS_META = {
   title: 'LAN Maps',
-  pages: ['index', 'main-lan', 'seasonalcme', 'phone-lan', 'seasonalvpn'],
+  pages: ['index', 'management-vlans', 'main-lan', 'seasonalcme', 'phone-lan', 'seasonalvpn'],
 };
 
 export const PUBLIC_DOCS_POLICIES_META = {

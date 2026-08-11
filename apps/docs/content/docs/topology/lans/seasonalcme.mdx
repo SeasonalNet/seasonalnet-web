@@ -1,15 +1,15 @@
 ---
 title: "SeasonalCME Network Map"
-description: "Voice and management VLAN topology for the SeasonalCME lab."
+description: "Voice and management VLAN topology for the SeasonalCME segment"
 ---
 
 - **Voice subnet:** `10.10.0.0/24` (VLAN 10)
-- **Management subnet:** `10.42.0.0/24` (VLAN 42)
+- **CME management subnet:** `10.42.0.0/24` (VLAN 42 / CME-MGMT)
 - **Voice IPv6 ULA:** `fd97:418:22dd:10::/64`
-- **Management IPv6 ULA:** `fd97:418:22dd:42::/64`
+- **CME management IPv6 ULA:** `fd97:418:22dd:42::/64`
 - **Voice gateway:** `10.10.0.1` / `fd97:418:22dd:10::1` (SeasonalNet-DSW1 `Vlan10`)
-- **Management gateway:** `10.42.0.1` / `fd97:418:22dd:42::1` (SeasonalNet-DSW1 `Vlan42`)
-- **Last updated:** 2026-07-27
+- **CME management gateway:** `10.42.0.1` / `fd97:418:22dd:42::1` (SeasonalNet-DSW1 `Vlan42`)
+- **Last updated:** 2026-08-11
 
 ---
 
@@ -21,12 +21,14 @@ description: "Voice and management VLAN topology for the SeasonalCME lab."
 | VLAN 10 / `fd97:418:22dd:10::/64` | SeasonalCME voice IPv6 ULA | `fd97:418:22dd:10::1` | DSW1 SVI and routed IPv6 boundary |
 | VLAN 30 / `10.30.0.0/24` | Phone-LAN IPv4 | `10.30.0.1` | DSW1 SVI; distributed primarily through SW3 |
 | VLAN 30 / `fd97:418:22dd:30::/64` | Phone-LAN IPv6 ULA | `fd97:418:22dd:30::1` | DSW1 SVI and routed IPv6 boundary |
-| VLAN 42 / `10.42.0.0/24` | Network infrastructure management IPv4 | `10.42.0.1` | DSW1 management and gateway SVI |
-| VLAN 42 / `fd97:418:22dd:42::/64` | Network infrastructure management IPv6 ULA | `fd97:418:22dd:42::1` | DSW1 management and gateway SVI |
+| VLAN 40 / `10.40.0.0/24` | NET-MGMT IPv4 | `10.40.0.1` | DSW1 SVI; target network for general network-device management |
+| VLAN 41 / `10.41.0.0/24` | BMC-MGMT IPv4 | `10.41.0.1` | DSW1 SVI; active PowerEdge iDRAC management network |
+| VLAN 42 / `10.42.0.0/24` | CME-MGMT IPv4 | `10.42.0.1` | DSW1 SVI; CME management plus transitional switch-management identities |
+| VLAN 43 / `10.43.0.0/24` | HOST-MGMT IPv4 | `10.43.0.1` | DSW1 SVI; routed/reserved for host management |
 | VLAN 99 | Main-LAN transit/access VLAN | WNC-CR200A | Layer-2 Main-LAN domain; DSW1 is STP root but not the VLAN 99 IP gateway |
 | `10.255.255.0/30` / `fd97:418:22dd:255::/64` | DSW1–FW4C routed transit | Point-to-point | Carries routed traffic and OSPF between distribution and edge |
 
-The former Voice VLAN 10 IPv4 subnet `10.42.0.0/24` was moved to Management VLAN 42, and Voice VLAN 10 was renumbered to `10.10.0.0/24`. The former management subnet `10.42.2.0/24` and legacy `fd42:42::/64` / `fd42:42:2::/64` prefixes are retired.
+The former Voice VLAN 10 IPv4 subnet `10.42.0.0/24` was moved to VLAN 42, and Voice VLAN 10 was renumbered to `10.10.0.0/24`. VLAN 42 is now named `CME-MGMT`. General switch/network-device management remains there only as a transition and is scheduled to move to VLAN 40 / `NET-MGMT`. The former management subnet `10.42.2.0/24` and legacy `fd42:42::/64` / `fd42:42:2::/64` prefixes are retired. The complete VLAN 40–43 management-family state is documented in [`management-vlans-map.md`](/docs/topology/lans/management-vlans).
 
 ---
 
@@ -44,16 +46,16 @@ The former Voice VLAN 10 IPv4 subnet `10.42.0.0/24` was moved to Management VLAN
 
 Fixed assignments include `10.10.0.1` (SeasonalNet-DSW1), `10.10.0.4` (SeasonalAP-3602i), and `10.10.0.10` (SeasonalCME-R1).
 
-### Management VLAN 42 (`10.42.0.0/24`)
+### CME-MGMT VLAN 42 (`10.42.0.0/24`)
 
 | Range | Purpose |
 |---|---|
-| `.1` | DSW1 gateway / management SVI |
-| `.2 – .19` | Static management infrastructure |
+| `.1` | DSW1 gateway / current transitional management identity |
+| `.2 – .19` | CME management plus transitional network-device management |
 | `.20 – .99` | Reserved static managed devices / expansion |
 | `.100 – .254` | Reserved for future use |
 
-Management VLAN 42 uses static infrastructure addressing. It does not provide a general client DHCPv4 pool.
+CME-MGMT VLAN 42 uses static infrastructure addressing. It does not provide a general client DHCPv4 pool. Existing DSW1/SW1/SW2/SW3 management identities remain here until the scheduled NET-MGMT/VLAN 40 cutover.
 
 ---
 
@@ -68,18 +70,21 @@ Management VLAN 42 uses static infrastructure addressing. It does not provide a 
 | `fd97:418:22dd:255::1/64` | SeasonalNet-DSW1 | `Gi1/0/1` | IPv6 transit endpoint toward FW4C |
 | `10.10.0.1` / `fd97:418:22dd:10::1/64` | SeasonalNet-DSW1 | `Vlan10` | Voice gateway and routed SVI |
 | `10.30.0.1` / `fd97:418:22dd:30::1/64` | SeasonalNet-DSW1 | `Vlan30` | Phone-LAN gateway and routed SVI |
-| `10.42.0.1` / `fd97:418:22dd:42::1/64` | SeasonalNet-DSW1 | `Vlan42` | Management gateway and DSW1 management identity |
+| `10.40.0.1` / `fd97:418:22dd:40::1/64` | SeasonalNet-DSW1 | `Vlan40` | NET-MGMT gateway; target network for switch/general network management |
+| `10.41.0.1` / `fd97:418:22dd:41::1/64` | SeasonalNet-DSW1 | `Vlan41` | BMC-MGMT gateway |
+| `10.42.0.1` / `fd97:418:22dd:42::1/64` | SeasonalNet-DSW1 | `Vlan42` | CME-MGMT gateway and current transitional DSW1 management identity |
+| `10.43.0.1` / `fd97:418:22dd:43::1/64` | SeasonalNet-DSW1 | `Vlan43` | HOST-MGMT gateway; no production host cutover yet |
 | `10.10.0.10` | SeasonalCME-R1 (Cisco 2901) | `Gi0/0` | CME call-control node and SCCP source address |
 | `fd97:418:22dd:10::10/64` | SeasonalCME-R1 | `Gi0/0` | Static IPv6 address and CME IPv6 source address |
-| `10.42.0.2` | SeasonalNet-SW1 | `Vlan42` | Primary non-PoE access switch; IPv4-only routed management |
-| `10.42.0.3` / `fd97:418:22dd:42::3/64` | SeasonalNet-SW2 | `Vlan42` | PoE access switch; dual-stack management |
-| `10.42.0.4` / `fd97:418:22dd:42::4/64` | SeasonalNet-SW3 | `Vlan42` | Compact PoE Phone-LAN/access switch; dual-stack management |
+| `10.42.0.2` | SeasonalNet-SW1 | `Vlan42` | Current transitional management; scheduled for NET-MGMT/VLAN 40 |
+| `10.42.0.3` / `fd97:418:22dd:42::3/64` | SeasonalNet-SW2 | `Vlan42` | Current transitional management; scheduled for NET-MGMT/VLAN 40 |
+| `10.42.0.4` / `fd97:418:22dd:42::4/64` | SeasonalNet-SW3 | `Vlan42` | Current transitional management; scheduled for NET-MGMT/VLAN 40 |
 | `10.10.0.4` | SeasonalAP-3602i | `BVI1` | Static IPv4 management address on Voice VLAN 10 |
 | dynamic `fd97:418:22dd:10::/64` | SeasonalAP-3602i | `BVI1` | IPv6 client behavior by device capability |
 | `192.168.1.30` | SeasonalR230 | VLAN 99 access | Primary Proxmox host |
 | `192.168.1.31` | SeasonalR340 | VLAN 99 access | Secondary Proxmox host |
-| `192.168.1.32` | SeasonalR230-iDRAC | VLAN 99 access | R230 out-of-band management |
-| `192.168.1.33` | SeasonalR340-iDRAC | VLAN 99 access | R340 out-of-band management |
+| `10.41.0.32` | SeasonalR230-iDRAC | SW2 `Gi1/0/13`, access VLAN 41 | R230 out-of-band management; IPv6 disabled |
+| `10.41.0.33` | SeasonalR340-iDRAC | SW2 `Gi1/0/15`, access VLAN 41 | R340 out-of-band management; IPv6 disabled |
 
 SeasonalNet-SW1 is a `WS-C2960X-24TS-LL` LAN Lite chassis. It can bridge IPv6 and communicate with on-link IPv6 neighbors, but it does not provide usable off-link IPv6 management in this deployment, so its routed management address remains IPv4-only.
 
@@ -89,7 +94,7 @@ SeasonalNet-SW1 is a `WS-C2960X-24TS-LL` LAN Lite chassis. It can bridge IPv6 an
 
 | Device | Role | Key uplink(s) | Notes |
 |---|---|---|---|
-| SeasonalNet-DSW1 (`WS-C3850-12S`) | Layer-3 distribution core and STP root | `Gi1/0/1` to FW4C; `Gi1/0/10` to SW3; `Gi1/0/11` to SW2; `Gi1/0/12` to SW1 | Owns VLAN 10/30/42 SVIs, inter-VLAN routing, routed default path, Rapid-PVST root, and routed-VLAN IGMP querier roles, running IP Services |
+| SeasonalNet-DSW1 (`WS-C3850-12S`) | Layer-3 distribution core and STP root | `Gi1/0/1` to FW4C; `Gi1/0/10` to SW3; `Gi1/0/11` to SW2; `Gi1/0/12` to SW1 | Owns VLAN 10/30/40/41/42/43 SVIs, inter-VLAN routing, routed default path, Rapid-PVST root, and routed-VLAN IGMP querier roles where configured, running IP Services |
 | FW4C | Production edge firewall/router | Main-LAN outside at `192.168.1.5`; inside transit to DSW1 | Owns upstream firewall/NAT boundary and exchanges routes with DSW1 |
 | SeasonalNet-SW1 (`WS-C2960X-24TS-LL`) | Non-PoE access/aggregation switch | Fiber uplink `Gi0/25` to DSW1 `Gi1/0/12`; retained copper trunk `Gi0/23` to SW2 | Carries CME-R1 and general lab access; no longer the STP root |
 | SeasonalNet-SW2 (`WS-C2960X-24PS-L`) | PoE access switch | Fiber uplink `Gi1/0/25` to DSW1; copper trunks `Gi1/0/24` to SW1 and `Gi1/0/22` to SW3 | Fiber is the root path; the SW1 copper path is alternate/blocking, while SW2 is designated toward SW3 |
@@ -97,7 +102,7 @@ SeasonalNet-SW1 is a `WS-C2960X-24TS-LL` LAN Lite chassis. It can bridge IPv6 an
 | SeasonalCME-R1 (`2901-CME-SRST`)| CME router / UC node | Voice VLAN 10 attachment through SW1 | Dual-stack CME application node; no longer a default gateway |
 | SeasonalNet-NP-R1 (`1921/K9`) | Non-production lab router | Main-LAN management at `192.168.1.54` | Former SeasonalEDGE-R1; removed from production VLAN routing, NAT, DHCP, and OSPF |
 
-The DSW1 fiber trunks carry VLANs `10,30,42,99` as required, with VLAN 99 used as the native Main-LAN transit/access VLAN. The legacy copper trunks remain physically connected for redundancy: Rapid-PVST currently blocks SW2 `Gi1/0/24` toward SW1 and SW3 `Gi0/10` toward SW2, leaving the direct DSW1 fiber uplinks as the preferred root paths.
+The DSW1 fiber trunks carry the applicable VLANs from `10,30,40,41,42,43,99`, with VLAN 99 used as the native Main-LAN transit/access VLAN. The legacy copper trunks remain physically connected for redundancy: Rapid-PVST currently blocks SW2 `Gi1/0/24` toward SW1 and SW3 `Gi0/10` toward SW2, leaving the direct DSW1 fiber uplinks as the preferred root paths.
 
 ---
 
@@ -108,9 +113,9 @@ The DSW1 fiber trunks carry VLANs `10,30,42,99` as required, with VLAN 99 used a
 | Port | Mode / network | Connected device | Notes |
 |---|---|---|---|
 | `Gi1/0/1` | Routed point-to-point | FW4C | `10.255.255.1/30` / `fd97:418:22dd:255::1/64` |
-| `Gi1/0/10` | Fiber trunk | SeasonalNet-SW3 `Gi0/11` | Carries the confirmed SW3 VLAN set: 30, 42, and 99 |
-| `Gi1/0/11` | Fiber trunk | SeasonalNet-SW2 `Gi1/0/25` | Carries VLANs 10, 30, 42, and 99 |
-| `Gi1/0/12` | Fiber trunk | SeasonalNet-SW1 `Gi0/25` | Carries VLANs 10, 30, 42, and 99 |
+| `Gi1/0/10` | Fiber trunk | SeasonalNet-SW3 `Gi0/11` | Carries VLANs 30, 40, 41, 42, 43, and 99 |
+| `Gi1/0/11` | Fiber trunk | SeasonalNet-SW2 `Gi1/0/25` | Carries VLANs 10, 30, 40, 41, 42, 43, and 99 |
+| `Gi1/0/12` | Fiber trunk | SeasonalNet-SW1 `Gi0/25` | Carries VLANs 10, 30, 40, 41, 42, 43, and 99 |
 
 ### Selected access attachments
 
@@ -119,17 +124,17 @@ The DSW1 fiber trunks carry VLANs `10,30,42,99` as required, with VLAN 99 used a
 | SW1 `Gi0/21` | Access VLAN 10 | SeasonalCME-R1 `Gi0/0` | OSPF and CME application attachment |
 | SW2 `Gi1/0/2` | Access VLAN 10 | SeasonalAP-3602i | 1 Gb/s PoE AP attachment |
 | SW2 `Gi1/0/3` | Access VLAN 99 | Verizon CE1000A / Cat6 backhaul | Current production Main-LAN path |
-| SW2 `Gi1/0/13` | Access VLAN 99 | SeasonalR230 | Proxmox host attachment |
-| SW2 `Gi1/0/14` | Access VLAN 99 | SeasonalR230-iDRAC | R230 OOB management |
-| SW2 `Gi1/0/15` | Access VLAN 99 | SeasonalR340-iDRAC | R340 OOB management |
+| SW2 `Gi1/0/13` | Access VLAN 41 | SeasonalR230-iDRAC | R230 OOB management on BMC-MGMT |
+| SW2 `Gi1/0/14` | Access VLAN 99 | SeasonalR230 | Proxmox host attachment |
+| SW2 `Gi1/0/15` | Access VLAN 41 | SeasonalR340-iDRAC | R340 OOB management on BMC-MGMT |
 | SW2 `Gi1/0/16` | Access VLAN 99 | SeasonalR340 | Proxmox host attachment |
 
 ### Retained copper trunks
 
 | Link | VLANs | Rapid-PVST state | Purpose |
 |---|---|---|---|
-| SW1 `Gi0/23` ↔ SW2 `Gi1/0/24` | `10`, `30`, `42`, `99` | SW2 `Gi1/0/24` is alternate/blocking | Legacy redundant trunk; direct fiber uplinks to DSW1 remain preferred |
-| SW2 `Gi1/0/22` ↔ SW3 `Gi0/10` | `30`, `42`, `99` | SW2 is designated/forwarding; SW3 `Gi0/10` is alternate/blocking | Legacy redundant trunk for SW3 if its direct fiber root path is unavailable |
+| SW1 `Gi0/23` ↔ SW2 `Gi1/0/24` | `10`, `30`, `40`, `41`, `42`, `43`, `99` | SW2 `Gi1/0/24` is alternate/blocking | Legacy redundant trunk; direct fiber uplinks to DSW1 remain preferred |
+| SW2 `Gi1/0/22` ↔ SW3 `Gi0/10` | `30`, `40`, `41`, `42`, `43`, `99` | SW2 is designated/forwarding; SW3 `Gi0/10` is alternate/blocking | Legacy redundant trunk for SW3 if its direct fiber root path is unavailable |
 
 Retired Aironet and powerline backhaul ports remain administratively disabled unless deliberately restored. The copper switch-to-switch trunks above are active physical links controlled by Rapid-PVST, not retired or shutdown paths.
 
@@ -139,13 +144,13 @@ Retired Aironet and powerline backhaul ports remain administratively disabled un
 
 | Item | Value | Notes |
 |---|---|---|
-| Inter-VLAN routing | SeasonalNet-DSW1 | Routes between VLANs 10, 30, and 42 |
+| Inter-VLAN routing | SeasonalNet-DSW1 | Routes between VLANs 10, 30, 40, 41, 42, and 43 |
 | Upstream routed transit | `10.255.255.0/30` / `fd97:418:22dd:255::/64` | DSW1 `.1` / `::1`; FW4C `.2` / `::2` |
 | DSW1 ↔ FW4C IPv4 routing | OSPFv2, FULL point-to-point adjacency | FW4C neighbor `10.255.255.2` on DSW1 `Gi1/0/1` |
 | DSW1 ↔ CME-R1 IPv4 routing | OSPFv2, FULL broadcast adjacency | CME-R1 `10.10.0.10` is priority `0` / DROTHER on `Vlan10` |
 | IPv6 dynamic routing | OSPFv3 | Runs on the corresponding DSW1–FW4C transit and DSW1–CME path |
 | Routed default source | FW4C | DSW1 sends Internet/default traffic across the transit to FW4C |
-| CR200A IPv4 return routes | VLANs 10, 30, and 42 via `192.168.1.5` | FW4C is the Main-LAN next hop; metric `10` |
+| CR200A IPv4 return routes | VLANs 10, 30, 40, 41, 42, and 43 via `192.168.1.5` | FW4C is the Main-LAN next hop; metric `10` |
 | CR200A ULA return routes | `:10::/64`, `:30::/64`, and `:42::/64` via FW4C Main-LAN link-local | Metric `10` |
 | NAT boundary | FW4C | IPv4 Internet NAT/firewall boundary; DSW1 does not NAT |
 | Legacy EDGE role | Removed | NP-R1 has no production NAT, DHCP, OSPF, or VLAN gateway configuration |
@@ -158,7 +163,10 @@ Retired Aironet and powerline backhaul ports remain administratively disabled un
 |---|---|---|
 | Voice VLAN 10 IPv4 | DHCPv4 plus static infrastructure | DSW1 owns the gateway/DHCP boundary; option 150 continues to identify SeasonalCME-R1 at `.10` |
 | Voice VLAN 10 IPv6 | DSW1 SVI plus device-specific client behavior | Gateway is `fd97:418:22dd:10::1`; exact RA/DHCPv6 behavior follows live DSW1 configuration |
-| Management VLAN 42 IPv4/IPv6 | Static infrastructure addressing | DSW1 is `.1` / `::1`; SW1 `.2`, SW2 `.3`, and SW3 `.4` |
+| NET-MGMT VLAN 40 | Static infrastructure addressing | DSW1 is `.1` / `::1`; switch/general network management is scheduled to migrate here from VLAN 42 |
+| BMC-MGMT VLAN 41 | Static BMC addressing | DSW1 is `.1` / `::1`; R230 iDRAC `.32`, R340 iDRAC `.33`; BMC IPv6 currently disabled |
+| CME-MGMT VLAN 42 | Static infrastructure addressing | DSW1 is `.1` / `::1`; SW1 `.2`, SW2 `.3`, and SW3 `.4` remain transitional assignments |
+| HOST-MGMT VLAN 43 | Static infrastructure addressing | DSW1 is `.1` / `::1`; routed/reserved with no production host-management cutover yet |
 | SeasonalCME-R1 | Static dual-stack | `10.10.0.10` and `fd97:418:22dd:10::10/64` |
 | SeasonalAP-3602i | Static IPv4 + dynamic IPv6 | `10.10.0.4`; IPv6 by device capability |
 | Phones / lab clients | DHCPv4 and IPv6 by device capability | Voice clients use the VLAN 10 services |
@@ -171,12 +179,15 @@ Retired Aironet and powerline backhaul ports remain administratively disabled un
 |---|---|---|
 | Rapid-PVST root VLAN 10 | SeasonalNet-DSW1 | All access switches use their DSW1 fiber uplink as the preferred root path |
 | Rapid-PVST root VLAN 30 | SeasonalNet-DSW1 | Phone-LAN distribution root |
-| Rapid-PVST root VLAN 42 | SeasonalNet-DSW1 | Infrastructure management root |
+| Rapid-PVST root VLAN 40 | SeasonalNet-DSW1 | NET-MGMT distribution root |
+| Rapid-PVST root VLAN 41 | SeasonalNet-DSW1 | BMC-MGMT distribution root |
+| Rapid-PVST root VLAN 42 | SeasonalNet-DSW1 | CME-MGMT distribution root |
+| Rapid-PVST root VLAN 43 | SeasonalNet-DSW1 | HOST-MGMT distribution root |
 | Rapid-PVST root VLAN 99 | SeasonalNet-DSW1 | Main-LAN Layer-2 distribution root; CR200A remains the IP gateway |
-| SW2 preferred root path | `Gi1/0/25`, root/forwarding | Direct fiber to DSW1 for VLANs 10, 30, 42, and 99 |
-| SW3 preferred root path | `Gi0/11`, root/forwarding | Direct fiber to DSW1 for VLANs 30, 42, and 99 |
-| SW1 ↔ SW2 legacy copper | SW2 `Gi1/0/24`, alternate/blocking | Retained redundant trunk for VLANs 10, 30, 42, and 99 |
-| SW2 ↔ SW3 legacy copper | SW3 `Gi0/10`, alternate/blocking | SW2 `Gi1/0/22` remains designated/forwarding; carries VLANs 30, 42, and 99 |
+| SW2 preferred root path | `Gi1/0/25`, root/forwarding | Direct fiber to DSW1 for VLANs 10, 30, 40, 41, 42, 43, and 99 |
+| SW3 preferred root path | `Gi0/11`, root/forwarding | Direct fiber to DSW1 for VLANs 30, 40, 41, 42, 43, and 99 |
+| SW1 ↔ SW2 legacy copper | SW2 `Gi1/0/24`, alternate/blocking | Retained redundant trunk for VLANs 10, 30, 40, 41, 42, 43, and 99 |
+| SW2 ↔ SW3 legacy copper | SW3 `Gi0/10`, alternate/blocking | SW2 `Gi1/0/22` remains designated/forwarding; carries VLANs 30, 40, 41, 42, 43, and 99 |
 | IGMP snooping querier VLAN 10 | DSW1 / `10.10.0.1` | Per-VLAN querier address |
 | IGMP snooping querier VLAN 30 | DSW1 / `10.30.0.1` | Per-VLAN querier address |
 | IGMP snooping querier VLAN 42 | DSW1 / `10.42.0.1` | Per-VLAN querier address |
@@ -213,7 +224,10 @@ FW4C (192.168.1.5)
 SeasonalNet-DSW1 (L3 distribution / STP root)
         |- Vlan10: 10.10.0.1 / fd97:418:22dd:10::1
         |- Vlan30: 10.30.0.1 / fd97:418:22dd:30::1
-        |- Vlan42: 10.42.0.1 / fd97:418:22dd:42::1
+        |- Vlan40 NET-MGMT: 10.40.0.1 / fd97:418:22dd:40::1
+        |- Vlan41 BMC-MGMT: 10.41.0.1 / fd97:418:22dd:41::1
+        |- Vlan42 CME-MGMT: 10.42.0.1 / fd97:418:22dd:42::1
+        |- Vlan43 HOST-MGMT: 10.43.0.1 / fd97:418:22dd:43::1
         |- Gi1/0/10 ==fiber== SeasonalNet-SW3
         |- Gi1/0/11 ==fiber== SeasonalNet-SW2
         `- Gi1/0/12 ==fiber== SeasonalNet-SW1
@@ -231,7 +245,8 @@ SeasonalNet-NP-R1 (192.168.1.54) is outside this production path and is retained
 
 ## Known Limitations / Remaining Items
 
-- SeasonalNet-SW1 remains IPv4-only for routed management because its LAN Lite feature set does not install a usable off-link IPv6 default-router state in this deployment.
+- Migrate SeasonalNet-DSW1, SW1, SW2, SW3, and other general network-device management identities from CME-MGMT/VLAN 42 to NET-MGMT/VLAN 40; keep the current VLAN 42 addresses authoritative until that cutover is complete.
+- SeasonalNet-SW1 remains IPv4-only for its current routed management because its LAN Lite feature set does not install a usable off-link IPv6 default-router state in this deployment.
 - Keep the disabled Aironet and powerline paths documented as retired/quarantined unless deliberately restored.
 - Do not describe the SW1–SW2 or SW2–SW3 copper trunks as unused: they remain connected redundant paths and are held in alternate/blocking state by Rapid-PVST during normal operation.
 - Treat DSW1 runtime output as authoritative for current IPv6 RA/DHCPv6 policy until those client-facing details are intentionally standardized.
