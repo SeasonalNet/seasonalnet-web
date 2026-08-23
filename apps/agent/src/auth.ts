@@ -10,7 +10,7 @@ import {
 const authentikIssuer = process.env.AUTH_AUTHENTIK_ISSUER!
 const accessPolicy = buildAccessPolicyFromEnv("AUTH_AUTHENTIK_AGENT")
 
-type SessionLike = {
+type MutableSession = {
   user?: {
     id?: string | null
     name?: string | null
@@ -20,7 +20,9 @@ type SessionLike = {
   groups?: string[]
   access_tier?: "status" | "operations" | "administration" | null
   is_authorized?: boolean
-} | null | undefined
+}
+
+type SessionLike = MutableSession | null | undefined
 
 function normalizeGroups(value: unknown): string[] {
   if (!Array.isArray(value)) return []
@@ -41,7 +43,10 @@ function applyTokenClaims(token: Record<string, unknown>, profile?: Record<strin
   return token
 }
 
-function applySessionClaims(session: any, token: Record<string, unknown>) {
+function applySessionClaims<TSession extends MutableSession>(
+  session: TSession,
+  token: Record<string, unknown>,
+): TSession {
   if (session.user) {
     if (typeof token.email === "string") session.user.email = token.email
     if (typeof token.name === "string") session.user.name = token.name
@@ -60,7 +65,7 @@ function applySessionClaims(session: any, token: Record<string, unknown>) {
   return session
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const { handlers, auth, signIn } = NextAuth({
   debug: process.env.NODE_ENV !== "production",
   session: {
     strategy: "jwt",
@@ -95,7 +100,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
 })
 
-export function getSessionGroups(session: SessionLike): string[] {
+function getSessionGroups(session: SessionLike): string[] {
   return normalizeGroups(session?.groups)
 }
 

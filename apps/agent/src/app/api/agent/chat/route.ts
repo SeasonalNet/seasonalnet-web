@@ -19,8 +19,19 @@ export async function POST(request: Request) {
     detail: "Authentication is required.",
   })
 
+  let body: BrowserAgentChatRequest
   try {
-    const body = (await request.json()) as BrowserAgentChatRequest
+    body = (await request.json()) as BrowserAgentChatRequest
+  } catch {
+    return problemJson({
+      type: "/problems/invalid-json",
+      title: "Invalid request body",
+      status: 400,
+      detail: "The request body must be valid JSON.",
+    })
+  }
+
+  try {
     const trustedBody = buildTrustedAgentChatPayload(session, body)
     const { ok, status, payload } = await seasonalAgentJson("/api/v1/chat", {
       method: "POST",

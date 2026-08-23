@@ -21,8 +21,27 @@ import { Label } from "@/components/ui/label"
 import { Progress } from "@/components/ui/progress"
 import { Textarea } from "@/components/ui/textarea"
 import type { AdminActionDialogType } from "@/lib/admin/types"
+import { fetchWithTimeout } from "@seasonalnet/shell/src/lib/fetch"
 
 const LAST_UPLOADED_AUDIO_ASSET_KEY = "seasonalweather:lastUploadedAudioAssetId"
+const AUDIO_UPLOAD_TIMEOUT_MS = 60_000
+
+function readStoredValue(key: string): string | null {
+  try {
+    return window.localStorage.getItem(key)
+  } catch {
+    return null
+  }
+}
+
+function storeValue(key: string, value: string): boolean {
+  try {
+    window.localStorage.setItem(key, value)
+    return true
+  } catch {
+    return false
+  }
+}
 
 const selectClassName =
   "flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm " +
@@ -121,7 +140,7 @@ async function postJsonAction(args: {
   const toastId = toast.loading(args.loadingMessage)
 
   try {
-    const res = await fetch(args.href, {
+    const res = await fetchWithTimeout(args.href, {
       method: args.method || "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(args.payload),
@@ -567,6 +586,7 @@ function UploadAudioDialog({ action }: { action: AdminActionControlProps }) {
         const xhr = new XMLHttpRequest()
 
         xhr.open(method, href)
+        xhr.timeout = AUDIO_UPLOAD_TIMEOUT_MS
 
         xhr.upload.onprogress = (event) => {
           if (event.lengthComputable) {
@@ -576,39 +596,47 @@ function UploadAudioDialog({ action }: { action: AdminActionControlProps }) {
 
         xhr.onerror = () => reject(new Error("Upload failed."))
         xhr.onabort = () => reject(new Error("Upload aborted."))
+        xhr.ontimeout = () => reject(new Error("Upload timed out. Please try again."))
 
         xhr.onload = () => {
+          let data: Record<string, unknown> = {}
           try {
-            const data = JSON.parse(xhr.responseText || "{}")
-
-            if (xhr.status >= 200 && xhr.status < 300) {
-              if (data?.asset_id && typeof window !== "undefined") {
-                window.localStorage.setItem(
-                  LAST_UPLOADED_AUDIO_ASSET_KEY,
-                  data.asset_id
-                )
-              }
-
-              toast.success("Audio staged.", {
-                id: toastId,
-                description: data?.asset_id
-                  ? `Asset ID: ${data.asset_id}`
-                  : "Upload accepted.",
-              })
-              resolve()
+            data = JSON.parse(xhr.responseText || "{}") as Record<string, unknown>
+          } catch {
+            if (xhr.status < 200 || xhr.status >= 300) {
+              reject(new Error(`Upload failed: ${xhr.status}`))
               return
             }
-
-            const message =
-              typeof data?.detail === "string"
-                ? data.detail
-                : typeof data?.error === "string"
-                  ? data.error
-                  : data?.error?.message || data?.title || `Upload failed: ${xhr.status}`
-            reject(new Error(message))
-          } catch {
-            reject(new Error(`Upload failed: ${xhr.status}`))
           }
+
+          if (xhr.status >= 200 && xhr.status < 300) {
+            const assetId = typeof data.asset_id === "string" ? data.asset_id : null
+            const stored = assetId ? storeValue(LAST_UPLOADED_AUDIO_ASSET_KEY, assetId) : true
+
+            toast.success("Audio staged.", {
+              id: toastId,
+              description: assetId
+                ? `Asset ID: ${assetId}${stored ? "" : " (browser storage unavailable)"}`
+                : "Upload accepted.",
+            })
+            resolve()
+            return
+          }
+
+          const nestedError = data.error && typeof data.error === "object" && "message" in data.error
+            ? data.error.message
+            : null
+          const message =
+            typeof data.detail === "string"
+              ? data.detail
+              : typeof data.error === "string"
+                ? data.error
+                : typeof nestedError === "string"
+                  ? nestedError
+                  : typeof data.title === "string"
+                    ? data.title
+                    : `Upload failed: ${xhr.status}`
+          reject(new Error(message))
         }
 
         xhr.send(formData)
@@ -679,7 +707,7 @@ function OriginateAudioDialog({ action }: { action: AdminActionControlProps }) {
 
     if (!nextOpen || typeof window === "undefined") return
 
-    const assetId = window.localStorage.getItem(LAST_UPLOADED_AUDIO_ASSET_KEY)
+    const assetId = readStoredValue(LAST_UPLOADED_AUDIO_ASSET_KEY)
     if (assetId) {
       setForm((prev) => ({ ...prev, audioAssetId: prev.audioAssetId || assetId }))
     }
@@ -1083,7 +1111,7 @@ function CycleInsertDialog({
 
     if (kind !== "audio" || typeof window === "undefined") return
 
-    const assetId = window.localStorage.getItem(LAST_UPLOADED_AUDIO_ASSET_KEY)
+    const assetId = readStoredValue(LAST_UPLOADED_AUDIO_ASSET_KEY)
     if (assetId) {
       setForm((prev) => ({ ...prev, audioAssetId: prev.audioAssetId || assetId }))
     }
@@ -1155,7 +1183,7 @@ function CycleInsertManagerDialog({ action }: { action: AdminActionControlProps 
     setError(null)
 
     try {
-      const res = await fetch(
+      const res = await fetchWithTimeout(
         `${action.href}?include_inactive=${nextIncludeInactive ? "true" : "false"}&limit=100`,
         { cache: "no-store" }
       )
@@ -1188,7 +1216,7 @@ function CycleInsertManagerDialog({ action }: { action: AdminActionControlProps 
     const toastId = toast.loading("Cancelling insert...")
 
     try {
-      const res = await fetch(`${action.href}/${encodeURIComponent(insertId)}`, {
+      const res = await fetchWithTimeout(`${action.href}/${encodeURIComponent(insertId)}`, {
         method: "DELETE",
         cache: "no-store",
       })

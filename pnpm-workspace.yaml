@@ -1,6 +1,20 @@
 packages:
   - "apps/*"
   - "packages/*"
+
+# Resolve only releases that have had at least one day of public exposure.
+# Explicit configuration makes the age gate strict instead of pnpm 11's
+# backward-compatible fallback behavior.
+minimumReleaseAge: 1440
+minimumReleaseAgeStrict: true
+minimumReleaseAgeIgnoreMissingTime: false
+blockExoticSubdeps: true
+trustLockfile: false
+
+# Patched security floor for minimatch's compatible transitive range.
+overrides:
+  "brace-expansion@>=5.0.0 <5.0.9": "5.0.9"
+
 allowBuilds:
   esbuild: true
   msw: true

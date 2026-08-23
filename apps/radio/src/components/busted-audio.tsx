@@ -14,6 +14,20 @@ function newToken() {
   return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2)}`;
 }
 
+function metadataValue(value: unknown, fallback?: string) {
+  return value == null ? fallback : String(value);
+}
+
+function parseMediaSessionMeta(value: unknown, fallback?: MediaSessionMeta): MediaSessionMeta {
+  const record = value && typeof value === "object" ? value as Record<string, unknown> : {};
+  return {
+    title: metadataValue(record.title, fallback?.title) ?? "",
+    artist: metadataValue(record.artist, fallback?.artist),
+    album: metadataValue(record.album, fallback?.album),
+    artworkUrl: metadataValue(record.artworkUrl, fallback?.artworkUrl),
+  };
+}
+
 type Props = {
   src: string; // "/seasonalweather.mp3"
 
@@ -57,8 +71,8 @@ export function BustedAudio({ src, mediaMeta, mediaMetaUrl, mediaMetaPollMs }: P
     const onPageShow = (e: PageTransitionEvent) => {
       if (e.persisted) setToken(newToken());
     };
-    window.addEventListener("pageshow", onPageShow as any);
-    return () => window.removeEventListener("pageshow", onPageShow as any);
+    window.addEventListener("pageshow", onPageShow);
+    return () => window.removeEventListener("pageshow", onPageShow);
   }, []);
 
   // When bustedSrc changes, force the <audio> element to reload and optionally resume
@@ -99,14 +113,7 @@ export function BustedAudio({ src, mediaMeta, mediaMetaUrl, mediaMetaPollMs }: P
 
     const meta = dynMeta ?? mediaMeta;
     if (meta) setMediaSessionMeta(meta);
-  }, [
-    playing,
-    dynMeta,
-    mediaMeta?.title,
-    mediaMeta?.artist,
-    mediaMeta?.album,
-    mediaMeta?.artworkUrl,
-  ]);
+  }, [playing, dynMeta, mediaMeta]);
 
   // Optional: poll dynamic metadata while playing
   React.useEffect(() => {
@@ -124,14 +131,7 @@ export function BustedAudio({ src, mediaMeta, mediaMetaUrl, mediaMetaPollMs }: P
       try {
         const r = await fetch(urlStr, { cache: "no-store" });
         if (!r.ok) throw new Error(`HTTP ${r.status}`);
-        const j: any = await r.json();
-
-        const next: MediaSessionMeta = {
-          title: String(j.title ?? mediaMeta?.title ?? ""),
-          artist: j.artist != null ? String(j.artist) : mediaMeta?.artist,
-          album: j.album != null ? String(j.album) : mediaMeta?.album,
-          artworkUrl: j.artworkUrl != null ? String(j.artworkUrl) : mediaMeta?.artworkUrl,
-        };
+        const next = parseMediaSessionMeta(await r.json(), mediaMeta);
 
         if (!stopped) setDynMeta(next);
       } catch {
@@ -145,7 +145,7 @@ export function BustedAudio({ src, mediaMeta, mediaMetaUrl, mediaMetaPollMs }: P
       stopped = true;
       window.clearInterval(t);
     };
-  }, [playing, mediaMetaUrl, mediaMetaPollMs, mediaMeta?.title, mediaMeta?.artist, mediaMeta?.album, mediaMeta?.artworkUrl]);
+  }, [playing, mediaMetaUrl, mediaMetaPollMs, mediaMeta]);
 
   return (
     <div className="space-y-2">

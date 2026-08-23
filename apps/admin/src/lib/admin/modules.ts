@@ -1,13 +1,13 @@
-import type { SeasonalWeatherOverview } from "@/lib/server/modules/seasonalweather"
-import type { SeasonalProvisioningOverview } from "@/lib/server/modules/seasonalprovisioning"
-import type { SeasonalApidOverview } from "@/lib/server/modules/seasonalapid"
-import type { AdminModule } from "@/lib/admin/types"
+import type { SeasonalWeatherOverview } from "../server/modules/seasonalweather"
+import type { SeasonalProvisioningOverview } from "../server/modules/seasonalprovisioning"
+import type { SeasonalApidOverview } from "../server/modules/seasonalapid"
+import type { AdminModule } from "./types"
 
-import { buildSeasonalWeatherModule } from "@/lib/admin/modules/seasonalweather"
-import { buildSeasonalPbxModule } from "@/lib/admin/modules/seasonalpbx"
-import { buildSeasonalProvModule } from "@/lib/admin/modules/seasonalprov"
-import { buildSeasonalRadioModule } from "@/lib/admin/modules/seasonalradio"
-import { buildSeasonalApidModule } from "@/lib/admin/modules/seasonalapid"
+import { buildSeasonalWeatherModule } from "./modules/seasonalweather"
+import { buildSeasonalPbxModule } from "./modules/seasonalpbx"
+import { buildSeasonalProvModule } from "./modules/seasonalprov"
+import { buildSeasonalRadioModule } from "./modules/seasonalradio"
+import { buildSeasonalApidModule } from "./modules/seasonalapid"
 
 export function buildAdminModules(
   seasonalWeatherOverview: SeasonalWeatherOverview,

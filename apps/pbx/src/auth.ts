@@ -1,7 +1,6 @@
 import NextAuth from "next-auth"
 
 import {
-  accessTierLabel,
   buildAccessPolicyFromEnv,
   isAuthorizedGroups,
   resolveAccessTier,
@@ -85,7 +84,7 @@ function applySessionClaims<TSession extends PbxSession>(
   return session
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const { handlers, auth, signIn } = NextAuth({
   debug: process.env.NODE_ENV !== "production",
   session: {
     strategy: "jwt",
@@ -120,13 +119,8 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
 })
 
-export function getSessionGroups(session: SessionLike): string[] {
+function getSessionGroups(session: SessionLike): string[] {
   return normalizeGroups(session?.groups)
-}
-
-export function getSessionAccessTier(session: SessionLike) {
-  const groups = getSessionGroups(session)
-  return resolveAccessTier(groups, accessPolicy)
 }
 
 export function isAuthorizedSession(session: SessionLike): boolean {
@@ -140,21 +134,6 @@ export function sessionDisplayName(session: SessionLike) {
     session?.preferred_username ||
     (session?.user ? "Signed in" : "Not signed in")
   )
-}
-
-export function sessionInitials(session: SessionLike) {
-  const source = (session?.user?.name || session?.user?.email || session?.preferred_username || "?").trim()
-  const parts = source.split(/\s+/).filter(Boolean)
-
-  if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase()
-  }
-
-  return source.slice(0, 2).toUpperCase()
-}
-
-export function sessionAccessTierLabel(session: SessionLike) {
-  return accessTierLabel(getSessionAccessTier(session))
 }
 
 export function sessionDiscordId(session: SessionLike): string | null {

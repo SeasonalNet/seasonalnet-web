@@ -15,10 +15,6 @@ function SheetTrigger(props: React.ComponentProps<typeof DialogPrimitive.Trigger
   return <DialogPrimitive.Trigger data-slot="sheet-trigger" {...props} />
 }
 
-function SheetClose(props: React.ComponentProps<typeof DialogPrimitive.Close>) {
-  return <DialogPrimitive.Close data-slot="sheet-close" {...props} />
-}
-
 function SheetPortal(props: React.ComponentProps<typeof DialogPrimitive.Portal>) {
   return <DialogPrimitive.Portal data-slot="sheet-portal" {...props} />
 }
@@ -96,11 +92,9 @@ function SheetDescription({ className, ...props }: React.ComponentProps<typeof D
 export {
   Sheet,
   SheetBody,
-  SheetClose,
   SheetContent,
   SheetDescription,
   SheetHeader,
-  SheetPortal,
   SheetTitle,
   SheetTrigger,
 }

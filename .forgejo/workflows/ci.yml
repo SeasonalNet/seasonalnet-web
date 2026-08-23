@@ -24,9 +24,9 @@ jobs:
           node <<'NODE'
           const pkg = require("./package.json");
 
-          if (pkg.packageManager !== "pnpm@11.17.0") {
+          if (pkg.packageManager !== "pnpm@11.22.0") {
             throw new Error(
-              `expected packageManager pnpm@11.17.0, got ${pkg.packageManager}`
+              `expected packageManager pnpm@11.22.0, got ${pkg.packageManager}`
             );
           }
 
@@ -43,28 +43,13 @@ jobs:
       - name: Verify dependency policy
         run: |
           pnpm ignored-builds
-          KNIP_DISABLE_RAW_TRANSFER=1 pnpm deps:audit
           pnpm --recursive list --depth -1
 
-      - name: Lint currently clean workspaces
-        run: |
-          pnpm --filter @seasonalnet/admin lint
-          pnpm --filter @seasonalnet/docs lint
-          pnpm --filter @seasonalnet/pbx lint
-          pnpm --filter @seasonalnet/prov lint
-          pnpm --filter @seasonalnet/www lint
+      - name: Verify dependency supply chain
+        run: make supply-chain
 
-      - name: Report known Agent lint debt
-        continue-on-error: true
-        run: pnpm --filter @seasonalnet/agent lint
-
-      - name: Report known Radio lint debt
-        continue-on-error: true
-        run: pnpm --filter @seasonalnet/radio lint
+      - name: Run governed quality gate
+        run: make quality
 
       - name: Build all applications
-        run: pnpm --workspace-concurrency=1 --recursive run build
-
-      - name: Report transitive peer advisories
-        continue-on-error: true
-        run: pnpm peers check
+        run: make build

@@ -1,6 +1,7 @@
 import "server-only"
 
 import { getCachedValue } from "@seasonalnet/shell/src/lib/server/cache"
+import { fetchWithTimeout } from "@seasonalnet/shell/src/lib/fetch"
 
 export type SeasonalWeatherOverview = {
   configured: boolean
@@ -95,7 +96,7 @@ async function seasonalWeatherFetch(path: string, init: RequestInit = {}, tokenK
   headers.set("Authorization", `Bearer ${token}`)
   headers.set("Accept", "application/json, application/problem+json")
 
-  const res = await fetch(`${API_BASE}${path}`, {
+  const res = await fetchWithTimeout(`${API_BASE}${path}`, {
     ...init,
     headers,
     next: { revalidate: 10 },

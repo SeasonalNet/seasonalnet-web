@@ -4,6 +4,7 @@
 // Renders the service-area Leaflet map wired to both alert feeds.
 
 import * as React from "react";
+import { fetchWithTimeout } from "@seasonalnet/shell/src/lib/fetch";
 import { Button } from "@seasonalnet/shell/src/components/ui/button";
 import { RefreshCw } from "lucide-react";
 import StationMap from "@/components/station-map";
@@ -128,8 +129,8 @@ export function StationAlertMapSection({
     setError(null);
     try {
       const [alertsRes, handledRes] = await Promise.all([
-        fetch(`/api/stations/${encodeURIComponent(stationId)}/alerts`,         { cache: "no-store" }),
-        fetch(`/api/stations/${encodeURIComponent(stationId)}/handled-alerts`, { cache: "no-store" }),
+        fetchWithTimeout(`/api/stations/${encodeURIComponent(stationId)}/alerts`,         { cache: "no-store" }),
+        fetchWithTimeout(`/api/stations/${encodeURIComponent(stationId)}/handled-alerts`, { cache: "no-store" }),
       ]);
 
       if (alertsRes.ok) {
@@ -143,17 +144,20 @@ export function StationAlertMapSection({
       }
 
       setUpdatedAt(new Date());
-    } catch (e: any) {
-      setError(e?.message ?? "Failed to load alert data.");
+    } catch (error: unknown) {
+      setError(error instanceof Error ? error.message : "Failed to load alert data.");
     } finally {
       setLoading(false);
     }
   }, [stationId]);
 
   React.useEffect(() => {
-    load();
+    const initialId = window.setTimeout(() => void load(), 0);
     const t = setInterval(load, 60_000);
-    return () => clearInterval(t);
+    return () => {
+      window.clearTimeout(initialId);
+      clearInterval(t);
+    };
   }, [load]);
 
   if (!config) return null;

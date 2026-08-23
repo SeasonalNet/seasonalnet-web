@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { problemJson } from "@seasonalnet/shell/src/lib/server/problem";
 import { cacheControlHeader, getCachedValue } from "@seasonalnet/shell/src/lib/server/cache";
 import { getStationMetaServerCfg } from "@/lib/server/station-metadata";
+import { fetchWithTimeout } from "@seasonalnet/shell/src/lib/fetch";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -86,7 +87,7 @@ async function buildStationMetadata(stationId: string, mountPath?: string) {
 
   if (nowPlayingUrl) {
     try {
-      const r = await fetch(nowPlayingUrl, { cache: "no-store" });
+      const r = await fetchWithTimeout(nowPlayingUrl, { cache: "no-store" });
       if (r.ok) {
         const raw: unknown = await r.json();
         const m = pairsToObject(raw);
@@ -120,7 +121,7 @@ async function buildStationMetadata(stationId: string, mountPath?: string) {
 
   // --- 2) Fallback: Icecast status-json.xsl ---
   try {
-    const r = await fetch(cfg.statusUrl, { cache: "no-store" });
+    const r = await fetchWithTimeout(cfg.statusUrl, { cache: "no-store" });
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const j: unknown = await r.json();
     const icestats = j && typeof j === "object" ? (j as { icestats?: { source?: unknown } }).icestats : undefined;

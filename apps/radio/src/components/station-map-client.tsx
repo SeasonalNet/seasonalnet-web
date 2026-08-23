@@ -8,9 +8,9 @@
 //   3. CAP polygon outlines for NWS alerts with geometry
 //   4. Hatch overlay where both overlap
 
-import { useEffect, useRef, useMemo } from "react";
+import { useEffect, useRef, useMemo, useState } from "react";
 import { useTheme } from "next-themes";
-import type { Map as LeafletMap, GeoJSON as LeafletGeoJSON } from "leaflet";
+import type { Layer as LeafletLayer, Map as LeafletMap, TileLayer as LeafletTileLayer } from "leaflet";
 import type { NwsAlertFeature, StationHandledAlert } from "@/lib/alert-map-utils";
 import {
   capPolygonStyle,
@@ -100,6 +100,21 @@ const SERVICE_AREA_BOUNDS: Record<string, [[number, number], [number, number]]> 
   default: [[37.0, -82.0], [40.5, -74.5]],
 };
 
+const MAP_ASSET_TIMEOUT_MS = 8_000;
+
+function tooltipContent(lines: Array<{ text: string; strong?: boolean }>): HTMLElement {
+  const content = document.createElement("span");
+
+  lines.forEach((line, index) => {
+    if (index > 0) content.append(document.createElement("br"));
+    const node = line.strong ? document.createElement("strong") : document.createTextNode(line.text);
+    if (line.strong) node.textContent = line.text;
+    content.append(node);
+  });
+
+  return content;
+}
+
 // ---------------------------------------------------------------------------
 // Component
 // ---------------------------------------------------------------------------
@@ -111,9 +126,12 @@ export default function StationMapClient({
   marineZonesUrl = "/marine-zones-filtered.json",
 }: Props) {
   const mapRef    = useRef<LeafletMap | null>(null);
-  const layersRef = useRef<LeafletGeoJSON[]>([]);
-  const tileLayerRef = useRef<any>(null);
+  const layersRef = useRef<LeafletLayer[]>([]);
+  const tileLayerRef = useRef<LeafletTileLayer | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const [mapReady, setMapReady] = useState(false);
+  const [mapError, setMapError] = useState(false);
+  const [overlayError, setOverlayError] = useState(false);
   const { resolvedTheme } = useTheme();
 
   // Station's own FIPS set (the counties this station covers at all)
@@ -139,13 +157,18 @@ export default function StationMapClient({
   // Map initialisation (once)
   // -------------------------------------------------------------------------
   useEffect(() => {
-    if (!containerRef.current || mapRef.current) return;
+    const container = containerRef.current;
+    if (!container || mapRef.current) return;
+
+    let cancelled = false;
+    let createdMap: LeafletMap | null = null;
 
     // Dynamic import — avoids SSR window errors
     import("leaflet").then(L => {
-      // Fix broken default icon paths in Next.js
-      // @ts-ignore
-      delete L.Icon.Default.prototype._getIconUrl;
+      if (cancelled) return;
+
+      // Remove Leaflet's legacy URL inference before providing explicit assets.
+      Reflect.deleteProperty(L.Icon.Default.prototype, "_getIconUrl");
       L.Icon.Default.mergeOptions({
         iconRetinaUrl: "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png",
         iconUrl:       "https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png",
@@ -153,15 +176,16 @@ export default function StationMapClient({
       });
 
       const bounds = SERVICE_AREA_BOUNDS.default;
-      const map = L.map(containerRef.current!, {
+      const map = L.map(container, {
         zoomControl: true,
         attributionControl: true,
         scrollWheelZoom: "center",
       }).fitBounds(bounds);
+      createdMap = map;
 
       // CartoDB tiles — theme-aware, swapped via tileLayerRef
       tileLayerRef.current = L.tileLayer(
-        TILE_URLS[resolvedTheme === "light" ? "light" : "dark"],
+        TILE_URLS[document.documentElement.classList.contains("dark") ? "dark" : "light"],
         {
           attribution: TILE_ATTRIBUTION,
           subdomains: "abcd",
@@ -170,14 +194,19 @@ export default function StationMapClient({
       ).addTo(map);
 
       mapRef.current = map;
+      setMapReady(true);
+    }).catch(() => {
+      if (!cancelled) setMapError(true);
     });
 
     return () => {
-      mapRef.current?.remove();
-      mapRef.current = null;
-      tileLayerRef.current = null;
+      cancelled = true;
+      createdMap?.remove();
+      if (mapRef.current === createdMap) {
+        mapRef.current = null;
+        tileLayerRef.current = null;
+      }
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // -------------------------------------------------------------------------
@@ -197,6 +226,7 @@ export default function StationMapClient({
     if (!map) return;
 
     let cancelled = false;
+    setOverlayError(false);
 
     import("leaflet").then(async L => {
       if (cancelled) return;
@@ -212,12 +242,12 @@ export default function StationMapClient({
       let marineZones: MarineZoneFeatureCollection | null = null;
 
       try {
-        const res = await fetch(countiesUrl);
+        const res = await fetch(countiesUrl, { signal: AbortSignal.timeout(MAP_ASSET_TIMEOUT_MS) });
         if (res.ok) counties = await res.json();
       } catch { /* county outlines will be skipped */ }
 
       try {
-        const res = await fetch(marineZonesUrl);
+        const res = await fetch(marineZonesUrl, { signal: AbortSignal.timeout(MAP_ASSET_TIMEOUT_MS) });
         if (res.ok) marineZones = await res.json();
       } catch { /* marine zone outlines will be skipped */ }
 
@@ -292,12 +322,12 @@ export default function StationMapClient({
       // 4. Draw county fills
       // -----------------------------------------------------------------------
       if (counties && fipsDominantSeverity.size > 0) {
-        const fillLayer = L.geoJSON(counties as any, {
-          filter: (feature: any) => {
+        const fillLayer = L.geoJSON<CountyFeature["properties"]>(counties, {
+          filter: (feature) => {
             return fipsDominantSeverity.has(feature.properties.GEOID);
           },
-          style: (feature: any) => {
-            const fips = feature.properties.GEOID as string;
+          style: (feature) => {
+            const fips = feature?.properties.GEOID ?? "";
             const sev  = fipsDominantSeverity.get(fips) ?? "Unknown";
             // Overlap → hatch style (dashed stroke, no fill — pattern is CSS bg)
             const style = capPolygonFips.has(fips)
@@ -305,47 +335,54 @@ export default function StationMapClient({
               : countyFillStyle(sev);
             return toLeafletStyle(style);
           },
-          onEachFeature: (feature: any, layer) => {
-            const fips = feature.properties.GEOID as string;
+          onEachFeature: (feature, layer) => {
+            const fips = feature.properties.GEOID;
             const sev  = fipsDominantSeverity.get(fips) ?? "Unknown";
             const state = STATE_FIPS_ABBR[fips.slice(0, 2)] ?? fips.slice(0, 2);
             layer.bindTooltip(
-              `<strong>${feature.properties.NAME}, ${state}</strong><br/>Severity: ${sev}`,
+              tooltipContent([
+                { text: `${feature.properties.NAME}, ${state}`, strong: true },
+                { text: `Severity: ${sev}` },
+              ]),
               { sticky: true }
             );
           },
         }).addTo(map);
-        layersRef.current.push(fillLayer as any);
+        layersRef.current.push(fillLayer);
       }
 
       // -----------------------------------------------------------------------
       // 5. Draw marine-zone fills
       // -----------------------------------------------------------------------
       if (marineZones && marineDominantSeverity.size > 0) {
-        const marineFillLayer = L.geoJSON(marineZones as any, {
-          filter: (feature: any) => {
+        const marineFillLayer = L.geoJSON<MarineZoneFeature["properties"]>(marineZones, {
+          filter: (feature) => {
             return marineDominantSeverity.has(String(feature.properties.ID));
           },
-          style: (feature: any) => {
-            const zoneId = String(feature.properties.ID);
+          style: (feature) => {
+            const zoneId = String(feature?.properties.ID ?? "");
             const sev = marineDominantSeverity.get(zoneId) ?? "Unknown";
             const style = capPolygonMarineZones.has(zoneId)
               ? overlappingCountyStyle(sev)
               : countyFillStyle(sev);
             return toLeafletStyle(style);
           },
-          onEachFeature: (feature: any, layer) => {
+          onEachFeature: (feature, layer) => {
             const zoneId = String(feature.properties.ID);
             const sev = marineDominantSeverity.get(zoneId) ?? "Unknown";
             const name = String(feature.properties.NAME ?? zoneId);
             layer.bindTooltip(
-              `<strong>${name}</strong><br/>Zone: ${zoneId}<br/>Severity: ${sev}`,
+              tooltipContent([
+                { text: name, strong: true },
+                { text: `Zone: ${zoneId}` },
+                { text: `Severity: ${sev}` },
+              ]),
               { sticky: true }
             );
           },
         }).addTo(map);
 
-        layersRef.current.push(marineFillLayer as any);
+        layersRef.current.push(marineFillLayer);
       }
 
       // -----------------------------------------------------------------------
@@ -356,28 +393,36 @@ export default function StationMapClient({
         const sev = deriveAlertSeverity(alert.properties.event, alert.properties.severity);
         const style = toLeafletStyle(capPolygonStyle(sev));
 
-        const polyLayer = L.geoJSON(
-          { type: "Feature", geometry: alert.geometry, properties: {} } as any,
+        const feature: GeoJSON.Feature<GeoJSON.Geometry, Record<string, never>> = {
+          type: "Feature",
+          geometry: alert.geometry,
+          properties: {},
+        };
+        const polyLayer = L.geoJSON<Record<string, never>>(
+          feature,
           {
             style: () => style,
-            onEachFeature: (_: any, layer) => {
+            onEachFeature: (_feature, layer) => {
               layer.bindTooltip(
-                `<strong>${alert.properties.event}</strong><br/>${alert.properties.areaDesc}`,
+                tooltipContent([
+                  { text: alert.properties.event, strong: true },
+                  { text: alert.properties.areaDesc },
+                ]),
                 { sticky: true }
               );
             },
           }
         ).addTo(map);
 
-        layersRef.current.push(polyLayer as any);
+        layersRef.current.push(polyLayer);
       }
 
       // -----------------------------------------------------------------------
       // 7. Draw service-area marine-zone outlines (subtle, always visible)
       // -----------------------------------------------------------------------
       if (marineZones) {
-        const marineOutlineLayer = L.geoJSON(marineZones as any, {
-          filter: (feature: any) => {
+        const marineOutlineLayer = L.geoJSON<MarineZoneFeature["properties"]>(marineZones, {
+          filter: (feature) => {
             return stationMarineZoneSet.has(String(feature.properties.ID));
           },
           style: () => ({
@@ -389,15 +434,15 @@ export default function StationMapClient({
           interactive: false,
         }).addTo(map);
 
-        layersRef.current.push(marineOutlineLayer as any);
+        layersRef.current.push(marineOutlineLayer);
       }
 
       // -----------------------------------------------------------------------
       // 8. Draw service-area county outlines (subtle, always visible)
       // -----------------------------------------------------------------------
       if (counties) {
-        const outlineLayer = L.geoJSON(counties as any, {
-          filter: (feature: any) =>
+        const outlineLayer = L.geoJSON<CountyFeature["properties"]>(counties, {
+          filter: (feature) =>
             stationFipsSet.has(feature.properties.GEOID) &&
             !fipsDominantSeverity.has(feature.properties.GEOID),
           style: () => ({
@@ -407,12 +452,14 @@ export default function StationMapClient({
             dashArray: "3 4",
           }),
         }).addTo(map);
-        layersRef.current.push(outlineLayer as any);
+        layersRef.current.push(outlineLayer);
       }
+    }).catch(() => {
+      if (!cancelled) setOverlayError(true);
     });
 
     return () => { cancelled = true; };
-  }, [capAlerts, handledAlerts, countiesUrl, marineZonesUrl, resolvedTheme, stationFipsSet, stationMarineZoneSet]);
+  }, [capAlerts, handledAlerts, countiesUrl, mapReady, marineZonesUrl, resolvedTheme, stationFipsSet, stationMarineZoneSet]);
 
   // -------------------------------------------------------------------------
   // Render
@@ -420,7 +467,6 @@ export default function StationMapClient({
   return (
     <div className="relative w-full rounded-md overflow-hidden border border-border" style={{ isolation: "isolate" }}>
       {/* Leaflet CSS */}
-      {/* eslint-disable-next-line @next/next/no-css-tags */}
       <link
         rel="stylesheet"
         href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
@@ -432,6 +478,18 @@ export default function StationMapClient({
         style={{ height: 340, background: "#0f172a" }}
         aria-label={`Service area map for ${config.serviceAreaName}`}
       />
+
+      {mapError ? (
+        <div className="absolute inset-0 z-[1001] grid place-items-center bg-background/95 p-6 text-center text-sm text-muted-foreground">
+          The service-area map could not be loaded. Alert details remain available above.
+        </div>
+      ) : null}
+
+      {overlayError && !mapError ? (
+        <div className="absolute bottom-7 left-3 z-[1001] max-w-[calc(100%-1.5rem)] rounded-md border border-border bg-background/95 px-3 py-2 text-xs text-muted-foreground shadow-sm">
+          Alert overlays could not be drawn. Alert details remain available above.
+        </div>
+      ) : null}
 
       {/* Severity legend — top-right avoids Leaflet attribution at bottom-right */}
       <div className="absolute top-3 right-3 z-[1000] bg-background/90 backdrop-blur-sm border border-border rounded-md px-2.5 py-2 text-xs space-y-1 pointer-events-none">

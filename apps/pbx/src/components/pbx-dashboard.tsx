@@ -38,6 +38,7 @@ import {
 
 import { classifyExtension, formatExtensionClassification, type ClassifiedExtension } from "@/lib/pbx-classification"
 import { cn } from "@seasonalnet/shell/src/lib/utils"
+import { fetchWithTimeout } from "@seasonalnet/shell/src/lib/fetch"
 
 type ExtensionOwner = {
   id: number
@@ -117,7 +118,7 @@ async function requestJson<T>(url: string, init: RequestInit = {}): Promise<T> {
   const headers = new Headers(init.headers)
   if (init.body && !headers.has("content-type")) headers.set("content-type", "application/json")
 
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     ...init,
     headers,
   })
@@ -239,11 +240,17 @@ function TipItem({ title, description }: { title: string; description: React.Rea
 
 function SecretField({ label, value }: { label: string; value: string }) {
   const [copied, setCopied] = useState(false)
+  const [copyFailed, setCopyFailed] = useState(false)
 
   async function copy() {
-    await navigator.clipboard.writeText(value)
-    setCopied(true)
-    window.setTimeout(() => setCopied(false), 1800)
+    setCopyFailed(false)
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopied(true)
+      window.setTimeout(() => setCopied(false), 1800)
+    } catch {
+      setCopyFailed(true)
+    }
   }
 
   return (
@@ -256,6 +263,7 @@ function SecretField({ label, value }: { label: string; value: string }) {
           {copied ? "Copied" : "Copy"}
         </Button>
       </div>
+      {copyFailed ? <p className="text-xs text-destructive">Clipboard access was denied. Select and copy the value manually.</p> : null}
     </div>
   )
 }

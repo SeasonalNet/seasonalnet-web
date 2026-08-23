@@ -1,4 +1,5 @@
 import "server-only"
+import { fetchWithTimeout } from "@seasonalnet/shell/src/lib/fetch"
 
 export type SiteAnnouncement = {
   id: string
@@ -36,7 +37,7 @@ function normalizeHost(host: string) {
   return (host || "").toLowerCase().split(":")[0]
 }
 
-export function deriveSiteIdFromHost(host: string) {
+function deriveSiteIdFromHost(host: string) {
   const h = normalizeHost(host)
   const first = h.split(".")[0]
   return first || ""
@@ -89,7 +90,7 @@ export async function loadAnnouncements(opts?: { host?: string; site?: string })
   const self = `${upstream.pathname}${upstream.search}`
 
   try {
-    const response = await fetch(upstream, {
+    const response = await fetchWithTimeout(upstream, {
       cache: "no-store",
       headers: { accept: "application/json" },
     })

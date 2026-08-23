@@ -1,7 +1,7 @@
 import { Braces, FileJson, KeyRound, RefreshCcw, Rss, ServerCog, Shield } from "lucide-react"
 
-import type { AdminModule, AdminStatusItem, ModuleTone } from "@/lib/admin/types"
-import type { SeasonalApidOverview } from "@/lib/server/modules/seasonalapid"
+import type { AdminModule, AdminStatusItem, ModuleTone } from "../types"
+import type { SeasonalApidOverview } from "../../server/modules/seasonalapid"
 
 function boolLabel(value: boolean | null, on = "Ready", off = "Unavailable") {
   if (value === null) return "Unknown"

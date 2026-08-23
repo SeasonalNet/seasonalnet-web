@@ -1,0 +1,73 @@
+{
+  "schemaVersion": 1,
+  "initialMeasurement": {
+    "measuredAt": "2026-08-23",
+    "eslint": {
+      "errors": 53,
+      "warnings": 3,
+      "note": "51 app findings plus 2 shared-shell findings exposed when the shell joined the gate"
+    },
+    "knip": {
+      "unusedExports": 78,
+      "unusedExportedTypes": 5,
+      "duplicateExports": 2,
+      "dependencyFindings": 8,
+      "totalFindings": 93
+    },
+    "typecheckDiagnostics": 0,
+    "coverage": {
+      "testFiles": 22,
+      "tests": 136,
+      "globalPercent": {
+        "statements": 91.92,
+        "branches": 82.98,
+        "functions": 96.18,
+        "lines": 95.22
+      },
+      "appPercent": {
+        "admin": { "statements": 89.86, "branches": 77.95, "functions": 94.59, "lines": 94.84 },
+        "agent": { "statements": 95.58, "branches": 83.56, "functions": 100, "lines": 100 },
+        "docs": { "statements": 97.5, "branches": 86.66, "functions": 100, "lines": 97.22 },
+        "pbx": { "statements": 95.21, "branches": 90.09, "functions": 95.91, "lines": 98.39 },
+        "prov": { "statements": 100, "branches": 86.66, "functions": 100, "lines": 100 },
+        "radio": { "statements": 96.21, "branches": 89.36, "functions": 100, "lines": 99.31 },
+        "www": { "statements": 100, "branches": 86.66, "functions": 100, "lines": 100 }
+      }
+    },
+    "suppressions": {
+      "typescript": 1,
+      "eslint": 2,
+      "coverage": 0,
+      "tests": 0,
+      "configuration": 0,
+      "ci": 3,
+      "total": 6
+    }
+  },
+  "ceilings": {
+    "eslintErrors": 0,
+    "eslintWarnings": 0,
+    "knipFindings": 0,
+    "typecheckDiagnostics": 0,
+    "coverageUncovered": {
+      "global": { "statements": 83, "branches": 196, "functions": 9, "lines": 43 },
+      "apps": {
+        "admin": { "statements": 29, "branches": 97, "functions": 4, "lines": 13 },
+        "agent": { "statements": 3, "branches": 12, "functions": 0, "lines": 0 },
+        "docs": { "statements": 1, "branches": 6, "functions": 0, "lines": 1 },
+        "pbx": { "statements": 10, "branches": 21, "functions": 2, "lines": 3 },
+        "prov": { "statements": 0, "branches": 6, "functions": 0, "lines": 0 },
+        "radio": { "statements": 7, "branches": 20, "functions": 0, "lines": 1 },
+        "www": { "statements": 0, "branches": 6, "functions": 0, "lines": 0 }
+      }
+    },
+    "suppressions": {
+      "typescript": 0,
+      "eslint": 0,
+      "coverage": 0,
+      "tests": 0,
+      "configuration": 0,
+      "ci": 0
+    }
+  }
+}

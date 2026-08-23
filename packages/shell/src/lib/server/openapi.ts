@@ -10,7 +10,7 @@ export type OpenApiDocumentOptions = {
   schemas?: JsonObject
 }
 
-export const problemDetailsSchema = {
+const problemDetailsSchema = {
   type: "object",
   additionalProperties: true,
   required: ["type", "title", "status"],
@@ -31,7 +31,7 @@ export const problemDetailsSchema = {
   },
 } satisfies JsonObject
 
-export const apiMetaSchema = {
+const apiMetaSchema = {
   type: "object",
   additionalProperties: true,
   properties: {
@@ -42,7 +42,7 @@ export const apiMetaSchema = {
   },
 } satisfies JsonObject
 
-export const apiLinksSchema = {
+const apiLinksSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
@@ -51,7 +51,7 @@ export const apiLinksSchema = {
   },
 } satisfies JsonObject
 
-export const siteAnnouncementSchema = {
+const siteAnnouncementSchema = {
   type: "object",
   additionalProperties: false,
   required: ["id", "title", "body"],
@@ -69,7 +69,7 @@ export const siteAnnouncementSchema = {
   },
 } satisfies JsonObject
 
-export const siteAnnouncementCollectionSchema = {
+const siteAnnouncementCollectionSchema = {
   type: "object",
   additionalProperties: false,
   properties: {
@@ -80,15 +80,6 @@ export const siteAnnouncementCollectionSchema = {
     meta: { $ref: "#/components/schemas/ApiMeta" },
     links: { $ref: "#/components/schemas/ApiLinks" },
   },
-} satisfies JsonObject
-
-export const standardProblemResponses = {
-  "400": { $ref: "#/components/responses/BadRequest" },
-  "401": { $ref: "#/components/responses/Unauthorized" },
-  "403": { $ref: "#/components/responses/Forbidden" },
-  "404": { $ref: "#/components/responses/NotFound" },
-  "500": { $ref: "#/components/responses/InternalServerError" },
-  "502": { $ref: "#/components/responses/BadGateway" },
 } satisfies JsonObject
 
 function problemResponse(description: string) {

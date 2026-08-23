@@ -1,7 +1,6 @@
 "use client";
 
-import * as React from "react";
-import { motion, type HTMLMotionProps } from "framer-motion";
+import { motion, type HTMLMotionProps } from "motion/react";
 import { cn } from "@seasonalnet/shell/src/lib/utils";
 
 export type BlurFadeProps = HTMLMotionProps<"div"> & {
@@ -40,5 +39,3 @@ export function BlurFade({
     </motion.div>
   );
 }
-
-export default BlurFade;

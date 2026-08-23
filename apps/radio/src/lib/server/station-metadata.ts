@@ -1,5 +1,5 @@
 // src/lib/server/station-metadata.ts
-import { seasonalWeatherIcecastStatusUrl, seasonalWeatherNowPlayingUrl } from "@/lib/server/seasonalweather-endpoints"
+import { seasonalWeatherIcecastStatusUrl, seasonalWeatherNowPlayingUrl } from "./seasonalweather-endpoints"
 
 export type StationMetaServerCfg = {
   statusUrl: string; // Icecast status-json.xsl

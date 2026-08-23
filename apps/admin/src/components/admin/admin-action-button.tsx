@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { useRouter } from "next/navigation"
 import { toast } from "sonner"
+import { fetchWithTimeout } from "@seasonalnet/shell/src/lib/fetch"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -41,7 +42,7 @@ export function AdminActionButton({
     const toastId = toast.loading(`${label} in progress...`)
 
     try {
-      const res = await fetch(href, {
+      const res = await fetchWithTimeout(href, {
         method,
         cache: "no-store",
       })

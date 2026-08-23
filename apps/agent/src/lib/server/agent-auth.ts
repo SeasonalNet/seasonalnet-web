@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto"
 import type { Session } from "next-auth"
 import { problemJson } from "@seasonalnet/shell/src/lib/server/problem"
 
-import { auth, getSessionAccessTier, isAuthorizedSession } from "@/auth"
+import { auth, getSessionAccessTier, isAuthorizedSession } from "../../auth"
 
 type SessionUser = NonNullable<Session["user"]> & {
   id?: string | null
@@ -58,7 +58,7 @@ export async function requireAuthorizedAgentSession() {
   }
 }
 
-export function getAuthorizedAgentUserId(session: AuthorizedAgentSession) {
+function getAuthorizedAgentUserId(session: AuthorizedAgentSession) {
   return normalizeUserId(session.user?.id || session.user?.email || preferredUsername(session))
 }
 

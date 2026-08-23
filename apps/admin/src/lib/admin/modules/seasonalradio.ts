@@ -1,6 +1,6 @@
 import { Shield, Wrench } from "lucide-react"
 
-import type { AdminModule } from "@/lib/admin/types"
+import type { AdminModule } from "../types"
 
 export function buildSeasonalRadioModule(): AdminModule {
   return {

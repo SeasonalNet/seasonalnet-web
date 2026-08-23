@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { cn } from "@/lib/utils"
+import { fetchWithTimeout } from "@seasonalnet/shell/src/lib/fetch"
 
 type SiteAnnouncement = {
   id: string
@@ -38,7 +39,7 @@ export function SiteAnnouncements({ className }: { className?: string }) {
 
   const load = React.useCallback(async () => {
     try {
-      const res = await fetch("/api/announcements", { cache: "no-store" })
+      const res = await fetchWithTimeout("/api/announcements", { cache: "no-store" })
       if (!res.ok) return
       const data = (await res.json()) as { data?: SiteAnnouncement[]; items?: SiteAnnouncement[] }
       setItems(Array.isArray(data.data) ? data.data : Array.isArray(data.items) ? data.items : [])

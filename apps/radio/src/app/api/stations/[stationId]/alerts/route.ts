@@ -4,6 +4,7 @@ import { problemJson } from "@seasonalnet/shell/src/lib/server/problem"
 import { cacheControlHeader, getCachedValue } from "@seasonalnet/shell/src/lib/server/cache"
 import { STATION_ALERTS } from "@/lib/station-alert-config"
 import { sameCodesIntersectServiceArea, sameToMarineZone } from "@/lib/alert-map-utils"
+import { fetchWithTimeout } from "@seasonalnet/shell/src/lib/fetch"
 
 type NwsFeature = {
   id?: string
@@ -44,7 +45,7 @@ function uniq<T>(arr: T[]): T[] {
 
 async function fetchNwsActiveAlertsByArea(area: string, ua: string): Promise<NwsFeature[]> {
   const url = `https://api.weather.gov/alerts/active?area=${encodeURIComponent(area)}`
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     headers: {
       "User-Agent": ua,
       "Accept": "application/geo+json",
@@ -60,7 +61,7 @@ async function fetchNwsActiveAlertsByArea(area: string, ua: string): Promise<Nws
 
 async function fetchNwsActiveAlertsByZone(zone: string, ua: string): Promise<NwsFeature[]> {
   const url = `https://api.weather.gov/alerts/active?zone=${encodeURIComponent(zone)}`
-  const res = await fetch(url, {
+  const res = await fetchWithTimeout(url, {
     headers: {
       "User-Agent": ua,
       "Accept": "application/geo+json",
@@ -88,10 +89,14 @@ async function buildStationAlerts(stationId: string) {
       .filter((v): v is string => Boolean(v))
   )
 
-  const featureLists = await Promise.all([
+  const results = await Promise.allSettled([
     ...areas.map((a) => fetchNwsActiveAlertsByArea(a, ua)),
     ...marineZones.map((z) => fetchNwsActiveAlertsByZone(z, ua)),
   ])
+  const featureLists = results
+    .filter((result): result is PromiseFulfilledResult<NwsFeature[]> => result.status === "fulfilled")
+    .map((result) => result.value)
+  const upstreamFailures = results.length - featureLists.length
 
   // Merge + de-dupe by feature.id
   const merged: NwsFeature[] = []
@@ -152,6 +157,8 @@ async function buildStationAlerts(stationId: string) {
     serviceAreaName: cfg.serviceAreaName,
     generatedAt: new Date().toISOString(),
     source: "nws",
+    degraded: upstreamFailures > 0,
+    upstreamFailures,
     alerts,
   }
 }

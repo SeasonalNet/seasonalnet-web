@@ -1,6 +1,7 @@
 import "server-only"
 
 import { getCachedValue } from "@seasonalnet/shell/src/lib/server/cache"
+import { fetchWithTimeout } from "@seasonalnet/shell/src/lib/fetch"
 
 export type SeasonalApidOverview = {
   configured: boolean
@@ -59,7 +60,7 @@ async function fetchJson(path: string): Promise<FetchResult> {
   let response: Response
 
   try {
-    response = await fetch(`${API_BASE}${path}`, {
+    response = await fetchWithTimeout(`${API_BASE}${path}`, {
       cache: "no-store",
       headers: { accept: "application/json" },
     })

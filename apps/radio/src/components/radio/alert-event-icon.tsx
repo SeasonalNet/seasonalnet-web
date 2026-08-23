@@ -1,6 +1,5 @@
 // src/components/radio/alert-event-icon.tsx
 
-import * as React from "react"
 import { cn } from "@seasonalnet/shell/src/lib/utils"
 import * as Lucide from "lucide-react"
 
@@ -147,7 +146,7 @@ const NWS_EVENT_TONE: Record<string, string> = {
 
 // 47 CFR §11.31(e) Event (EEE) codes (authorized list) + MEP (FCC order)
 // Source list: CFR mirror; MEP per FCC/Federal Register.
-export const EAS_EVENT_CODE_TO_NAME: Record<string, string> = {
+const EAS_EVENT_CODE_TO_NAME: Record<string, string> = {
   // National codes (required)
   EAN: "National Emergency Message",
   NPT: "Nationwide Test of the Emergency Alert System",
@@ -265,7 +264,7 @@ function easToneByName(name: string): string {
 }
 
 // Full mapping object (codes + full names) for convenience / future overrides
-export const EAS_EVENT_TONE: Record<string, string> = (() => {
+const EAS_EVENT_TONE: Record<string, string> = (() => {
   const out: Record<string, string> = {}
   for (const [code, name] of Object.entries(EAS_EVENT_CODE_TO_NAME)) {
     const tone = easToneByName(name)
@@ -362,6 +361,28 @@ type IconName =
   | "Info"
   | "PhoneOff"
 
+const EVENT_ICONS: Record<IconName, Lucide.LucideIcon> = {
+  Biohazard: Lucide.Biohazard,
+  CloudFog: Lucide.CloudFog,
+  CloudHaze: Lucide.Cloudy,
+  CloudLightning: Lucide.CloudLightning,
+  Flame: Lucide.Flame,
+  Info: Lucide.Info,
+  PhoneOff: Lucide.PhoneOff,
+  Radiation: Lucide.Radiation,
+  ShieldAlert: Lucide.ShieldAlert,
+  Siren: Lucide.Siren,
+  Snowflake: Lucide.Snowflake,
+  TestTube: Lucide.TestTube,
+  ThermometerSnowflake: Lucide.ThermometerSnowflake,
+  ThermometerSun: Lucide.ThermometerSun,
+  Tornado: Lucide.Tornado,
+  TriangleAlert: Lucide.TriangleAlert,
+  UserSearch: Lucide.UserSearch,
+  Waves: Lucide.Waves,
+  Wind: Lucide.Wind,
+}
+
 function pickIconName(event: string): IconName {
   const e = norm(event)
 
@@ -448,12 +469,7 @@ export function AlertEventIcon({ event, severity, className, mode = "nws" }: Pro
   const iconEvent = mode === "eas" ? canonEasEventName(event) : event
   const iconName = pickIconName(iconEvent)
 
-  // Safe lookup: if an icon name ever doesn't exist in your lucide version,
-  // this gracefully falls back to TriangleAlert.
-  const Icon = ((Lucide as any)[iconName] ?? Lucide.TriangleAlert) as React.ComponentType<{
-    className?: string
-    "aria-hidden"?: boolean
-  }>
+  const Icon = EVENT_ICONS[iconName]
 
   return <Icon className={cn("h-4 w-4 shrink-0", tone, className)} aria-hidden />
 }

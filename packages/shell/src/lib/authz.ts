@@ -11,7 +11,7 @@ function unique(values: string[]) {
   return [...new Set(values)]
 }
 
-export function parseGroupList(value?: string | null): string[] {
+function parseGroupList(value?: string | null): string[] {
   if (!value) return []
   return unique(
     value
@@ -21,7 +21,7 @@ export function parseGroupList(value?: string | null): string[] {
   )
 }
 
-export function buildAccessPolicy(groups: {
+function buildAccessPolicy(groups: {
   status?: string[]
   operations?: string[]
   administration?: string[]

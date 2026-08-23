@@ -1,5 +1,5 @@
-import { NextResponse } from "next/server"
-import { problemDetailFromError, problemJson } from "@seasonalnet/shell/src/lib/server/problem"
+import { problemJson } from "@seasonalnet/shell/src/lib/server/problem"
+import { fetchWithTimeout, isTimeoutError } from "@seasonalnet/shell/src/lib/fetch"
 
 import type { BrowserAgentChatRequest } from "@/lib/agent/chat-types"
 import { buildTrustedAgentChatPayload } from "@/lib/server/agent-caller-context"
@@ -19,10 +19,21 @@ export async function POST(request: Request) {
     detail: "Authentication is required.",
   })
 
+  let body: BrowserAgentChatRequest
   try {
-    const body = (await request.json()) as BrowserAgentChatRequest
+    body = (await request.json()) as BrowserAgentChatRequest
+  } catch {
+    return problemJson({
+      type: "/problems/invalid-json",
+      title: "Invalid request body",
+      status: 400,
+      detail: "The request body must be valid JSON.",
+    })
+  }
+
+  try {
     const trustedBody = buildTrustedAgentChatPayload(session, body)
-    const upstream = await fetch(`${seasonalAgentBaseUrl()}/api/v1/chat/stream`, {
+    const upstream = await fetchWithTimeout(`${seasonalAgentBaseUrl()}/api/v1/chat/stream`, {
       method: "POST",
       headers: seasonalAgentHeaders({
         "Content-Type": "application/json",
@@ -55,12 +66,12 @@ export async function POST(request: Request) {
       headers,
     })
   } catch (error) {
-    const message = problemDetailFromError(error, "Unexpected upstream stream error")
+    const timedOut = isTimeoutError(error)
     return problemJson({
       type: "/problems/upstream-agent-stream-error",
       title: "Seasonal Agent stream request failed",
-      status: 500,
-      detail: message,
+      status: timedOut ? 504 : 502,
+      detail: timedOut ? "The Seasonal Agent stream timed out." : "The Seasonal Agent stream is unavailable.",
     })
   }
 }

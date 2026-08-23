@@ -7,6 +7,8 @@ import { Badge } from "./ui/badge"
 import { Button } from "./ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "./ui/card"
 import { cn } from "../lib/utils"
+import { fetchWithTimeout } from "../lib/fetch"
+import { safeNavigationHref } from "../lib/browser-safe"
 
 type SiteAnnouncement = {
   id: string
@@ -38,7 +40,7 @@ export function SiteAnnouncements({ className }: { className?: string }) {
 
   const load = React.useCallback(async () => {
     try {
-      const res = await fetch("/api/announcements", { cache: "no-store" })
+      const res = await fetchWithTimeout("/api/announcements", { cache: "no-store" })
       if (!res.ok) return
       const data = (await res.json()) as { data?: SiteAnnouncement[]; items?: SiteAnnouncement[] }
       setItems(Array.isArray(data.data) ? data.data : Array.isArray(data.items) ? data.items : [])
@@ -50,9 +52,12 @@ export function SiteAnnouncements({ className }: { className?: string }) {
   }, [])
 
   React.useEffect(() => {
-    void load()
+    const initialId = window.setTimeout(() => void load(), 0)
     const id = window.setInterval(() => void load(), 5 * 60 * 1000)
-    return () => window.clearInterval(id)
+    return () => {
+      window.clearTimeout(initialId)
+      window.clearInterval(id)
+    }
   }, [load])
 
   if (!loaded) return null
@@ -71,21 +76,22 @@ export function SiteAnnouncements({ className }: { className?: string }) {
         <CardContent className="space-y-3 pt-0 pb-4 -mt-2">
           {items.map((a) => {
             const meta = levelBadge(a.level)
+            const href = safeNavigationHref(a.href)
 
             return (
               <div key={a.id} className="rounded-xl border bg-background/50 p-3">
                 <div className="flex flex-wrap items-start justify-between gap-2">
                   <div className="min-w-0 flex-1">
                     <div className="flex flex-wrap items-center gap-2">
-                      <div className="font-medium">{a.title}</div>
+                    <div className="break-words font-medium">{a.title}</div>
                       <Badge variant={meta.variant}>{meta.label}</Badge>
                     </div>
-                    <p className="mt-1 text-sm text-muted-foreground">{a.body}</p>
+                    <p className="mt-1 break-words text-sm text-muted-foreground">{a.body}</p>
                   </div>
 
-                  {a.href ? (
+                  {href ? (
                     <Button size="sm" variant="secondary" asChild className="shrink-0">
-                      <a href={a.href} target="_blank" rel="noreferrer noopener">
+                      <a href={href} target="_blank" rel="noreferrer noopener">
                         <ExternalLink className="mr-2 h-4 w-4" />
                         {a.hrefLabel || "Open"}
                       </a>

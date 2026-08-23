@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
-import { problemDetailFromError, problemJson } from "@seasonalnet/shell/src/lib/server/problem"
+import { problemJson } from "@seasonalnet/shell/src/lib/server/problem"
+import { fetchWithTimeout, isTimeoutError } from "@seasonalnet/shell/src/lib/fetch"
 
 import { requireAuthorizedAgentSession } from "@/lib/server/agent-auth"
 import { seasonalAgentBaseUrl, seasonalAgentHeaders } from "@/lib/server/seasonal-agent"
@@ -18,7 +19,7 @@ export async function GET(request: Request) {
   })
 
   try {
-    const upstream = await fetch(`${seasonalAgentBaseUrl()}/healthz`, {
+    const upstream = await fetchWithTimeout(`${seasonalAgentBaseUrl()}/healthz`, {
       headers: seasonalAgentHeaders(),
       cache: "no-store",
       signal: request.signal,
@@ -38,12 +39,12 @@ export async function GET(request: Request) {
 
     return NextResponse.json({ ok: text.trim() === "ok", status: upstream.status })
   } catch (error) {
-    const message = problemDetailFromError(error, "Upstream health request failed")
+    const timedOut = isTimeoutError(error)
     return problemJson({
       type: "/problems/upstream-agent-health-error",
       title: "Seasonal Agent health request failed",
-      status: 500,
-      detail: message,
+      status: timedOut ? 504 : 502,
+      detail: timedOut ? "The Seasonal Agent health check timed out." : "The Seasonal Agent health service is unavailable.",
     })
   }
 }

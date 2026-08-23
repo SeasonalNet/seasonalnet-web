@@ -1,0 +1,20 @@
+{
+  "$schema": "https://unpkg.com/knip@6/schema.json",
+  "workspaces": {
+    ".": {
+      "entry": ["tools/quality/check-suppressions.mjs"],
+      "project": ["tools/**/*.mjs"]
+    },
+    "apps/docs": {
+      "entry": [
+        "next.config.mjs",
+        "source.config.ts",
+        "scripts/public-docs-policy.mjs",
+        "scripts/sync-seasonalnet-docs.mjs"
+      ]
+    },
+    "apps/radio": {
+      "entry": ["scripts/generate-*-geojson.mjs"]
+    }
+  }
+}

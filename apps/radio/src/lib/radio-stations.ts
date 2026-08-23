@@ -1,6 +1,6 @@
 // src/lib/radio-stations.ts
 
-export type RadioMount = {
+type RadioMount = {
   id: string
   title: string
   src: string // "/seasonalweather.mp3" or full URL

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { problemDetailFromError, problemJson } from "@seasonalnet/shell/src/lib/server/problem"
+import { problemJson } from "@seasonalnet/shell/src/lib/server/problem"
 
 import {
   SeasonalWeatherApiError,
@@ -177,13 +177,11 @@ async function handle(
       })
     }
 
-    const message = problemDetailFromError(error, "Unexpected upstream error")
-
     return problemJson({
       type: "/problems/upstream-seasonalweather-error",
       title: "SeasonalWeather proxy failed",
       status: 500,
-      detail: message,
+      detail: "The SeasonalWeather proxy could not complete the request.",
     })
   }
 }

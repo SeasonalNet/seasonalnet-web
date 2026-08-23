@@ -9,8 +9,8 @@ import {
   Wrench,
 } from "lucide-react"
 
-import type { AdminModule, AdminStatusItem, ModuleTone } from "@/lib/admin/types"
-import type { SeasonalWeatherOverview } from "@/lib/server/modules/seasonalweather"
+import type { AdminModule, AdminStatusItem, ModuleTone } from "../types"
+import type { SeasonalWeatherOverview } from "../../server/modules/seasonalweather"
 
 function boolLabel(value: boolean | null, on = "Enabled", off = "Disabled") {
   if (value === null) return "Unknown"

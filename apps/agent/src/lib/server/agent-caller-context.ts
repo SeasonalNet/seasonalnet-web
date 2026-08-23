@@ -1,11 +1,11 @@
-import type { BrowserAgentChatRequest } from "@/lib/agent/chat-types"
-import type { AuthorizedAgentSession } from "@/lib/server/agent-auth"
+import type { BrowserAgentChatRequest } from "../agent/chat-types"
+import type { AuthorizedAgentSession } from "./agent-auth"
 import {
   buildAgentSessionPrefix,
   createAgentSessionId,
   ensureAgentSessionOwnership,
   getAgentCallerIdentity,
-} from "@/lib/server/agent-auth"
+} from "./agent-auth"
 
 const EXECUTION_MODES = new Set([
   "text_only",

@@ -110,8 +110,14 @@ function HighlightedCodeBlock({
   useEffect(() => {
     let cancelled = false
 
+    const updateHtml = (value: string | null) => {
+      queueMicrotask(() => {
+        if (!cancelled) setHtml(value)
+      })
+    }
+
     if (!language) {
-      setHtml("")
+      updateHtml("")
       return () => {
         cancelled = true
       }
@@ -120,13 +126,13 @@ function HighlightedCodeBlock({
     const cacheKey = `${theme}:${language}:${source}`
     const cached = highlightCache.get(cacheKey)
     if (cached) {
-      setHtml(cached)
+      updateHtml(cached)
       return () => {
         cancelled = true
       }
     }
 
-    setHtml(null)
+    updateHtml(null)
 
     void codeToHtml(source, {
       lang: language,

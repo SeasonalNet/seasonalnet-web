@@ -20,7 +20,7 @@ type CachedValue<T> = {
 }
 
 const values = new Map<string, CacheEntry<unknown>>()
-const inflight = new Map<string, Promise<unknown>>()
+const inflight = new Map<string, Promise<CachedValue<unknown>>>()
 
 function nowMs() {
   return Date.now()
@@ -39,9 +39,10 @@ export async function getCachedValue<T>(
     return { value: entry.value, status: "hit" }
   }
 
-  const existing = inflight.get(options.key) as Promise<T> | undefined
+  const existing = inflight.get(options.key) as Promise<CachedValue<T>> | undefined
   if (existing) {
-    return { value: await existing, status: "coalesced" }
+    const result = await existing
+    return { value: result.value, status: result.status === "stale" ? "stale" : "coalesced" }
   }
 
   const pending = loader()
@@ -52,12 +53,12 @@ export async function getCachedValue<T>(
         expiresAt,
         staleUntil: expiresAt + staleTtlMs,
       })
-      return value
+      return { value, status: "miss" as const }
     })
     .catch((error) => {
       const staleEntry = values.get(options.key) as CacheEntry<T> | undefined
       if (staleEntry && staleEntry.staleUntil > nowMs()) {
-        return staleEntry.value
+        return { value: staleEntry.value, status: "stale" as const }
       }
       throw error
     })
@@ -67,23 +68,11 @@ export async function getCachedValue<T>(
 
   inflight.set(options.key, pending)
 
-  try {
-    return { value: await pending, status: "miss" }
-  } catch (error) {
-    if (entry && entry.staleUntil > nowMs()) {
-      return { value: entry.value, status: "stale" }
-    }
-    throw error
-  }
+  return pending
 }
 
 export function cacheControlHeader(ttlSeconds: number, staleWhileRevalidateSeconds = ttlSeconds * 5) {
   const ttl = Math.max(0, Math.floor(ttlSeconds))
   const stale = Math.max(0, Math.floor(staleWhileRevalidateSeconds))
   return `public, max-age=${ttl}, s-maxage=${ttl}, stale-while-revalidate=${stale}`
-}
-
-export function privateCacheControlHeader(ttlSeconds: number) {
-  const ttl = Math.max(0, Math.floor(ttlSeconds))
-  return `private, max-age=${ttl}`
 }

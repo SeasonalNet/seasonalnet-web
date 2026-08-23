@@ -1,6 +1,7 @@
 import "server-only"
 
 import { randomUUID } from "crypto"
+import { fetchWithTimeout } from "@seasonalnet/shell/src/lib/fetch"
 
 export type SeasonalWeatherCapability =
   | "read"
@@ -75,7 +76,7 @@ function legacyErrorMessage(error: LegacySeasonalWeatherErrorBody["error"]) {
 
 export function seasonalWeatherProblemSummary(body: SeasonalWeatherErrorBody | string | null, fallback: string) {
   if (!body) return fallback
-  if (typeof body === "string") return body || fallback
+  if (typeof body === "string") return fallback
 
   if (isProblemDetails(body)) {
     const detail = typeof body.detail === "string" ? body.detail : null
@@ -137,16 +138,15 @@ export async function seasonalWeatherApi(
 
   let res: Response
   try {
-    res = await fetch(`${BASE_URL}${upstreamPath}`, {
+    res = await fetchWithTimeout(`${BASE_URL}${upstreamPath}`, {
       ...init,
       method,
       headers,
       cache: "no-store",
     })
-  } catch (error) {
-    const detail = error instanceof Error ? error.message : "fetch failed"
+  } catch {
     throw new SeasonalWeatherApiError(
-      `Unable to reach SeasonalWeather API at ${BASE_URL}: ${detail}`,
+      "The SeasonalWeather API is temporarily unavailable.",
       502
     )
   }

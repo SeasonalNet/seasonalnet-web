@@ -23,7 +23,7 @@ export type ProblemJsonOptions = {
 
 const PROBLEM_JSON = "application/problem+json; charset=utf-8"
 
-export function problemDetails(options: ProblemJsonOptions): ProblemDetails {
+function problemDetails(options: ProblemJsonOptions): ProblemDetails {
   const detail = options.detail || options.title
   return {
     type: options.type,

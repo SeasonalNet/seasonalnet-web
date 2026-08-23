@@ -1,6 +1,4 @@
 export const PUBLIC_DOCS_SOURCE_REPO = 'seasonalnet-docs';
-export const PUBLIC_DOCS_SOURCE_REMOTE =
-  'https://git.seasonalnet.org/Seasonal_Currency/seasonalnet-docs';
 
 // Default sibling checkout on SeasonalWeb when both repos live under /opt/git-staging/.
 // apps/docs -> /opt/git-staging/seasonalnet-web/apps/docs

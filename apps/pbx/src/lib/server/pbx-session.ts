@@ -1,5 +1,5 @@
-import { auth, isAuthorizedSession, sessionDiscordId, sessionDisplayName } from "@/auth"
-import { pbxJsonResponse } from "@/lib/server/pbx-response"
+import { auth, isAuthorizedSession, sessionDiscordId, sessionDisplayName } from "../../auth"
+import { pbxJsonResponse } from "./pbx-response"
 
 export type PbxSelfSession = {
   displayName: string

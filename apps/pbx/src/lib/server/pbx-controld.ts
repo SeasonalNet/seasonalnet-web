@@ -1,9 +1,11 @@
 import { randomUUID } from "node:crypto"
 
-import { classifyExtension, type ClassifiedExtension } from "@/lib/pbx-classification"
-import { pbxJsonResponse } from "@/lib/server/pbx-response"
+import { fetchWithTimeout, isTimeoutError } from "@seasonalnet/shell/src/lib/fetch"
 
-export type PbxProblem = {
+import { classifyExtension, type ClassifiedExtension } from "../pbx-classification"
+import { pbxJsonResponse } from "./pbx-response"
+
+type PbxProblem = {
   type?: string
   title?: string
   status?: number
@@ -24,12 +26,12 @@ export type ExtensionOwner = {
   updatedAt: string
 }
 
-export type ExtensionCredentials = {
+type ExtensionCredentials = {
   sipSecret: string
   voicemailPin: string
 }
 
-export type CredentialMetadata = {
+type CredentialMetadata = {
   extension: string
   sipSecretStored: boolean
   voicemailPinStored: boolean
@@ -68,7 +70,7 @@ export type PoolSummary = {
   byState: Record<string, number>
 }
 
-export class PbxControlError extends Error {
+class PbxControlError extends Error {
   readonly status: number
   readonly problem: PbxProblem
 
@@ -132,6 +134,61 @@ function problemFromUnknown(status: number, value: unknown): PbxProblem {
   }
 }
 
+function invalidUpstreamPayload(expected: string): never {
+  throw new PbxControlError(502, {
+    type: "https://seasonalnet.org/problems/pbx-controld-invalid-response",
+    title: "Invalid PBX control response",
+    status: 502,
+    detail: `pbx-controld returned an invalid ${expected} response.`,
+  })
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return Boolean(value && typeof value === "object" && !Array.isArray(value))
+}
+
+function assertExtensionOwner(value: unknown): ExtensionOwner {
+  if (
+    !isRecord(value) ||
+    typeof value.id !== "number" ||
+    typeof value.discordId !== "string" ||
+    typeof value.extension !== "string" ||
+    typeof value.state !== "string" ||
+    typeof value.createdAt !== "string" ||
+    typeof value.updatedAt !== "string"
+  ) invalidUpstreamPayload("extension owner")
+  return value as ExtensionOwner
+}
+
+function assertPoolSummary(value: unknown): PoolSummary {
+  if (
+    !isRecord(value) ||
+    typeof value.total !== "number" ||
+    typeof value.enabled !== "number" ||
+    typeof value.available !== "number" ||
+    !isRecord(value.byState)
+  ) invalidUpstreamPayload("extension pool summary")
+  return value as PoolSummary
+}
+
+function assertOperations(value: unknown): Operation[] {
+  if (!Array.isArray(value) || value.some((item) => !isRecord(item) || typeof item.id !== "string" || typeof item.status !== "string")) {
+    invalidUpstreamPayload("operation list")
+  }
+  return value as Operation[]
+}
+
+function assertMutationResponse(value: unknown): ExtensionMutationResponse {
+  if (!isRecord(value) || typeof value.replayed !== "boolean" || !(value.owner === null || isRecord(value.owner))) {
+    invalidUpstreamPayload("extension mutation")
+  }
+
+  return {
+    ...(value as ExtensionMutationResponse),
+    owner: value.owner === null ? null : assertExtensionOwner(value.owner),
+  }
+}
+
 async function getAccessToken(options: { forceRefresh?: boolean } = {}) {
   const legacyToken = legacyBearerToken()
   if (legacyToken && !clientCredential()) return legacyToken
@@ -139,7 +196,7 @@ async function getAccessToken(options: { forceRefresh?: boolean } = {}) {
   const now = Date.now()
   if (!options.forceRefresh && cachedToken && cachedToken.expiresAtMs - 30_000 > now) return cachedToken.accessToken
 
-  const response = await fetch(`${baseUrl()}/v1/auth/token`, {
+  const response = await fetchWithTimeout(`${baseUrl()}/v1/auth/token`, {
     method: "POST",
     headers: {
       authorization: `Bearer ${mustClientCredential()}`,
@@ -185,7 +242,7 @@ async function request<T>(path: string, init: RequestInit = {}, retryOnUnauthori
   headers.set("authorization", `Bearer ${token}`)
   if (init.body && !headers.has("content-type")) headers.set("content-type", "application/json")
 
-  const response = await fetch(`${baseUrl()}${path}`, {
+  const response = await fetchWithTimeout(`${baseUrl()}${path}`, {
     ...init,
     headers,
     cache: "no-store",
@@ -238,7 +295,8 @@ export function assertSelfServiceCredentialAllowed(owner: ExtensionOwner): void 
 
 export async function getExtensionByDiscordId(discordId: string): Promise<ExtensionOwner | null> {
   try {
-    return withOwnerClassification(await request<ExtensionOwner>(`/v1/discord-users/${encodeURIComponent(discordId)}/extension`))
+    const payload = await request<unknown>(`/v1/discord-users/${encodeURIComponent(discordId)}/extension`)
+    return withOwnerClassification(assertExtensionOwner(payload))
   } catch (error) {
     if (error instanceof PbxControlError && error.status === 404) return null
     throw error
@@ -247,7 +305,7 @@ export async function getExtensionByDiscordId(discordId: string): Promise<Extens
 
 export async function getPoolSummary(): Promise<PoolSummary | null> {
   try {
-    return await request<PoolSummary>("/v1/extension-pool/summary")
+    return assertPoolSummary(await request<unknown>("/v1/extension-pool/summary"))
   } catch (error) {
     if (error instanceof PbxControlError && error.status === 404) return null
     throw error
@@ -255,11 +313,11 @@ export async function getPoolSummary(): Promise<PoolSummary | null> {
 }
 
 export async function listOperationsForDiscordId(discordId: string, limit = 8): Promise<Operation[]> {
-  return request<Operation[]>(`/v1/operations?discordId=${encodeURIComponent(discordId)}&limit=${limit}`)
+  return assertOperations(await request<unknown>(`/v1/operations?discordId=${encodeURIComponent(discordId)}&limit=${limit}`))
 }
 
 export async function claimExtension(input: { discordId: string; displayName?: string | null }) {
-  const result = await request<ExtensionMutationResponse>("/v1/extension-claims", {
+  const result = assertMutationResponse(await request<unknown>("/v1/extension-claims", {
     method: "POST",
     headers: idempotencyHeaders(),
     body: JSON.stringify({
@@ -267,40 +325,40 @@ export async function claimExtension(input: { discordId: string; displayName?: s
       displayName: input.displayName || null,
       reason: "PBX self-service dashboard claim",
     }),
-  })
+  }))
   return withMutationOwnerClassification(result)
 }
 
 export async function updateExtensionProfile(input: { extension: string; displayName?: string | null }) {
-  const result = await request<ExtensionMutationResponse>(`/v1/extensions/${encodeURIComponent(input.extension)}/profile`, {
+  const result = assertMutationResponse(await request<unknown>(`/v1/extensions/${encodeURIComponent(input.extension)}/profile`, {
     method: "PATCH",
     headers: idempotencyHeaders(),
     body: JSON.stringify({
       displayName: input.displayName || null,
       reason: "PBX self-service dashboard profile update",
     }),
-  })
+  }))
   return withMutationOwnerClassification(result)
 }
 
 export async function revealExtensionCredentials(extension: string) {
-  const result = await request<ExtensionMutationResponse>(`/v1/extensions/${encodeURIComponent(extension)}/credentials/reveal`, {
+  const result = assertMutationResponse(await request<unknown>(`/v1/extensions/${encodeURIComponent(extension)}/credentials/reveal`, {
     method: "POST",
     headers: idempotencyHeaders(),
     body: JSON.stringify({ reason: "PBX self-service dashboard credential reveal" }),
-  })
+  }))
   return withMutationOwnerClassification(result)
 }
 
 export async function rotateExtensionCredentials(extension: string, resetVoicemailPin: boolean) {
-  const result = await request<ExtensionMutationResponse>(`/v1/extensions/${encodeURIComponent(extension)}/credentials/rotate`, {
+  const result = assertMutationResponse(await request<unknown>(`/v1/extensions/${encodeURIComponent(extension)}/credentials/rotate`, {
     method: "POST",
     headers: idempotencyHeaders(),
     body: JSON.stringify({
       reason: "PBX self-service dashboard credential rotation",
       resetVoicemailPin,
     }),
-  })
+  }))
   return withMutationOwnerClassification(result)
 }
 
@@ -309,14 +367,17 @@ export function problemResponse(error: unknown) {
     return pbxJsonResponse(error.problem, { status: error.status })
   }
 
-  const message = error instanceof Error ? error.message : String(error)
+  const timedOut = isTimeoutError(error)
+  const status = timedOut ? 504 : 502
   return pbxJsonResponse(
     {
       type: "https://seasonalnet.org/problems/pbx-spa-upstream-error",
-      title: "PBX dashboard request failed",
-      status: 500,
-      detail: message,
+      title: timedOut ? "PBX control request timed out" : "PBX control service unavailable",
+      status,
+      detail: timedOut
+        ? "The PBX control service did not respond in time."
+        : "The PBX control service could not be reached.",
     },
-    { status: 500 },
+    { status },
   )
 }

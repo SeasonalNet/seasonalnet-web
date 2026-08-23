@@ -66,7 +66,7 @@ function applySessionClaims<TSession extends MutableSession>(
   return session
 }
 
-export const { handlers, auth, signIn, signOut } = NextAuth({
+export const { handlers, auth, signIn } = NextAuth({
   debug: process.env.NODE_ENV !== "production",
   session: {
     strategy: "jwt",
@@ -101,11 +101,11 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   },
 })
 
-export function getSessionGroups(session: SessionLike): string[] {
+function getSessionGroups(session: SessionLike): string[] {
   return normalizeGroups(session?.groups)
 }
 
-export function getSessionAccessTier(session: SessionLike) {
+function getSessionAccessTier(session: SessionLike) {
   const groups = getSessionGroups(session)
   return resolveAccessTier(groups, accessPolicy)
 }

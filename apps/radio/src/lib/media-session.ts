@@ -8,8 +8,7 @@ export type MediaSessionMeta = {
 
 export function setMediaSessionMeta(meta: MediaSessionMeta) {
   if (typeof window === "undefined") return
-  const nav: any = navigator as any
-  if (!("mediaSession" in nav) || !(window as any).MediaMetadata) return
+  if (!("mediaSession" in navigator) || typeof MediaMetadata === "undefined") return
 
   const artwork = meta.artworkUrl
     ? [
@@ -19,7 +18,7 @@ export function setMediaSessionMeta(meta: MediaSessionMeta) {
       ]
     : undefined
 
-  nav.mediaSession.metadata = new (window as any).MediaMetadata({
+  navigator.mediaSession.metadata = new MediaMetadata({
     title: meta.title ?? "",
     artist: meta.artist ?? "",
     album: meta.album ?? "",
@@ -29,10 +28,9 @@ export function setMediaSessionMeta(meta: MediaSessionMeta) {
 
 export function setMediaSessionPlaybackState(state: "none" | "paused" | "playing") {
   if (typeof window === "undefined") return
-  const nav: any = navigator as any
-  if (!("mediaSession" in nav)) return
+  if (!("mediaSession" in navigator)) return
   try {
-    nav.mediaSession.playbackState = state
+    navigator.mediaSession.playbackState = state
   } catch {
     // some browsers are picky; safe to ignore
   }
@@ -40,12 +38,11 @@ export function setMediaSessionPlaybackState(state: "none" | "paused" | "playing
 
 export function bindBasicMediaSessionControls(audio: HTMLAudioElement | null) {
   if (!audio) return
-  const nav: any = navigator as any
-  if (!("mediaSession" in nav)) return
+  if (!("mediaSession" in navigator)) return
 
-  const safe = (action: string, fn: (() => void) | null) => {
+  const safe = (action: MediaSessionAction, fn: MediaSessionActionHandler | null) => {
     try {
-      nav.mediaSession.setActionHandler(action, fn)
+      navigator.mediaSession.setActionHandler(action, fn)
     } catch {
       // unsupported action; ignore
     }

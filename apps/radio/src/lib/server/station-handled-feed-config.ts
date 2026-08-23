@@ -1,7 +1,7 @@
 // src/lib/server/station-handled-feed-config.ts
 import "server-only"
 
-import { seasonalWeatherHandledAlertsUrl } from "@/lib/server/seasonalweather-endpoints"
+import { seasonalWeatherHandledAlertsUrl } from "./seasonalweather-endpoints"
 
 export type StationHandledFeedConfig = {
   stationId: string

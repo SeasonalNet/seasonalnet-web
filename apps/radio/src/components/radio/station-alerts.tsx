@@ -6,6 +6,8 @@ import { Badge } from "@seasonalnet/shell/src/components/ui/badge"
 import { Button } from "@seasonalnet/shell/src/components/ui/button"
 import { AlertEventIcon, alertToneClass } from "@/components/radio/alert-event-icon"
 import { cn } from "@seasonalnet/shell/src/lib/utils"
+import { fetchWithTimeout } from "@seasonalnet/shell/src/lib/fetch"
+import { formatDateTime, safeNavigationHref } from "@seasonalnet/shell/src/lib/browser-safe"
 import { ExternalLink, RefreshCw, TriangleAlert } from "lucide-react"
 
 type ApiAlert = {
@@ -32,16 +34,7 @@ type ApiPayload = {
 }
 
 function fmtLocal(ts: string, tz = "America/New_York") {
-  const d = new Date(ts)
-  if (Number.isNaN(d.getTime())) return "—"
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: tz,
-    weekday: "short",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(d)
+  return formatDateTime(ts, tz)
 }
 
 function severityVariant(sev: string): "default" | "secondary" | "destructive" | "outline" {
@@ -60,21 +53,24 @@ export function StationAlerts({ stationId, timezone = "America/New_York" }: { st
     setLoading(true)
     setErr(null)
     try {
-      const res = await fetch(`/api/stations/${encodeURIComponent(stationId)}/alerts`, { cache: "no-store" })
+      const res = await fetchWithTimeout(`/api/stations/${encodeURIComponent(stationId)}/alerts`, { cache: "no-store" })
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const json = (await res.json()) as ApiPayload
       setData(json)
-    } catch (e: any) {
-      setErr(e?.message ?? "Failed to load alerts")
+    } catch (error: unknown) {
+      setErr(error instanceof Error ? error.message : "Failed to load alerts")
     } finally {
       setLoading(false)
     }
   }, [stationId])
 
   React.useEffect(() => {
-    load()
+    const initialId = window.setTimeout(() => void load(), 0)
     const t = setInterval(load, 60_000)
-    return () => clearInterval(t)
+    return () => {
+      window.clearTimeout(initialId)
+      clearInterval(t)
+    }
   }, [load])
 
   const alerts = data?.alerts ?? []
@@ -123,6 +119,7 @@ export function StationAlerts({ stationId, timezone = "America/New_York" }: { st
         <div className="space-y-3">
           {alerts.slice(0, 12).map((a) => {
             const until = a.ends ?? a.expires
+            const nwsHref = safeNavigationHref(a.links?.nws)
 
             return (
               <Alert key={a.id} className="relative">
@@ -139,7 +136,7 @@ export function StationAlerts({ stationId, timezone = "America/New_York" }: { st
                       </Badge>
                     </div>
 
-                    {a.headline ? <div className="text-sm text-muted-foreground">{a.headline}</div> : null}
+                    {a.headline ? <div className="break-words text-sm text-muted-foreground">{a.headline}</div> : null}
 
                     <div className="text-sm">
                       <span className="font-medium">For:</span>{" "}
@@ -152,9 +149,9 @@ export function StationAlerts({ stationId, timezone = "America/New_York" }: { st
                     </div>
                   </div>
 
-                  {a.links?.nws ? (
+                  {nwsHref ? (
                     <Button variant="ghost" size="sm" className="gap-2 shrink-0 self-end sm:self-start" asChild>
-                      <a href={a.links.nws} target="_blank" rel="noreferrer" aria-label="Open this alert on NWS">
+                      <a href={nwsHref} target="_blank" rel="noreferrer noopener" aria-label="Open this alert on NWS">
                         <ExternalLink className="h-4 w-4" />
                         <span className="hidden sm:inline">NWS</span>
                       </a>

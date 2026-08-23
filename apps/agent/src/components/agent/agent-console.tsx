@@ -1,7 +1,7 @@
 "use client"
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react"
-import { AnimatePresence, motion, useReducedMotion } from "framer-motion"
+import { AnimatePresence, motion, useReducedMotion } from "motion/react"
 import {
   Activity,
   Bot,
@@ -72,6 +72,7 @@ import {
   TooltipTrigger,
 } from "@seasonalnet/shell/src/components/ui/tooltip"
 import { cn } from "@seasonalnet/shell/src/lib/utils"
+import { fetchWithTimeout } from "@seasonalnet/shell/src/lib/fetch"
 
 type SessionSummary = {
   session_id: string
@@ -287,17 +288,17 @@ function consumeSseBuffer(
   return buffer
 }
 
-function messageIcon(role: SessionMessage["role"]) {
+function messageIcon(role: SessionMessage["role"], className: string) {
   switch (role) {
     case "assistant":
-      return Bot
+      return <Bot className={className} />
     case "tool":
-      return Wrench
+      return <Wrench className={className} />
     case "system":
-      return Activity
+      return <Activity className={className} />
     case "user":
     default:
-      return MessageSquare
+      return <MessageSquare className={className} />
   }
 }
 
@@ -669,7 +670,6 @@ function MessageDisclosure({
 }
 
 function MessageCard({ message }: { message: SessionMessage }) {
-  const Icon = messageIcon(message.role)
   const roleLabel = message.role === "tool" ? message.toolName || "tool" : message.role
   const reduceMotion = useReducedMotion()
 
@@ -695,7 +695,7 @@ function MessageCard({ message }: { message: SessionMessage }) {
               message.role === "user" ? "border-background/20 bg-background/5" : "bg-background/50",
             )}
           >
-            <Icon className="h-4 w-4" />
+            {messageIcon(message.role, "h-4 w-4")}
           </div>
           <div className="min-w-0">
             <div className="text-sm font-medium capitalize">{roleLabel}</div>
@@ -1186,7 +1186,7 @@ export function AgentConsole() {
     async ({ preferredSessionId, includeHealth = true }: RefreshSessionsOptions = {}) => {
       setLoadingSessions(true)
       try {
-        const sessionsRes = await fetch("/api/agent/sessions?limit=40", { cache: "no-store" })
+        const sessionsRes = await fetchWithTimeout("/api/agent/sessions?limit=40", { cache: "no-store" })
         const sessionsJson = await parseJsonResponse<{ sessions?: SessionSummary[]; error?: string }>(
           sessionsRes,
           "Failed to load sessions.",
@@ -1200,7 +1200,7 @@ export function AgentConsole() {
         setSessions(nextSessions)
 
         if (includeHealth) {
-          const healthRes = await fetch("/api/agent/health", { cache: "no-store" })
+          const healthRes = await fetchWithTimeout("/api/agent/health", { cache: "no-store" })
           const healthJson = await parseJsonResponse<{ ok?: boolean; error?: string }>(
             healthRes,
             "Failed to load health status.",
@@ -1243,7 +1243,7 @@ export function AgentConsole() {
   const loadTools = useCallback(async () => {
     setLoadingTools(true)
     try {
-      const response = await fetch("/api/agent/tools", { cache: "no-store" })
+      const response = await fetchWithTimeout("/api/agent/tools", { cache: "no-store" })
       const json = await parseJsonResponse<ToolsResponse>(response, "Failed to load tool metadata.")
       if (!response.ok) {
         throw new Error(json.error || "Failed to load tool metadata.")
@@ -1264,9 +1264,9 @@ export function AgentConsole() {
       setError(null)
       try {
         const [sessionRes, activeTurnRes, recoverableTurnRes] = await Promise.all([
-          fetch(`/api/agent/sessions/${encodeURIComponent(sessionId)}?limit=100`, { cache: "no-store" }),
-          fetch(`/api/agent/sessions/${encodeURIComponent(sessionId)}/active-turn`, { cache: "no-store" }),
-          fetch(`/api/agent/sessions/${encodeURIComponent(sessionId)}/recoverable-turn`, { cache: "no-store" }),
+          fetchWithTimeout(`/api/agent/sessions/${encodeURIComponent(sessionId)}?limit=100`, { cache: "no-store" }),
+          fetchWithTimeout(`/api/agent/sessions/${encodeURIComponent(sessionId)}/active-turn`, { cache: "no-store" }),
+          fetchWithTimeout(`/api/agent/sessions/${encodeURIComponent(sessionId)}/recoverable-turn`, { cache: "no-store" }),
         ])
 
         const [sessionJson, activeTurnJson, recoverableTurnJson] = await Promise.all([
@@ -1306,7 +1306,7 @@ export function AgentConsole() {
 
         setReconnecting(Boolean(!sending))
 
-        const snapshotRes = await fetch(
+        const snapshotRes = await fetchWithTimeout(
           `/api/agent/turns/${encodeURIComponent(recoveryTurnId)}/snapshot?session_id=${encodeURIComponent(sessionId)}`,
           { cache: "no-store" },
         )
@@ -1347,7 +1347,7 @@ export function AgentConsole() {
           return
         }
 
-        const eventsRes = await fetch(
+        const eventsRes = await fetchWithTimeout(
           `/api/agent/turns/${encodeURIComponent(recoveryTurnId)}/events?session_id=${encodeURIComponent(sessionId)}&after_sequence=${encodeURIComponent(String(snapshot.last_sequence || 0))}`,
           { cache: "no-store" },
         )
@@ -1392,8 +1392,11 @@ export function AgentConsole() {
   )
 
   useEffect(() => {
-    void refreshSessions()
-    void loadTools()
+    const id = window.setTimeout(() => {
+      void refreshSessions()
+      void loadTools()
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [loadTools, refreshSessions])
 
   useEffect(() => {
@@ -1401,21 +1404,24 @@ export function AgentConsole() {
   }, [selectedSessionId])
 
   useEffect(() => {
-    if (!selectedSessionId) {
-      setMessages([])
-      setActiveTurn(null)
-      setReconnecting(false)
-      setRecoveryNotice(null)
-      return
-    }
+    const id = window.setTimeout(() => {
+      if (!selectedSessionId) {
+        setMessages([])
+        setActiveTurn(null)
+        setReconnecting(false)
+        setRecoveryNotice(null)
+        return
+      }
 
-    void loadSessionState(selectedSessionId)
+      void loadSessionState(selectedSessionId)
+    }, 0)
+    return () => window.clearTimeout(id)
   }, [loadSessionState, selectedSessionId])
 
   useEffect(() => {
-    if (isDesktop) {
-      setSessionsSheetOpen(false)
-    }
+    if (!isDesktop) return
+    const id = window.setTimeout(() => setSessionsSheetOpen(false), 0)
+    return () => window.clearTimeout(id)
   }, [isDesktop])
 
   useEffect(() => {
@@ -1432,14 +1438,6 @@ export function AgentConsole() {
     const nextHeight = Math.min(Math.max(el.scrollHeight, 88), 224)
     el.style.height = `${nextHeight}px`
     el.style.overflowY = el.scrollHeight > 224 ? "auto" : "hidden"
-  }, [message])
-
-  useEffect(() => {
-    if (message.trim() === "/") {
-      setMessage("")
-      setTurnFlagsOpen(false)
-      setTurnFlagsOpen(true)
-    }
   }, [message])
 
   useEffect(() => {
@@ -1493,6 +1491,15 @@ export function AgentConsole() {
     setTurnFlags({ target: "", executionMode: "", confirmedTools: [] })
   }, [])
 
+  const handleMessageChange = useCallback((value: string) => {
+    if (value.trim() === "/") {
+      setMessage("")
+      setTurnFlagsOpen(true)
+      return
+    }
+    setMessage(value)
+  }, [])
+
   const handleNewChat = useCallback(() => {
     abortRef.current?.abort()
     abortRef.current = null
@@ -1525,7 +1532,7 @@ export function AgentConsole() {
         if (selectedSessionId) {
           cancelUrl.searchParams.set("session_id", selectedSessionId)
         }
-        const response = await fetch(`${cancelUrl.pathname}${cancelUrl.search}`, {
+        const response = await fetchWithTimeout(`${cancelUrl.pathname}${cancelUrl.search}`, {
           method: "POST",
         })
         const payload = await parseJsonResponse<{ error?: string }>(response, "Failed to cancel the active turn.")
@@ -1958,7 +1965,7 @@ export function AgentConsole() {
                         ref={textareaRef}
                         rows={1}
                         value={message}
-                        onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => setMessage(event.target.value)}
+                        onChange={(event: React.ChangeEvent<HTMLTextAreaElement>) => handleMessageChange(event.target.value)}
                         onKeyDown={(event: React.KeyboardEvent<HTMLTextAreaElement>) => {
                           if ((event.ctrlKey || event.metaKey) && event.key === "Enter") {
                             event.preventDefault()

@@ -9,7 +9,7 @@ import type { PathOptions } from "leaflet";
 // ---------------------------------------------------------------------------
 
 export type NwsSeverity = "Extreme" | "Severe" | "Moderate" | "Minor" | "Unknown";
-export type NwsUrgency  = "Immediate" | "Expected" | "Future" | "Past" | "Unknown";
+type NwsUrgency  = "Immediate" | "Expected" | "Future" | "Past" | "Unknown";
 
 export interface NwsAlertFeature {
   id: string;
@@ -274,7 +274,7 @@ const MARINE_SAME_SS_TO_UGC_PREFIX: Record<string, string> = {
   "83": "LEZ", // Lake Erie
 };
 
-export const NATIONAL_SAME_LOCATION = "000000";
+const NATIONAL_SAME_LOCATION = "000000";
 
 function normalizeSameCode(value: unknown): string | null {
   const s = String(value ?? "").trim();
@@ -315,14 +315,14 @@ function fipsInState(stateFips: string, availableFips: Iterable<string> | undefi
  * 000000 is national/all-US and is intentionally not treated as a local
  * wildcard.  Marine SS families are also not treated as state wildcards.
  */
-export function isStatewideSameCode(same: string): boolean {
+function isStatewideSameCode(same: string): boolean {
   const s = normalizeSameCode(same);
   if (!s || s === NATIONAL_SAME_LOCATION) return false;
   if (!s.startsWith("0") || !s.endsWith("000")) return false;
   return !MARINE_SAME_SS_TO_UGC_PREFIX[s.slice(1, 3)];
 }
 
-export function sameToStateFips(same: string): string | null {
+function sameToStateFips(same: string): string | null {
   const s = normalizeSameCode(same);
   return s && isStatewideSameCode(s) ? s.slice(1, 3) : null;
 }
@@ -355,10 +355,6 @@ export function sameToFips(same: string): string | null {
 export function sameToMarineZone(same: string): string | null {
   const ref = sameToCoverageRef(same);
   return ref?.kind === "marineZone" ? ref.id : null;
-}
-
-export function fipsToSame(fips: string): string {
-  return "0" + fips.padStart(5, "0");
 }
 
 /**
@@ -394,7 +390,7 @@ export function expandFipsCode(
   return [normalized];
 }
 
-export function fipsFromSameCode(
+function fipsFromSameCode(
   same: string,
   availableFips?: Iterable<string>,
 ): string[] {
@@ -408,7 +404,7 @@ export function fipsFromSameCode(
  * the service area contains at least one concrete county/city SAME code in that
  * state.  000000 never matches.
  */
-export function sameCodeIntersectsServiceArea(
+function sameCodeIntersectsServiceArea(
   same: string,
   serviceAreaSameCodes: Iterable<string>,
 ): boolean {

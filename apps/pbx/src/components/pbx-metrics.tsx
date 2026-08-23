@@ -8,6 +8,7 @@ import { AnimatedNumber } from "@/components/animated-number"
 import { BlurFade } from "@/components/magic/blur-fade"
 import { SectionHeader } from "@/components/pbx-section"
 import { cn } from "@seasonalnet/shell/src/lib/utils"
+import { fetchWithTimeout } from "@seasonalnet/shell/src/lib/fetch"
 
 type Metrics = {
   enabled: boolean
@@ -67,7 +68,7 @@ export function PBXMetricsPanel() {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/pbx/metrics", { cache: "no-store" })
+      const res = await fetchWithTimeout("/api/pbx/metrics", { cache: "no-store" })
       const json = (await res.json()) as Metrics
       setData(json)
     } catch (e: unknown) {

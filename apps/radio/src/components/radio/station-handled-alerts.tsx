@@ -13,6 +13,8 @@ import {
   handledAlertToneModeForSource,
 } from "@/components/radio/alert-event-icon"
 import { STATION_HANDLED_ALERTS } from "@/lib/station-handled-alert-config"
+import { fetchWithTimeout } from "@seasonalnet/shell/src/lib/fetch"
+import { formatDateTime, safeNavigationHref } from "@seasonalnet/shell/src/lib/browser-safe"
 
 type FeedSender = { name: string; kind?: "relay" | "origin" | "unknown" }
 
@@ -48,16 +50,7 @@ type Payload =
   | { ok: true; enabled: false; stationId: string; generatedAt: string; source: string; alerts: StationFeedAlert[] }
 
 function fmtLocal(ts: string, tz = "America/New_York") {
-  const d = new Date(ts)
-  if (Number.isNaN(d.getTime())) return "—"
-  return new Intl.DateTimeFormat("en-US", {
-    timeZone: tz,
-    weekday: "short",
-    month: "short",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(d)
+  return formatDateTime(ts, tz)
 }
 
 function severityVariant(sev: string): "default" | "secondary" | "destructive" | "outline" {
@@ -75,17 +68,16 @@ export function StationHandledAlerts({
   timezone?: string
 }) {
   const cfg = STATION_HANDLED_ALERTS[stationId]
-  if (!cfg) return null
-
-  const pollMs = Math.max(10, Math.floor(cfg.pollSeconds ?? 60)) * 1000
+  const pollMs = Math.max(10, Math.floor(cfg?.pollSeconds ?? 60)) * 1000
 
   const [data, setData] = React.useState<Payload | null>(null)
   const [loading, setLoading] = React.useState(false)
 
   const load = React.useCallback(async () => {
+    if (!cfg) return
     setLoading(true)
     try {
-      const res = await fetch(`/api/stations/${encodeURIComponent(stationId)}/handled-alerts`, { cache: "no-store" })
+      const res = await fetchWithTimeout(`/api/stations/${encodeURIComponent(stationId)}/handled-alerts`, { cache: "no-store" })
       const j = (await res.json()) as Payload
       setData(j)
     } catch {
@@ -101,19 +93,24 @@ export function StationHandledAlerts({
     } finally {
       setLoading(false)
     }
-  }, [stationId])
+  }, [cfg, stationId])
 
   React.useEffect(() => {
-    load()
+    const initialId = window.setTimeout(() => void load(), 0)
     const t = setInterval(load, pollMs)
-    return () => clearInterval(t)
+    return () => {
+      window.clearTimeout(initialId)
+      clearInterval(t)
+    }
   }, [load, pollMs])
+
+  if (!cfg) return null
 
   if (data && "enabled" in data && data.enabled === false) return null
 
   const alerts = (data && "alerts" in data ? data.alerts : []) ?? []
   const last = data?.generatedAt
-  const err = (data as any)?.error as string | undefined
+  const err = data && "error" in data ? data.error : undefined
   const title = cfg.title ?? "Station Alert Feed"
 
   return (
@@ -149,7 +146,7 @@ export function StationHandledAlerts({
         <div className="space-y-3">
           {alerts.slice(0, 12).map((a) => {
             const until = a.ends ?? a.expires
-            const href = a.links?.primary ?? a.links?.nws ?? ""
+            const href = safeNavigationHref(a.links?.primary ?? a.links?.nws)
             const fromLabel = a.from?.name ?? ""
             const toneMode = handledAlertToneModeForSource({
               feedSource: data?.source,
@@ -181,7 +178,7 @@ export function StationHandledAlerts({
                       ) : null}
                     </div>
 
-                    {a.headline ? <div className="text-sm text-muted-foreground">{a.headline}</div> : null}
+                    {a.headline ? <div className="break-words text-sm text-muted-foreground">{a.headline}</div> : null}
 
                     <div className="text-sm">
                       <span className="font-medium">For:</span>{" "}
@@ -196,7 +193,7 @@ export function StationHandledAlerts({
 
                   {href ? (
                     <Button variant="ghost" size="sm" className="gap-2 shrink-0 self-end sm:self-start" asChild>
-                      <a href={href} target="_blank" rel="noreferrer" aria-label="Open this alert">
+                      <a href={href} target="_blank" rel="noreferrer noopener" aria-label="Open this alert">
                         <ExternalLink className="h-4 w-4" />
                         <span className="hidden sm:inline">Open</span>
                       </a>

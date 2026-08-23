@@ -1,18 +1,32 @@
 {
   "name": "seasonalnet-web",
   "private": true,
-  "packageManager": "pnpm@11.17.0",
+  "packageManager": "pnpm@11.22.0",
   "scripts": {
-    "lint": "pnpm --recursive run lint",
-    "build": "pnpm --recursive run build",
-    "check": "pnpm run lint && pnpm run build",
-    "knip": "knip",
+    "lint": "pnpm --recursive run lint && pnpm run lint:root",
+    "lint:root": "eslint eslint.config.mjs vitest.config.mjs tools/**/*.mjs",
+    "typecheck": "pnpm --recursive run typecheck",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
+    "build": "pnpm --workspace-concurrency=1 --recursive run build",
+    "quality:suppressions": "node tools/quality/check-suppressions.mjs",
+    "quality": "pnpm run quality:suppressions && pnpm run lint && pnpm run typecheck && pnpm run test:coverage && pnpm run knip",
+    "check": "pnpm run quality",
+    "ci": "pnpm run quality && pnpm run build",
+    "knip": "KNIP_DISABLE_RAW_TRANSFER=1 knip --strict",
     "deps:audit": "knip --include dependencies,unlisted,unresolved,binaries",
-    "deps:audit:strict": "knip --strict --include dependencies,unlisted,unresolved,binaries"
+    "deps:audit:strict": "knip --strict --include dependencies,unlisted,unresolved,binaries",
+    "deps:supply-chain": "pnpm audit signatures && pnpm audit --audit-level moderate"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@types/node": "^20.19.43",
-    "knip": "^6.29.0",
-    "typescript": "^5.9.3"
+    "@vitest/coverage-v8": "^4.1.11",
+    "eslint": "^9.39.5",
+    "globals": "^17.11.0",
+    "knip": "^6.32.2",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.11"
   }
 }

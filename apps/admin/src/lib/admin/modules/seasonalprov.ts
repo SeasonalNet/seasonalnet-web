@@ -1,7 +1,7 @@
 import { Folder, Image, KeyRound, Server, Shield, Wrench } from "lucide-react"
 
-import type { AdminModule, AdminStatusItem, ModuleTone } from "@/lib/admin/types"
-import type { SeasonalProvisioningOverview } from "@/lib/server/modules/seasonalprovisioning"
+import type { AdminModule, AdminStatusItem, ModuleTone } from "../types"
+import type { SeasonalProvisioningOverview } from "../../server/modules/seasonalprovisioning"
 
 function reachabilityTone(value: boolean): ModuleTone {
   return value ? "success" : "danger"

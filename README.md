@@ -85,13 +85,13 @@ The package area is now the active home for shared front-door shell work. New sh
 
 Current workspace characteristics:
 
-- npm workspaces at the repository root
+- pnpm workspaces at the repository root
 - Next.js 16 application packages
 - React 19
 - TypeScript
 - Tailwind CSS 4
 - shadcn-oriented component setup in the app workspaces
-- Framer Motion and Lucide where used
+- Motion and Lucide where used
 - Leaflet present in the radio app
 - Fumadocs present in the docs app
 - NextAuth/Auth.js present in the admin and agent apps
@@ -100,6 +100,35 @@ Current workspace characteristics:
 The root `package.json` defines repository-wide scripts and development tooling. Workspace membership is defined in `pnpm-workspace.yaml`.
 
 ## Working in this repository
+
+The Makefile is the stable local and CI interface:
+
+```bash
+make install
+make dev APP=www
+make quality
+make build
+make ci
+```
+
+`APP` accepts a workspace suffix such as `www`, `radio`, `pbx`, `prov`,
+`admin`, `agent`, or `docs`. `make quality` is the governed acceptance gate:
+it runs the anti-suppression ratchet, ESLint for every app and the shared shell,
+strict TypeScript checks, coverage-enabled Vitest, and full strict Knip
+analysis. Coverage is ratcheted to the exact achieved uncovered-item counts,
+globally and independently for every SPA; any additional uncovered statement,
+branch, function, or line fails the gate. `make build`
+runs every workspace production build serially to keep peak memory bounded.
+`make ci` also verifies registry signatures and fails on moderate-or-higher
+dependency advisories before running quality and production builds. Dependency
+resolution enforces the release-age and lockfile trust policy in
+`pnpm-workspace.yaml`.
+
+The measured starting debt, current zero non-coverage debt ceilings, and exact
+coverage ceilings are recorded in `quality/baselines.json`; the governance
+rules are described in `quality/README.md`.
+
+The underlying pnpm commands remain available when targeting one workspace.
 
 Install dependencies at the repository root:
 
@@ -161,7 +190,8 @@ Lint all workspaces from the root when broad validation is needed:
 pnpm lint
 ```
 
-The root scripts use pnpm's recursive runner. Workspaces without the requested script, such as `packages/shell`, are skipped.
+The root scripts use pnpm's recursive runner. `packages/shell` participates in
+lint and type checking; only deployable app workspaces define production builds.
 
 ## Expected workflow
 

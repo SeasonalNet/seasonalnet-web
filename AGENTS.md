@@ -117,6 +117,22 @@ The admin surface should read like a control plane, not a blog or marketing site
 
 ## Commands
 
+Use the governed Make entrypoints from the repository root:
+
+```bash
+make install
+make dev APP=www
+make quality
+make build
+make ci
+```
+
+`make quality` is the same zero-ceiling gate used by CI. It includes the
+anti-suppression scan, all workspace lint and type checks, governed per-SPA
+coverage tests, and strict Knip analysis. Do not raise debt ceilings, lower
+coverage by permitting more uncovered items, or add tool ignore rules to make
+this target pass.
+
 Install dependencies from the repo root:
 
 ```bash
@@ -177,7 +193,8 @@ Run all workspace lint jobs when broad validation is needed:
 pnpm lint
 ```
 
-The root scripts use pnpm's recursive runner. Workspaces without the requested script, such as `packages/shell`, are skipped.
+The root scripts use pnpm's recursive runner. `packages/shell` participates in
+lint and type checking; only deployable app workspaces define production builds.
 
 ## Change preferences
 
