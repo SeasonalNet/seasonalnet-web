@@ -82,7 +82,7 @@ describe("radio configuration contract", () => {
   })
 
   it("returns metadata configuration only for supported stations", () => {
-    expect(getStationMetaServerCfg("seasonalweather")).toMatchObject({
+    expect(getStationMetaServerCfg("jetstream")).toMatchObject({
       defaultArtist: "SeasonalNet",
       defaultArtworkUrl: "/apple-touch-icon.png",
     })
