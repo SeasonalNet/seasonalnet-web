@@ -12,6 +12,8 @@ type NwsFeature = {
   properties?: {
     event?: string
     headline?: string
+    description?: string
+    instruction?: string
     severity?: string
     urgency?: string
     certainty?: string
@@ -20,11 +22,30 @@ type NwsFeature = {
     ends?: string | null
     expires?: string
     sent?: string
+    parameters?: Record<string, unknown>
     geocode?: {
       SAME?: string[]
       UGC?: string[]
     }
   }
+}
+
+function textOrNull(value: unknown): string | null {
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const text = textOrNull(item)
+      if (text) return text
+    }
+    return null
+  }
+  if (typeof value !== "string") return null
+  const text = value.trim()
+  return text || null
+}
+
+function nwsHeadline(parameters: Record<string, unknown> | undefined): string | null {
+  const entry = Object.entries(parameters ?? {}).find(([key]) => key.toLowerCase() === "nwsheadline")
+  return entry ? textOrNull(entry[1]) : null
 }
 
 function isNwsKeepAliveOrTest(f: NwsFeature): boolean {
@@ -127,6 +148,9 @@ async function buildStationAlerts(stationId: string) {
       id: f.id ?? "",
       event: p.event ?? "Alert",
       headline: p.headline ?? "",
+      nwsHeadline: nwsHeadline(p.parameters),
+      description: p.description ?? null,
+      instruction: p.instruction ?? null,
       severity: p.severity ?? "Unknown",
       urgency: p.urgency ?? "Unknown",
       certainty: p.certainty ?? "Unknown",

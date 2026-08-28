@@ -21,8 +21,10 @@ export interface NwsAlertFeature {
     severity: NwsSeverity;
     urgency: NwsUrgency;
     certainty: string;
+    nwsHeadline?: string | null;
     headline: string | null;
     description: string | null;
+    instruction?: string | null;
     areaDesc: string;
     effective: string;
     expires: string;
@@ -48,6 +50,22 @@ export interface StationHandledAlert {
   effective?: string;
   expires?: string;
   raw?: string;
+}
+
+/**
+ * Reassemble the public-facing CAP product text. NWSheadline is the product's
+ * operational headline; the generic API headline is only its fallback.
+ */
+export function assembleAlertProductText(fields: {
+  nwsHeadline?: string | null;
+  headline?: string | null;
+  description?: string | null;
+  instruction?: string | null;
+}): string {
+  const primary = fields.nwsHeadline?.trim() || fields.headline?.trim() || "";
+  return [primary, fields.description?.trim(), fields.instruction?.trim()]
+    .filter((part): part is string => Boolean(part))
+    .join("\n\n");
 }
 
 // ---------------------------------------------------------------------------

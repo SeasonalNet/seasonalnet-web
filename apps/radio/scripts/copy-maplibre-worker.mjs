@@ -10,6 +10,11 @@ const destination = path.resolve("public", "maplibre")
 
 mkdirSync(destination, { recursive: true })
 
-for (const file of ["maplibre-gl-worker.mjs", "maplibre-gl-shared.mjs"]) {
+for (const file of [
+  "maplibre-gl-worker.mjs",
+  "maplibre-gl-worker.mjs.map",
+  "maplibre-gl-shared.mjs",
+  "maplibre-gl-shared.mjs.map",
+]) {
   copyFileSync(path.join(maplibreDist, file), path.join(destination, file))
 }

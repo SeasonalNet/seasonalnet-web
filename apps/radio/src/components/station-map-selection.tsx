@@ -26,12 +26,20 @@ type MapCountySelection = {
   alerts: MapAlertSummary[]
 }
 
+type MapMarineSelection = {
+  kind: "marine"
+  id: string
+  name: string
+  severity: NwsSeverity
+  alerts: MapAlertSummary[]
+}
+
 type MapAlertSelection = {
   kind: "alert"
   alert: MapAlertSummary
 }
 
-export type MapSelection = MapCountySelection | MapAlertSelection
+export type MapSelection = MapCountySelection | MapMarineSelection | MapAlertSelection
 
 type Props = {
   selection: MapSelection | null
@@ -48,7 +56,7 @@ function severityVariant(severity: NwsSeverity): "default" | "secondary" | "dest
 
 function AlertRow({ alert, onSelect }: { alert: MapAlertSummary; onSelect: () => void }) {
   return (
-    <div className="rounded-md border border-border/70 px-2.5 py-2">
+    <div className="rounded-md border border-border/70 px-2 py-1.5">
       <button
         type="button"
         className="flex w-full items-start justify-between gap-2 text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -59,11 +67,11 @@ function AlertRow({ alert, onSelect }: { alert: MapAlertSummary; onSelect: () =>
           {alert.severity}
         </Badge>
       </button>
-      {alert.source ? <div className="mt-1 text-[11px] text-muted-foreground">Source: {alert.source}</div> : null}
-      {alert.area ? <div className="mt-1 text-[11px] text-muted-foreground">{alert.area}</div> : null}
+      {alert.source ? <div className="mt-0.5 text-[10px] text-muted-foreground">Source: {alert.source}</div> : null}
+      {alert.area ? <div className="mt-0.5 line-clamp-1 text-[10px] text-muted-foreground">{alert.area}</div> : null}
       {alert.until ? <div className="mt-0.5 text-[11px] text-muted-foreground">Until {alert.until}</div> : null}
       {alert.headline ? (
-        <details className="mt-1.5 text-[11px] text-muted-foreground">
+        <details className="mt-1 text-[10px] text-muted-foreground">
           <summary className="cursor-pointer select-none hover:text-foreground">Show alert text</summary>
           <p className="mt-1 whitespace-pre-wrap leading-relaxed">{alert.headline}</p>
         </details>
@@ -75,19 +83,23 @@ function AlertRow({ alert, onSelect }: { alert: MapAlertSummary; onSelect: () =>
 export function StationMapSelection({ selection, onClose, onSelectAlert }: Props) {
   if (!selection) return null
 
-  const isCounty = selection.kind === "county"
-  const title = isCounty ? `${selection.name}, ${selection.state}` : selection.alert.label
-  const subtitle = isCounty
+  const isArea = selection.kind === "county" || selection.kind === "marine"
+  const title = selection.kind === "county"
+    ? `${selection.name}, ${selection.state}`
+    : selection.kind === "marine"
+      ? selection.name
+      : selection.alert.label
+  const subtitle = isArea
     ? `${selection.alerts.length} alert${selection.alerts.length === 1 ? "" : "s"} mapped here`
     : selection.alert.area
 
   return (
     <section
       className={cn(
-        "absolute bottom-3 left-3 z-[1001] max-h-[calc(100%-1.5rem)] w-[min(23rem,calc(100%-4.5rem))] overflow-y-auto rounded-md border border-border bg-background/95 p-3 shadow-lg backdrop-blur-sm",
+        "absolute bottom-7 left-3 z-[1001] max-h-[6rem] w-[min(23rem,calc(100%-4.5rem))] overflow-y-auto rounded-md border border-border bg-background/95 p-2 shadow-lg backdrop-blur-sm",
         "text-foreground"
       )}
-      aria-label={isCounty ? "Selected county details" : "Selected alert details"}
+      aria-label={selection.kind === "county" ? "Selected county details" : selection.kind === "marine" ? "Selected marine zone details" : "Selected alert details"}
     >
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
@@ -99,8 +111,8 @@ export function StationMapSelection({ selection, onClose, onSelectAlert }: Props
         </Button>
       </div>
 
-      {isCounty ? (
-        <div className="mt-2 space-y-2">
+      {isArea ? (
+        <div className="mt-1 space-y-1">
           {selection.alerts.length > 0 ? (
             selection.alerts.map((alert) => (
               <AlertRow key={`${alert.kind}:${alert.id}`} alert={alert} onSelect={() => onSelectAlert(alert)} />

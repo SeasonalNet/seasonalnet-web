@@ -10,11 +10,14 @@ export const runtime = "nodejs"
 const stationAlertSchema = {
   type: "object",
   additionalProperties: false,
-  required: ["id", "event", "headline", "severity", "urgency", "certainty", "area", "sameCodes", "ugcCodes", "links"],
+  required: ["id", "event", "headline", "nwsHeadline", "description", "instruction", "severity", "urgency", "certainty", "area", "sameCodes", "ugcCodes", "links"],
   properties: {
     id: { type: "string" },
     event: { type: "string" },
     headline: { type: "string" },
+    nwsHeadline: { type: ["string", "null"] },
+    description: { type: ["string", "null"] },
+    instruction: { type: ["string", "null"] },
     severity: { type: "string" },
     urgency: { type: "string" },
     certainty: { type: "string" },

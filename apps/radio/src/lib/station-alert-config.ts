@@ -30,8 +30,8 @@ export type StationRadarConfig = {
   sources: Record<RadarSourceId, RadarSourceConfig>
 }
 
-const cloudGisWmsTile = (radarSite: string, layer: string) =>
-  `https://opengeo.ncep.noaa.gov/geoserver/${radarSite.toLowerCase()}/wms?service=WMS&request=GetMap&version=1.3.0&layers=${radarSite.toLowerCase()}:${layer}&styles=&format=image/png&transparent=true&width=256&height=256&crs=EPSG:3857&bbox={bbox-epsg-3857}`
+const cloudGisWmsTile = (radarSite: string, layer: string, style: string) =>
+  `https://opengeo.ncep.noaa.gov/geoserver/${radarSite.toLowerCase()}/ows?service=WMS&request=GetMap&version=1.3.0&layers=${radarSite.toLowerCase()}_${layer.toLowerCase()}&styles=${style}&format=image/png&exceptions=BLANK&transparent=true&width=256&height=256&crs=EPSG:3857&bbox={bbox-epsg-3857}`
 
 const mrmsReflectivityTile =
   "https://mapservices.weather.noaa.gov/eventdriven/rest/services/radar/radar_base_reflectivity_time/ImageServer/exportImage?bbox={bbox-epsg-3857}&bboxSR=3857&imageSR=3857&size=256,256&format=png32&transparent=true&f=image"
@@ -75,14 +75,14 @@ export const STATION_ALERTS: Record<string, StationAlertConfig> = {
             reflectivity: {
               label: "Base reflectivity",
               shortLabel: "Reflectivity",
-              tileUrlTemplate: cloudGisWmsTile("KLWX", "SR_BREF"),
+              tileUrlTemplate: cloudGisWmsTile("KLWX", "SR_BREF", "radar_reflectivity"),
               legend: "Reflectivity · dBZ",
               sourceLabel: "NWS CloudGIS · KLWX",
             },
             velocity: {
               label: "Base radial velocity",
               shortLabel: "Velocity",
-              tileUrlTemplate: cloudGisWmsTile("KLWX", "SR_BVEL"),
+              tileUrlTemplate: cloudGisWmsTile("KLWX", "SR_BVEL", "radar_velocity"),
               legend: "Radial velocity · toward / away from KLWX",
               sourceLabel: "NWS CloudGIS · KLWX",
             },

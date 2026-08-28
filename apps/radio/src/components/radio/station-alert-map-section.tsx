@@ -19,6 +19,9 @@ type ApiAlert = {
   id: string;
   event: string;
   headline: string;
+  nwsHeadline: string | null;
+  description: string | null;
+  instruction: string | null;
   severity: string;
   urgency: string;
   certainty: string;
@@ -80,8 +83,10 @@ function normaliseCapAlerts(alerts: ApiAlert[]): NwsAlertFeature[] {
       severity: a.severity as NwsAlertFeature["properties"]["severity"],
       urgency: a.urgency as NwsAlertFeature["properties"]["urgency"],
       certainty: a.certainty,
+      nwsHeadline: a.nwsHeadline,
       headline: a.headline,
-      description: null,
+      description: a.description,
+      instruction: a.instruction,
       areaDesc: a.area,
       effective: a.effective ?? "",
       expires: a.expires ?? a.ends ?? "",

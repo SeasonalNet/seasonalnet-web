@@ -14,6 +14,7 @@ import type { Layer as LeafletLayer, Map as LeafletMap, Path as LeafletPath, Pat
 import type { NwsAlertFeature, StationHandledAlert } from "@/lib/alert-map-utils";
 import {
   capPolygonStyle,
+  assembleAlertProductText,
   countyFillStyle,
   overlappingCountyStyle,
   expandFipsCode,
@@ -63,7 +64,7 @@ type LeafletLayerWithOptionalPathApi = LeafletLayer & {
 };
 
 type InteractiveMapLayer = {
-  kind: "county" | "alert";
+  kind: "county" | "marine" | "alert";
   id: string;
   layer: LeafletLayer;
   style: PathOptions;
@@ -94,7 +95,7 @@ function capSummary(alert: NwsAlertFeature): MapAlertSummary {
     label: alert.properties.event,
     severity: deriveAlertSeverity(alert.properties.event, alert.properties.severity),
     area: alert.properties.areaDesc,
-    headline: alert.properties.headline ?? undefined,
+    headline: assembleAlertProductText(alert.properties),
     until: formatMapTime(alert.properties.expires),
     source: "NWS",
   };
@@ -321,6 +322,19 @@ export default function StationMapClient({
     return summaries;
   }, [capAlerts, handledAlerts, stationFipsSet]);
 
+  const alertsForMarineZone = useCallback((zoneId: string): MapAlertSummary[] => {
+    const summaries: MapAlertSummary[] = [];
+    capAlerts.forEach((alert) => {
+      if (marineZonesFromAlert(alert).includes(zoneId)) summaries.push(capSummary(alert));
+    });
+    handledAlerts.forEach((alert) => {
+      if ((alert.sameCodes ?? []).some((same) => sameToMarineZone(same) === zoneId)) {
+        summaries.push(handledSummary(alert));
+      }
+    });
+    return summaries;
+  }, [capAlerts, handledAlerts]);
+
   // -------------------------------------------------------------------------
   // Map initialisation (once)
   // -------------------------------------------------------------------------
@@ -407,7 +421,10 @@ export default function StationMapClient({
     capAlerts.forEach((alert) => {
       versions.set(`nws:${alert.id}`, JSON.stringify([
         alert.properties.event,
+        alert.properties.nwsHeadline,
         alert.properties.headline,
+        alert.properties.description,
+        alert.properties.instruction,
         alert.properties.effective,
         alert.properties.expires,
         alert.properties.parameters?.SAME,
@@ -500,9 +517,13 @@ export default function StationMapClient({
       ...(source.sameCodes ?? []).flatMap((same) => fipsFromCoverageRef(sameToCoverageRef(same), stationFipsSet)),
       ...(source.fipsCodes ?? []).flatMap((code) => expandFipsCode(code, stationFipsSet)),
     ];
+    const marineZones = (source.sameCodes ?? []).flatMap((same) => {
+      const zone = sameToMarineZone(same);
+      return zone ? [zone] : [];
+    });
     fitLayers(
-      fips
-        .map((id) => interactiveLayersRef.current.get(`county:${id}`)?.layer)
+      [...fips.map((id) => interactiveLayersRef.current.get(`county:${id}`)?.layer),
+        ...marineZones.map((id) => interactiveLayersRef.current.get(`marine:${id}`)?.layer)]
         .filter((layer): layer is LeafletLayer => Boolean(layer))
     );
   }, [fitLayer, fitLayers, handledAlerts, stationFipsSet]);
@@ -519,6 +540,9 @@ export default function StationMapClient({
         type: "raster",
         tiles: [radarProductConfig.tileUrlTemplate],
         tileSize: 256,
+        // Radar images are time-sensitive; do not retain a stale tile while
+        // zooming or switching between the local and mosaic products.
+        volatile: true,
       });
       const firstSymbolLayer = map.getStyle().layers?.find((layer) => layer.type === "symbol")?.id;
       map.addLayer({
@@ -540,8 +564,8 @@ export default function StationMapClient({
   }, [mapReady, radarOpacity, radarProductConfig, radarVisible]);
 
   useEffect(() => {
-    const selectionKey = selection?.kind === "county"
-      ? `county:${selection.id}`
+    const selectionKey = selection?.kind === "county" || selection?.kind === "marine"
+      ? `${selection.kind}:${selection.id}`
       : selection?.kind === "alert"
         ? `alert:${selection.alert.id}`
         : null;
@@ -559,6 +583,17 @@ export default function StationMapClient({
               ...(alert.fipsCodes ?? []).flatMap((code) => expandFipsCode(code, stationFipsSet)),
             ];
             return freshAlertIds.has(`station:${alert.id}`) && fips.includes(entry.id);
+          })
+        )
+      ) || (
+        entry.kind === "marine" && (
+          capAlerts.some((alert) => freshAlertIds.has(`nws:${alert.id}`) && marineZonesFromAlert(alert).includes(entry.id)) ||
+          handledAlerts.some((alert) => {
+            const zones = (alert.sameCodes ?? []).flatMap((same) => {
+              const zone = sameToMarineZone(same);
+              return zone ? [zone] : [];
+            });
+            return freshAlertIds.has(`station:${alert.id}`) && zones.includes(entry.id);
           })
         )
       );
@@ -651,14 +686,16 @@ export default function StationMapClient({
         }
       }
 
-      // CAP alerts without geometry → county fill.
+      // CAP alerts without geometry → county fill. Marine zones are also
+      // interactive when the CAP geometry is present, so retain their severity
+      // in the zone-fill index in both cases.
       // Route through deriveAlertSeverity to catch known NWS CAP misclassifications
       // (e.g. Tornado Watch shipped as severity="Extreme").
       for (const alert of capAlerts) {
-        if (alert.geometry) continue; // polygon alerts handled later
         const sev = deriveAlertSeverity(alert.properties.event, alert.properties.severity);
-        fipsFromAlert(alert, stationFipsSet).forEach((f) => upgradeSeverity(fipsDominantSeverity, f, sev));
         marineZonesFromAlert(alert).forEach((z) => upgradeSeverity(marineDominantSeverity, z, sev));
+        if (alert.geometry) continue; // land polygon alerts handled later
+        fipsFromAlert(alert, stationFipsSet).forEach((f) => upgradeSeverity(fipsDominantSeverity, f, sev));
       }
 
       // Station-handled alerts (NWWS-OI, ERN/GWES, originated).
@@ -779,6 +816,24 @@ export default function StationMapClient({
               ]),
               { sticky: true }
             );
+            const alerts = alertsForMarineZone(zoneId);
+            const style = capPolygonMarineZones.has(zoneId)
+              ? overlappingCountyStyle(sev)
+              : countyFillStyle(sev);
+            registerInteractiveLayer("marine", zoneId, layer, toLeafletStyle(style));
+            layer.on("mouseover", () => setHoveredKey(`marine:${zoneId}`));
+            layer.on("mouseout", () => setHoveredKey((current) => current === `marine:${zoneId}` ? null : current));
+            layer.on("click", (event) => {
+              L.DomEvent.stopPropagation(event);
+              setSelection({
+                kind: "marine",
+                id: zoneId,
+                name,
+                severity: sev,
+                alerts,
+              });
+              fitLayer(layer);
+            });
           },
         }).addTo(map);
 
@@ -869,7 +924,7 @@ export default function StationMapClient({
     });
 
     return () => { cancelled = true; };
-  }, [alertsForCounty, capAlerts, countiesUrl, fitLayer, handledAlerts, mapReady, marineZonesUrl, resolvedTheme, stationFipsSet, stationMarineZoneSet]);
+  }, [alertsForCounty, alertsForMarineZone, capAlerts, countiesUrl, fitLayer, handledAlerts, mapReady, marineZonesUrl, resolvedTheme, stationFipsSet, stationMarineZoneSet]);
 
   // -------------------------------------------------------------------------
   // Render
@@ -930,8 +985,8 @@ export default function StationMapClient({
         onSelectAlert={selectMapAlert}
       />
 
-      {/* Severity legend — left side keeps the options control clear */}
-      <div className="absolute left-3 top-3 z-[1000] rounded-md border border-border bg-background/90 px-2.5 py-2 text-xs shadow-sm backdrop-blur-sm pointer-events-none">
+      {/* Severity legend — below Leaflet's zoom controls */}
+      <div className="absolute left-3 top-12 z-[1000] rounded-md border border-border bg-background/90 px-2.5 py-2 text-xs shadow-sm backdrop-blur-sm pointer-events-none">
         {(Object.entries(SEVERITY_COLORS) as [NwsSeverity, { fill: string }][]).map(
           ([sev, { fill }]) => (
             <div key={sev} className="flex items-center gap-1.5">

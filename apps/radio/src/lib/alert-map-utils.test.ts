@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest"
 
 import {
   capPolygonStyle,
+  assembleAlertProductText,
   countyFillStyle,
   deriveAlertSeverity,
   expandFipsCode,
@@ -63,6 +64,25 @@ describe("alert severity", () => {
     const overlap = overlappingCountyStyle("Minor")
     expect(overlap).toMatchObject({ fillOpacity: 0, weight: 2.5, dashArray: "6 4" })
     expect(toLeafletStyle(overlap)).toMatchObject({ ...overlap, opacity: 0.9 })
+  })
+})
+
+describe("CAP product text", () => {
+  it("uses NWSHeadline before the generic headline and appends the product text", () => {
+    expect(assembleAlertProductText({
+      nwsHeadline: "NWS operational headline",
+      headline: "Generic API headline",
+      description: "Description.",
+      instruction: "Take action.",
+    })).toBe("NWS operational headline\n\nDescription.\n\nTake action.")
+  })
+
+  it("falls back to the generic headline when NWSHeadline is absent", () => {
+    expect(assembleAlertProductText({ headline: "Fallback", description: "Details" })).toBe("Fallback\n\nDetails")
+  })
+
+  it("returns no text when every CAP text field is empty", () => {
+    expect(assembleAlertProductText({ nwsHeadline: " ", headline: "", description: "", instruction: null })).toBe("")
   })
 })
 
