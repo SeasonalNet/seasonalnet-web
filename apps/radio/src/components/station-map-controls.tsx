@@ -1,6 +1,6 @@
 "use client"
 
-import { Check, Eye, EyeOff, Map, Radar, SlidersHorizontal, Wrench } from "lucide-react"
+import { Check, Eye, EyeOff, Map, Radar, SlidersHorizontal } from "lucide-react"
 import { Button } from "@seasonalnet/shell/src/components/ui/button"
 import {
   DropdownMenu,
