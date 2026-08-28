@@ -11,7 +11,7 @@ export type StationMetaServerCfg = {
 
 export function getStationMetaServerCfg(stationId: string): StationMetaServerCfg | null {
   switch (stationId) {
-    case "seasonalweather":
+    case "jetstream":
       return {
         statusUrl: seasonalWeatherIcecastStatusUrl(),
 

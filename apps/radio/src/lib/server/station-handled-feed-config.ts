@@ -11,8 +11,8 @@ export type StationHandledFeedConfig = {
 }
 
 export const STATION_HANDLED_FEEDS: Record<string, StationHandledFeedConfig> = {
-  seasonalweather: {
-    stationId: "seasonalweather",
+  jetstream: {
+    stationId: "jetstream",
     feedUrl: seasonalWeatherHandledAlertsUrl(),
     revalidateSeconds: 10,
     // bearerTokenEnv: "SEASONALWEATHER_FEED_TOKEN",
