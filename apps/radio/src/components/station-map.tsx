@@ -12,7 +12,7 @@ import dynamic from "next/dynamic";
 import type { ComponentProps } from "react";
 import type StationMapClient from "./station-map-client";
 
-// Skeleton shown while the map JS loads (~40 KB gzipped for Leaflet)
+// Skeleton shown while the map JS loads (Leaflet plus the vector basemap renderer)
 function MapSkeleton() {
   return (
     <div

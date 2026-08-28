@@ -17,7 +17,6 @@ export function getStationMetaServerCfg(stationId: string): StationMetaServerCfg
 
         nowPlayingUrl: seasonalWeatherNowPlayingUrl(),
 
-        // I’d align defaults with your new annotation vibe:
         defaultArtist: "SeasonalNet",
         defaultAlbum: "Weather information for Baltimore, Washington DC, and surrounding areas",
         defaultArtworkUrl: "/apple-touch-icon.png",

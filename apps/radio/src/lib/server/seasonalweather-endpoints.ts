@@ -1,5 +1,5 @@
 // src/lib/server/seasonalweather-endpoints.ts
-const DEFAULT_SEASONALWEATHER_HOST = "192.168.1.10"
+const DEFAULT_SEASONALWEATHER_HOST = "wx.lan.seasonalnet.org"
 
 function cleanEnv(value: string | undefined): string | undefined {
   const trimmed = value?.trim()

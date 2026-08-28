@@ -56,3 +56,18 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes radio-map-freshness {
+  0%, 100% { stroke-opacity: 0.72; }
+  50% { stroke-opacity: 1; }
+}
+
+.radio-map-freshness {
+  animation: radio-map-freshness 5s ease-in-out 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .radio-map-freshness {
+    animation: none;
+  }
+}

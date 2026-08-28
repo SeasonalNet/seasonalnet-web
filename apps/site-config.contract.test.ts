@@ -61,17 +61,17 @@ describe("SPA site configuration contract", () => {
 describe("radio configuration contract", () => {
   it("connects every station and alert configuration to a known station", () => {
     const stationIds = new Set(RADIO_STATIONS.map((station) => station.id))
-    expect(stationIds).toContain("seasonalweather")
-    expect(stationIds).toContain(STATION_ALERTS.seasonalweather?.stationId)
-    expect(stationIds).toContain(STATION_HANDLED_ALERTS.seasonalweather?.stationId)
+    expect(stationIds).toContain("jetstream")
+    expect(stationIds).toContain(STATION_ALERTS.jetstream?.stationId)
+    expect(stationIds).toContain(STATION_HANDLED_ALERTS.jetstream?.stationId)
     expect(RADIO_STATIONS[0]?.mounts.map((mount) => mount.id)).toEqual(["sw-ogg", "sw-mp3", "sw-wav"])
   })
 
   it("uses safe defaults and supports trimmed endpoint overrides", () => {
     for (const key of environmentKeys) delete process.env[key]
-    expect(seasonalWeatherHandledAlertsUrl()).toBe("http://192.168.1.10/v1/handled-alerts")
-    expect(seasonalWeatherIcecastStatusUrl()).toBe("http://192.168.1.10:8000/status-json.xsl")
-    expect(seasonalWeatherNowPlayingUrl()).toBe("http://192.168.1.10:7099/nowplaying")
+    expect(seasonalWeatherHandledAlertsUrl()).toBe("http://wx.lan.seasonalnet.org/v1/handled-alerts")
+    expect(seasonalWeatherIcecastStatusUrl()).toBe("http://wx.lan.seasonalnet.org:8000/status-json.xsl")
+    expect(seasonalWeatherNowPlayingUrl()).toBe("http://wx.lan.seasonalnet.org:7099/nowplaying")
 
     process.env.SEASONALWEATHER_API_BASE_URL = " https://weather.example.test/api/// "
     process.env.SEASONALWEATHER_ICECAST_STATUS_URL = " https://icecast.example.test/status/// "

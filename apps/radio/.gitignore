@@ -17,6 +17,9 @@
 /.next/
 /out/
 
+# MapLibre worker assets are copied here by predev/prebuild.
+/public/maplibre/
+
 # production
 /build
 

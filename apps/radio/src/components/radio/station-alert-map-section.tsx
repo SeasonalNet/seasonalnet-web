@@ -100,6 +100,7 @@ function normaliseHandledAlerts(alerts: StationFeedAlert[]): StationHandledAlert
     severity: a.severity,
     source: a.source ?? a.from?.name,
     areaDesc: a.area,
+    headline: a.headline,
     sameCodes: a.sameCodes ?? [],
     fipsCodes: [],
     effective: a.effective ?? undefined,

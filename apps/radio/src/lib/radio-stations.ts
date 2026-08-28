@@ -24,14 +24,14 @@ export type RadioStation = {
 
 export const RADIO_STATIONS: RadioStation[] = [
   {
-    id: "seasonalweather",
-    name: "SeasonalWeather",
+    id: "jetstream",
+    name: "Jetstream / WXK435",
     description: "Weather automation stream mounts (Icecast).",
     tags: ["weather", "self-hosted"],
     mounts: [
-      { id: "sw-ogg", title: "SeasonalWeather (OGG)", src: "/seasonalweather.ogg" },
-      { id: "sw-mp3", title: "SeasonalWeather (MP3)", src: "/seasonalweather.mp3" },
-      { id: "sw-wav", title: "SeasonalWeather (WAV)", src: "/seasonalweather.wav" },
+      { id: "sw-ogg", title: "Jetstream (OGG)", src: "/seasonalweather.ogg" },
+      { id: "sw-mp3", title: "Jetstream (MP3)", src: "/seasonalweather.mp3" },
+      { id: "sw-wav", title: "Jetstream (WAV)", src: "/seasonalweather.wav" },
     ],
     metadata: {
       enabled: true,

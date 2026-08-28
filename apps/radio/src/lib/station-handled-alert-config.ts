@@ -7,8 +7,8 @@ export type StationHandledAlertUiConfig = {
 }
 
 export const STATION_HANDLED_ALERTS: Record<string, StationHandledAlertUiConfig> = {
-  seasonalweather: {
-    stationId: "seasonalweather",
+  jetstream: {
+    stationId: "jetstream",
     title: "Station Alert Feed",
     pollSeconds: 60,
   },

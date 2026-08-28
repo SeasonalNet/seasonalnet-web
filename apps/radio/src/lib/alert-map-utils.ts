@@ -42,6 +42,7 @@ export interface StationHandledAlert {
   severity?: string;
   source?: string;            // e.g. "WJON/TV"
   areaDesc?: string;          // free-text area description
+  headline?: string;
   sameCodes?: string[];       // 6-digit SAME codes if available
   fipsCodes?: string[];       // 5-digit FIPS if resolved
   effective?: string;

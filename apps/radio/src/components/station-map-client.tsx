@@ -3,14 +3,14 @@
 //
 // Actual Leaflet map — imported only client-side via station-map.tsx.
 // Renders:
-//   1. Base map (OpenStreetMap or CartoDB dark)
+//   1. OpenFreeMap vector basemap rendered through MapLibre GL
 //   2. County fills for station-handled / no-geometry alerts
 //   3. CAP polygon outlines for NWS alerts with geometry
 //   4. Hatch overlay where both overlap
 
-import { useEffect, useRef, useMemo, useState } from "react";
+import { useCallback, useEffect, useRef, useMemo, useState } from "react";
 import { useTheme } from "next-themes";
-import type { Layer as LeafletLayer, Map as LeafletMap, TileLayer as LeafletTileLayer } from "leaflet";
+import type { Layer as LeafletLayer, Map as LeafletMap, Path as LeafletPath, PathOptions } from "leaflet";
 import type { NwsAlertFeature, StationHandledAlert } from "@/lib/alert-map-utils";
 import {
   capPolygonStyle,
@@ -28,17 +28,94 @@ import {
   deriveAlertSeverity,
   type NwsSeverity,
 } from "@/lib/alert-map-utils";
-import type { StationAlertConfig } from "@/lib/station-alert-config";
+import type {
+  RadarProductId,
+  RadarSourceId,
+  StationAlertConfig,
+} from "@/lib/station-alert-config";
+import { StationMapControls } from "@/components/station-map-controls";
+import {
+  StationMapSelection,
+  type MapAlertSummary,
+  type MapSelection,
+} from "@/components/station-map-selection";
 
 // ---------------------------------------------------------------------------
-// Tile layer URLs — swapped on theme change
+// OpenFreeMap vector styles — swapped on theme change.
 // ---------------------------------------------------------------------------
-const TILE_URLS = {
-  dark:  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
-  light: "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+const BASEMAP_STYLE_URLS = {
+  dark:  "https://tiles.openfreemap.org/styles/dark",
+  light: "https://tiles.openfreemap.org/styles/positron",
 } as const;
 
-const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> contributors &copy; <a href="https://carto.com/">CARTO</a>';
+const BASEMAP_ATTRIBUTION =
+  '&copy; <a href="https://openfreemap.org/">OpenFreeMap</a> &copy; <a href="https://www.openmaptiles.org/">OpenMapTiles</a> Data from <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
+
+type MapLibreLeafletLayer = LeafletLayer & {
+  getMaplibreMap: () => import("maplibre-gl").Map;
+};
+
+type LeafletLayerWithOptionalPathApi = LeafletLayer & {
+  eachLayer?: (callback: (layer: LeafletLayer) => void) => void;
+  getBounds?: () => import("leaflet").LatLngBounds;
+  getElement?: () => SVGElement | null;
+  setStyle?: (style: PathOptions) => void;
+};
+
+type InteractiveMapLayer = {
+  kind: "county" | "alert";
+  id: string;
+  layer: LeafletLayer;
+  style: PathOptions;
+};
+
+const RADAR_LAYER_ID = "seasonalnet-radar";
+
+function forEachLeafletPath(layer: LeafletLayer, callback: (path: LeafletPath) => void): void {
+  const candidate = layer as LeafletLayerWithOptionalPathApi;
+  if (candidate.setStyle && candidate.getElement) {
+    callback(candidate as unknown as LeafletPath);
+    return;
+  }
+  candidate.eachLayer?.((child) => forEachLeafletPath(child, callback));
+}
+
+function formatMapTime(value: string | undefined): string {
+  if (!value) return "";
+  const timestamp = Date.parse(value);
+  if (!Number.isFinite(timestamp)) return "";
+  return new Intl.DateTimeFormat([], { dateStyle: "short", timeStyle: "short" }).format(timestamp);
+}
+
+function capSummary(alert: NwsAlertFeature): MapAlertSummary {
+  return {
+    id: alert.id,
+    kind: "nws",
+    label: alert.properties.event,
+    severity: deriveAlertSeverity(alert.properties.event, alert.properties.severity),
+    area: alert.properties.areaDesc,
+    headline: alert.properties.headline ?? undefined,
+    until: formatMapTime(alert.properties.expires),
+    source: "NWS",
+  };
+}
+
+function handledSummary(alert: StationHandledAlert): MapAlertSummary {
+  return {
+    id: alert.id,
+    kind: "station",
+    label: alert.eventType,
+    severity: deriveAlertSeverity(alert.eventType, alert.severity),
+    area: alert.areaDesc ?? "",
+    headline: alert.headline,
+    until: formatMapTime(alert.expires),
+    source: alert.source ?? "Station feed",
+  };
+}
+
+function basemapStyleUrl(theme: string | undefined): string {
+  return BASEMAP_STYLE_URLS[theme === "light" ? "light" : "dark"];
+}
 
 // ---------------------------------------------------------------------------
 // Types
@@ -102,6 +179,24 @@ const SERVICE_AREA_BOUNDS: Record<string, [[number, number], [number, number]]> 
 
 const MAP_ASSET_TIMEOUT_MS = 8_000;
 
+type MapPreferences = {
+  radarSource?: RadarSourceId;
+  radarProduct?: RadarProductId;
+  radarVisible?: boolean;
+  radarOpacity?: number;
+  freshnessCues?: boolean;
+  reducedMotion?: boolean;
+};
+
+function readMapPreferences(stationId: string): MapPreferences {
+  if (typeof window === "undefined") return {};
+  try {
+    return (JSON.parse(window.localStorage.getItem(`radio-map-preferences:${stationId}`) ?? "null") as MapPreferences | null) ?? {};
+  } catch {
+    return {};
+  }
+}
+
 function tooltipContent(lines: Array<{ text: string; strong?: boolean }>): HTMLElement {
   const content = document.createElement("span");
 
@@ -126,13 +221,36 @@ export default function StationMapClient({
   marineZonesUrl = "/marine-zones-filtered.json",
 }: Props) {
   const mapRef    = useRef<LeafletMap | null>(null);
+  const mapLibreMapRef = useRef<import("maplibre-gl").Map | null>(null);
   const layersRef = useRef<LeafletLayer[]>([]);
-  const tileLayerRef = useRef<LeafletTileLayer | null>(null);
+  const basemapLayerRef = useRef<MapLibreLeafletLayer | null>(null);
+  const interactiveLayersRef = useRef<Map<string, InteractiveMapLayer>>(new Map());
   const containerRef = useRef<HTMLDivElement>(null);
   const [mapReady, setMapReady] = useState(false);
   const [mapError, setMapError] = useState(false);
   const [overlayError, setOverlayError] = useState(false);
+  const [layersRevision, setLayersRevision] = useState(0);
+  const [selection, setSelection] = useState<MapSelection | null>(null);
+  const [hoveredKey, setHoveredKey] = useState<string | null>(null);
+  const [radarSource, setRadarSource] = useState<RadarSourceId>(config.radar.defaultSource);
+  const [radarProduct, setRadarProduct] = useState<RadarProductId>(config.radar.defaultProduct);
+  const [radarVisible, setRadarVisible] = useState(false);
+  const [radarOpacity, setRadarOpacity] = useState(0.45);
+  const [freshnessCues, setFreshnessCues] = useState(true);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const [freshAlertIds, setFreshAlertIds] = useState<Set<string>>(new Set());
+  const knownAlertVersionsRef = useRef<Map<string, string>>(new Map());
+  const hasAlertBaselineRef = useRef(false);
+  const preferencesLoadedRef = useRef(false);
   const { resolvedTheme } = useTheme();
+
+  const radarSourceConfig = config.radar.sources[radarSource];
+  const effectiveRadarProduct = radarSourceConfig.products[radarProduct]
+    ? radarProduct
+    : (config.radar.defaultProduct in radarSourceConfig.products
+      ? config.radar.defaultProduct
+      : "reflectivity");
+  const radarProductConfig = radarSourceConfig.products[effectiveRadarProduct];
 
   // Station's own FIPS set (the counties this station covers at all)
   const stationFipsSet = useMemo<Set<string>>(() => {
@@ -153,6 +271,56 @@ export default function StationMapClient({
     return s;
   }, [config.sameCodes]);
 
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => {
+      const saved = readMapPreferences(config.stationId);
+      if (saved.radarSource && config.radar.sources[saved.radarSource]) setRadarSource(saved.radarSource);
+      if (saved.radarProduct) setRadarProduct(saved.radarProduct);
+      if (typeof saved.radarVisible === "boolean") setRadarVisible(saved.radarVisible);
+      if (typeof saved.radarOpacity === "number") setRadarOpacity(Math.min(0.6, Math.max(0.3, saved.radarOpacity)));
+      if (typeof saved.freshnessCues === "boolean") setFreshnessCues(saved.freshnessCues);
+      if (typeof saved.reducedMotion === "boolean") {
+        setReducedMotion(saved.reducedMotion);
+      } else {
+        setReducedMotion(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
+      }
+      preferencesLoadedRef.current = true;
+    }, 0);
+    return () => window.clearTimeout(timeoutId);
+  }, [config.radar.sources, config.stationId]);
+
+  useEffect(() => {
+    if (!preferencesLoadedRef.current) return;
+    const key = `radio-map-preferences:${config.stationId}`;
+    try {
+      window.localStorage.setItem(key, JSON.stringify({
+        radarSource,
+        radarProduct,
+        radarVisible,
+        radarOpacity,
+        freshnessCues,
+        reducedMotion,
+      }));
+    } catch {
+      // Preferences are optional; map behavior must not depend on storage.
+    }
+  }, [config.stationId, freshnessCues, radarOpacity, radarProduct, radarSource, radarVisible, reducedMotion]);
+
+  const alertsForCounty = useCallback((fips: string): MapAlertSummary[] => {
+    const summaries: MapAlertSummary[] = [];
+    capAlerts.forEach((alert) => {
+      if (fipsFromAlert(alert, stationFipsSet).includes(fips)) summaries.push(capSummary(alert));
+    });
+    handledAlerts.forEach((alert) => {
+      const sameFips = (alert.sameCodes ?? []).flatMap((same) =>
+        fipsFromCoverageRef(sameToCoverageRef(same), stationFipsSet)
+      );
+      const directFips = (alert.fipsCodes ?? []).flatMap((code) => expandFipsCode(code, stationFipsSet));
+      if (sameFips.includes(fips) || directFips.includes(fips)) summaries.push(handledSummary(alert));
+    });
+    return summaries;
+  }, [capAlerts, handledAlerts, stationFipsSet]);
+
   // -------------------------------------------------------------------------
   // Map initialisation (once)
   // -------------------------------------------------------------------------
@@ -163,8 +331,13 @@ export default function StationMapClient({
     let cancelled = false;
     let createdMap: LeafletMap | null = null;
 
-    // Dynamic import — avoids SSR window errors
-    import("leaflet").then(L => {
+    // Dynamic imports — avoid SSR window errors and defer the vector renderer
+    // until the map is actually shown.
+    Promise.all([
+      import("leaflet"),
+      import("maplibre-gl"),
+      import("@maplibre/maplibre-gl-leaflet"),
+    ]).then(([L, maplibregl, { maplibreGL }]) => {
       if (cancelled) return;
 
       // Remove Leaflet's legacy URL inference before providing explicit assets.
@@ -183,15 +356,17 @@ export default function StationMapClient({
       }).fitBounds(bounds);
       createdMap = map;
 
-      // CartoDB tiles — theme-aware, swapped via tileLayerRef
-      tileLayerRef.current = L.tileLayer(
-        TILE_URLS[document.documentElement.classList.contains("dark") ? "dark" : "light"],
-        {
-          attribution: TILE_ATTRIBUTION,
-          subdomains: "abcd",
-          maxZoom: 19,
-        }
-      ).addTo(map);
+      map.on("click", () => setSelection(null));
+      map.on("dragstart", () => setSelection(null));
+
+      // MapLibre GL's Next.js worker is copied to public/ by predev/prebuild.
+      maplibregl.setWorkerUrl("/maplibre/maplibre-gl-worker.mjs");
+
+      basemapLayerRef.current = maplibreGL({
+        style: basemapStyleUrl(document.documentElement.classList.contains("dark") ? "dark" : "light"),
+        attributionControl: { customAttribution: BASEMAP_ATTRIBUTION },
+      }).addTo(map) as MapLibreLeafletLayer;
+      mapLibreMapRef.current = basemapLayerRef.current.getMaplibreMap();
 
       mapRef.current = map;
       setMapReady(true);
@@ -204,19 +379,213 @@ export default function StationMapClient({
       createdMap?.remove();
       if (mapRef.current === createdMap) {
         mapRef.current = null;
-        tileLayerRef.current = null;
+        mapLibreMapRef.current = null;
+        basemapLayerRef.current = null;
       }
     };
   }, []);
 
   // -------------------------------------------------------------------------
-  // Swap tile layer when theme changes (no map reinit needed)
+  // Swap vector style when theme changes (no map reinit needed)
   // -------------------------------------------------------------------------
   useEffect(() => {
-    const tile = tileLayerRef.current;
-    if (!tile) return;
-    tile.setUrl(TILE_URLS[resolvedTheme === "light" ? "light" : "dark"]);
+    const basemap = basemapLayerRef.current;
+    if (!basemap) return;
+    basemap.getMaplibreMap().setStyle(basemapStyleUrl(resolvedTheme));
   }, [resolvedTheme]);
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setSelection(null);
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
+
+  const alertVersions = useMemo(() => {
+    const versions = new Map<string, string>();
+    capAlerts.forEach((alert) => {
+      versions.set(`nws:${alert.id}`, JSON.stringify([
+        alert.properties.event,
+        alert.properties.headline,
+        alert.properties.effective,
+        alert.properties.expires,
+        alert.properties.parameters?.SAME,
+      ]));
+    });
+    handledAlerts.forEach((alert) => {
+      versions.set(`station:${alert.id}`, JSON.stringify([
+        alert.eventType,
+        alert.severity,
+        alert.areaDesc,
+        alert.effective,
+        alert.expires,
+        alert.sameCodes,
+        alert.fipsCodes,
+      ]));
+    });
+    return versions;
+  }, [capAlerts, handledAlerts]);
+
+  useEffect(() => {
+    const prior = knownAlertVersionsRef.current;
+    const changed = hasAlertBaselineRef.current
+      ? Array.from(alertVersions.keys()).filter((key) => prior.get(key) !== alertVersions.get(key))
+      : [];
+    knownAlertVersionsRef.current = alertVersions;
+    hasAlertBaselineRef.current = true;
+
+    if (!freshnessCues || reducedMotion || changed.length === 0) {
+      if (!freshnessCues || reducedMotion) {
+        const timeoutId = window.setTimeout(() => setFreshAlertIds(new Set()), 0);
+        return () => window.clearTimeout(timeoutId);
+      }
+      return;
+    }
+
+    const addTimeoutId = window.setTimeout(() => setFreshAlertIds((current) => new Set([...current, ...changed])), 0);
+    const removeTimeoutId = window.setTimeout(() => {
+      setFreshAlertIds((current) => {
+        const next = new Set(current);
+        changed.forEach((key) => next.delete(key));
+        return next;
+      });
+    }, 5_000);
+    return () => {
+      window.clearTimeout(addTimeoutId);
+      window.clearTimeout(removeTimeoutId);
+    };
+  }, [alertVersions, freshnessCues, reducedMotion]);
+
+  const fitLayer = useCallback((layer: LeafletLayer | undefined) => {
+    const map = mapRef.current;
+    const bounds = layer && (layer as LeafletLayerWithOptionalPathApi).getBounds?.();
+    if (!map || !bounds || !bounds.isValid()) return;
+    map.fitBounds(bounds, {
+      padding: [28, 28],
+      maxZoom: 10,
+      animate: !reducedMotion,
+      duration: 0.55,
+    });
+  }, [reducedMotion]);
+
+  const fitLayers = useCallback((layers: LeafletLayer[]) => {
+    const map = mapRef.current;
+    const bounds = layers
+      .map((layer) => (layer as LeafletLayerWithOptionalPathApi).getBounds?.())
+      .find((candidate) => candidate?.isValid());
+    if (!map || !bounds || !bounds.isValid()) return;
+    for (const layer of layers) {
+      const layerBounds = (layer as LeafletLayerWithOptionalPathApi).getBounds?.();
+      if (layerBounds?.isValid()) bounds.extend(layerBounds);
+    }
+    map.fitBounds(bounds, {
+      padding: [28, 28],
+      maxZoom: 10,
+      animate: !reducedMotion,
+      duration: 0.55,
+    });
+  }, [reducedMotion]);
+
+  const selectMapAlert = useCallback((alert: MapAlertSummary) => {
+    setSelection({ kind: "alert", alert });
+    if (alert.kind === "nws") {
+      fitLayer(interactiveLayersRef.current.get(`alert:${alert.id}`)?.layer);
+      return;
+    }
+
+    const source = handledAlerts.find((candidate) => candidate.id === alert.id);
+    if (!source) return;
+    const fips = [
+      ...(source.sameCodes ?? []).flatMap((same) => fipsFromCoverageRef(sameToCoverageRef(same), stationFipsSet)),
+      ...(source.fipsCodes ?? []).flatMap((code) => expandFipsCode(code, stationFipsSet)),
+    ];
+    fitLayers(
+      fips
+        .map((id) => interactiveLayersRef.current.get(`county:${id}`)?.layer)
+        .filter((layer): layer is LeafletLayer => Boolean(layer))
+    );
+  }, [fitLayer, fitLayers, handledAlerts, stationFipsSet]);
+
+  useEffect(() => {
+    const map = mapLibreMapRef.current;
+    const syncRadarLayer = () => {
+      if (!map || !map.isStyleLoaded()) return;
+      if (map.getLayer(RADAR_LAYER_ID)) map.removeLayer(RADAR_LAYER_ID);
+      if (map.getSource(RADAR_LAYER_ID)) map.removeSource(RADAR_LAYER_ID);
+      if (!radarVisible || !radarProductConfig) return;
+
+      map.addSource(RADAR_LAYER_ID, {
+        type: "raster",
+        tiles: [radarProductConfig.tileUrlTemplate],
+        tileSize: 256,
+      });
+      const firstSymbolLayer = map.getStyle().layers?.find((layer) => layer.type === "symbol")?.id;
+      map.addLayer({
+        id: RADAR_LAYER_ID,
+        type: "raster",
+        source: RADAR_LAYER_ID,
+        paint: {
+          "raster-opacity": radarOpacity,
+          "raster-fade-duration": 0,
+        },
+      }, firstSymbolLayer);
+    };
+
+    map?.on("style.load", syncRadarLayer);
+    if (map?.isStyleLoaded()) syncRadarLayer();
+    return () => {
+      map?.off("style.load", syncRadarLayer);
+    };
+  }, [mapReady, radarOpacity, radarProductConfig, radarVisible]);
+
+  useEffect(() => {
+    const selectionKey = selection?.kind === "county"
+      ? `county:${selection.id}`
+      : selection?.kind === "alert"
+        ? `alert:${selection.alert.id}`
+        : null;
+
+    interactiveLayersRef.current.forEach((entry) => {
+      const entryKey = `${entry.kind}:${entry.id}`;
+      const selected = selectionKey === entryKey;
+      const dimmed = Boolean(selectionKey && !selected);
+      const fresh = freshAlertIds.has(entryKey) || (
+        entry.kind === "county" && (
+          capAlerts.some((alert) => freshAlertIds.has(`nws:${alert.id}`) && fipsFromAlert(alert, stationFipsSet).includes(entry.id)) ||
+          handledAlerts.some((alert) => {
+            const fips = [
+              ...(alert.sameCodes ?? []).flatMap((same) => fipsFromCoverageRef(sameToCoverageRef(same), stationFipsSet)),
+              ...(alert.fipsCodes ?? []).flatMap((code) => expandFipsCode(code, stationFipsSet)),
+            ];
+            return freshAlertIds.has(`station:${alert.id}`) && fips.includes(entry.id);
+          })
+        )
+      );
+
+      forEachLeafletPath(entry.layer, (path) => {
+        const style = { ...entry.style };
+        if (dimmed) {
+          style.opacity = 0.3;
+          style.fillOpacity = (style.fillOpacity ?? 0) * 0.25;
+          style.weight = Math.max(0.75, (style.weight ?? 1) * 0.75);
+        } else if (selected) {
+          style.opacity = 1;
+          style.fillOpacity = Math.min(0.7, (style.fillOpacity ?? 0) + 0.12);
+          style.weight = (style.weight ?? 1) + 1.5;
+        } else if (hoveredKey === entryKey) {
+          style.opacity = 1;
+          style.fillOpacity = Math.min(0.65, (style.fillOpacity ?? 0) + 0.08);
+          style.weight = (style.weight ?? 1) + 1;
+        }
+        path.setStyle(style);
+        const element = path.getElement();
+        element?.classList.toggle("radio-map-freshness", fresh && freshnessCues && !reducedMotion);
+        element?.classList.toggle("radio-map-selected", selected);
+        element?.classList.toggle("radio-map-hovered", hoveredKey === entryKey);
+      });
+    });
+  }, [capAlerts, freshAlertIds, freshnessCues, handledAlerts, hoveredKey, layersRevision, reducedMotion, selection, stationFipsSet]);
 
   // -------------------------------------------------------------------------
   // Draw / redraw alert layers whenever alerts change
@@ -234,6 +603,8 @@ export default function StationMapClient({
       // Remove previous alert layers
       for (const layer of layersRef.current) layer.remove();
       layersRef.current = [];
+      interactiveLayersRef.current.clear();
+      setHoveredKey(null);
 
       // -----------------------------------------------------------------------
       // 1. Fetch county + marine-zone GeoJSON assets
@@ -252,6 +623,15 @@ export default function StationMapClient({
       } catch { /* marine zone outlines will be skipped */ }
 
       if (cancelled) return;
+
+      const registerInteractiveLayer = (
+        kind: InteractiveMapLayer["kind"],
+        id: string,
+        layer: LeafletLayer,
+        style: PathOptions,
+      ) => {
+        interactiveLayersRef.current.set(`${kind}:${id}`, { kind, id, layer, style });
+      };
 
       // -----------------------------------------------------------------------
       // 2. Determine the dominant severity per FIPS code across active alerts
@@ -339,13 +719,33 @@ export default function StationMapClient({
             const fips = feature.properties.GEOID;
             const sev  = fipsDominantSeverity.get(fips) ?? "Unknown";
             const state = STATE_FIPS_ABBR[fips.slice(0, 2)] ?? fips.slice(0, 2);
+            const alerts = alertsForCounty(fips);
+            const style = capPolygonFips.has(fips)
+              ? overlappingCountyStyle(sev)
+              : countyFillStyle(sev);
             layer.bindTooltip(
               tooltipContent([
                 { text: `${feature.properties.NAME}, ${state}`, strong: true },
                 { text: `Severity: ${sev}` },
+                { text: `${alerts.length} alert${alerts.length === 1 ? "" : "s"} mapped` },
               ]),
               { sticky: true }
             );
+            registerInteractiveLayer("county", fips, layer, toLeafletStyle(style));
+            layer.on("mouseover", () => setHoveredKey(`county:${fips}`));
+            layer.on("mouseout", () => setHoveredKey((current) => current === `county:${fips}` ? null : current));
+            layer.on("click", (event) => {
+              L.DomEvent.stopPropagation(event);
+              setSelection({
+                kind: "county",
+                id: fips,
+                name: feature.properties.NAME,
+                state,
+                severity: sev,
+                alerts,
+              });
+              fitLayer(layer);
+            });
           },
         }).addTo(map);
         layersRef.current.push(fillLayer);
@@ -410,6 +810,14 @@ export default function StationMapClient({
                 ]),
                 { sticky: true }
               );
+              registerInteractiveLayer("alert", alert.id, layer, style);
+              layer.on("mouseover", () => setHoveredKey(`alert:${alert.id}`));
+              layer.on("mouseout", () => setHoveredKey((current) => current === `alert:${alert.id}` ? null : current));
+              layer.on("click", (event) => {
+                L.DomEvent.stopPropagation(event);
+                setSelection({ kind: "alert", alert: capSummary(alert) });
+                fitLayer(layer);
+              });
             },
           }
         ).addTo(map);
@@ -454,12 +862,14 @@ export default function StationMapClient({
         }).addTo(map);
         layersRef.current.push(outlineLayer);
       }
+
+      setLayersRevision((revision) => revision + 1);
     }).catch(() => {
       if (!cancelled) setOverlayError(true);
     });
 
     return () => { cancelled = true; };
-  }, [capAlerts, handledAlerts, countiesUrl, mapReady, marineZonesUrl, resolvedTheme, stationFipsSet, stationMarineZoneSet]);
+  }, [alertsForCounty, capAlerts, countiesUrl, fitLayer, handledAlerts, mapReady, marineZonesUrl, resolvedTheme, stationFipsSet, stationMarineZoneSet]);
 
   // -------------------------------------------------------------------------
   // Render
@@ -479,6 +889,22 @@ export default function StationMapClient({
         aria-label={`Service area map for ${config.serviceAreaName}`}
       />
 
+      <StationMapControls
+        radarConfig={config.radar}
+        radarSource={radarSource}
+        radarProduct={effectiveRadarProduct}
+        radarVisible={radarVisible}
+        radarOpacity={radarOpacity}
+        freshnessCues={freshnessCues}
+        reducedMotion={reducedMotion}
+        onRadarSourceChange={setRadarSource}
+        onRadarProductChange={setRadarProduct}
+        onRadarVisibleChange={setRadarVisible}
+        onRadarOpacityChange={setRadarOpacity}
+        onFreshnessCuesChange={setFreshnessCues}
+        onReducedMotionChange={setReducedMotion}
+      />
+
       {mapError ? (
         <div className="absolute inset-0 z-[1001] grid place-items-center bg-background/95 p-6 text-center text-sm text-muted-foreground">
           The service-area map could not be loaded. Alert details remain available above.
@@ -491,8 +917,21 @@ export default function StationMapClient({
         </div>
       ) : null}
 
-      {/* Severity legend — top-right avoids Leaflet attribution at bottom-right */}
-      <div className="absolute top-3 right-3 z-[1000] bg-background/90 backdrop-blur-sm border border-border rounded-md px-2.5 py-2 text-xs space-y-1 pointer-events-none">
+      {radarVisible && radarProductConfig ? (
+        <div className="absolute bottom-7 right-3 z-[1000] max-w-[min(18rem,calc(100%-1.5rem))] rounded-md border border-border bg-background/90 px-2.5 py-2 text-xs shadow-sm backdrop-blur-sm">
+          <div className="font-medium">{radarProductConfig.legend}</div>
+          <div className="text-muted-foreground">{radarProductConfig.sourceLabel} · {Math.round(radarOpacity * 100)}%</div>
+        </div>
+      ) : null}
+
+      <StationMapSelection
+        selection={selection}
+        onClose={() => setSelection(null)}
+        onSelectAlert={selectMapAlert}
+      />
+
+      {/* Severity legend — left side keeps the options control clear */}
+      <div className="absolute left-3 top-3 z-[1000] rounded-md border border-border bg-background/90 px-2.5 py-2 text-xs shadow-sm backdrop-blur-sm pointer-events-none">
         {(Object.entries(SEVERITY_COLORS) as [NwsSeverity, { fill: string }][]).map(
           ([sev, { fill }]) => (
             <div key={sev} className="flex items-center gap-1.5">

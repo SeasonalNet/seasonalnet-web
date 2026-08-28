@@ -14,7 +14,10 @@
       ]
     },
     "apps/radio": {
-      "entry": ["scripts/generate-*-geojson.mjs"]
+      "entry": [
+        "scripts/copy-maplibre-worker.mjs",
+        "scripts/generate-*-geojson.mjs"
+      ]
     }
   }
 }
