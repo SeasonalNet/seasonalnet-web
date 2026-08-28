@@ -944,22 +944,6 @@ export default function StationMapClient({
         aria-label={`Service area map for ${config.serviceAreaName}`}
       />
 
-      <StationMapControls
-        radarConfig={config.radar}
-        radarSource={radarSource}
-        radarProduct={effectiveRadarProduct}
-        radarVisible={radarVisible}
-        radarOpacity={radarOpacity}
-        freshnessCues={freshnessCues}
-        reducedMotion={reducedMotion}
-        onRadarSourceChange={setRadarSource}
-        onRadarProductChange={setRadarProduct}
-        onRadarVisibleChange={setRadarVisible}
-        onRadarOpacityChange={setRadarOpacity}
-        onFreshnessCuesChange={setFreshnessCues}
-        onReducedMotionChange={setReducedMotion}
-      />
-
       {mapError ? (
         <div className="absolute inset-0 z-[1001] grid place-items-center bg-background/95 p-6 text-center text-sm text-muted-foreground">
           The service-area map could not be loaded. Alert details remain available above.
@@ -985,8 +969,11 @@ export default function StationMapClient({
         onSelectAlert={selectMapAlert}
       />
 
-      {/* Severity legend — below Leaflet's zoom controls */}
-      <div className="absolute left-3 top-12 z-[1000] rounded-md border border-border bg-background/90 px-2.5 py-2 text-xs shadow-sm backdrop-blur-sm pointer-events-none">
+      {/* Severity legend and map options share one stable, right-side panel. */}
+      <div
+        className="absolute right-3 top-3 z-[1000] rounded-md border border-border bg-background/90 px-2.5 py-2 text-xs shadow-sm backdrop-blur-sm"
+        onClick={(event) => event.stopPropagation()}
+      >
         {(Object.entries(SEVERITY_COLORS) as [NwsSeverity, { fill: string }][]).map(
           ([sev, { fill }]) => (
             <div key={sev} className="flex items-center gap-1.5">
@@ -1001,6 +988,24 @@ export default function StationMapClient({
         <div className="flex items-center gap-1.5 pt-0.5 border-t border-border">
           <span className="inline-block w-3 h-3 rounded-sm border border-slate-500 bg-transparent" style={{ borderStyle: "dashed" }} />
           <span className="text-muted-foreground">Overlap</span>
+        </div>
+        <div className="mt-1.5 border-t border-border pt-1.5">
+          <StationMapControls
+            inline
+            radarConfig={config.radar}
+            radarSource={radarSource}
+            radarProduct={effectiveRadarProduct}
+            radarVisible={radarVisible}
+            radarOpacity={radarOpacity}
+            freshnessCues={freshnessCues}
+            reducedMotion={reducedMotion}
+            onRadarSourceChange={setRadarSource}
+            onRadarProductChange={setRadarProduct}
+            onRadarVisibleChange={setRadarVisible}
+            onRadarOpacityChange={setRadarOpacity}
+            onFreshnessCuesChange={setFreshnessCues}
+            onReducedMotionChange={setReducedMotion}
+          />
         </div>
       </div>
     </div>

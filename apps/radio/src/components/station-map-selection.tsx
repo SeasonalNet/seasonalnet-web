@@ -56,7 +56,7 @@ function severityVariant(severity: NwsSeverity): "default" | "secondary" | "dest
 
 function AlertRow({ alert, onSelect }: { alert: MapAlertSummary; onSelect: () => void }) {
   return (
-    <div className="rounded-md border border-border/70 px-2 py-1.5">
+    <div className="rounded-md border border-border/70 px-2.5 py-2">
       <button
         type="button"
         className="flex w-full items-start justify-between gap-2 text-left hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
@@ -67,11 +67,11 @@ function AlertRow({ alert, onSelect }: { alert: MapAlertSummary; onSelect: () =>
           {alert.severity}
         </Badge>
       </button>
-      {alert.source ? <div className="mt-0.5 text-[10px] text-muted-foreground">Source: {alert.source}</div> : null}
-      {alert.area ? <div className="mt-0.5 line-clamp-1 text-[10px] text-muted-foreground">{alert.area}</div> : null}
+      {alert.source ? <div className="mt-1 text-[11px] text-muted-foreground">Source: {alert.source}</div> : null}
+      {alert.area ? <div className="mt-1 line-clamp-2 text-[11px] text-muted-foreground">{alert.area}</div> : null}
       {alert.until ? <div className="mt-0.5 text-[11px] text-muted-foreground">Until {alert.until}</div> : null}
       {alert.headline ? (
-        <details className="mt-1 text-[10px] text-muted-foreground">
+        <details className="mt-1.5 text-[11px] text-muted-foreground">
           <summary className="cursor-pointer select-none hover:text-foreground">Show alert text</summary>
           <p className="mt-1 whitespace-pre-wrap leading-relaxed">{alert.headline}</p>
         </details>
@@ -96,7 +96,7 @@ export function StationMapSelection({ selection, onClose, onSelectAlert }: Props
   return (
     <section
       className={cn(
-        "absolute bottom-7 left-3 z-[1001] max-h-[6rem] w-[min(23rem,calc(100%-4.5rem))] overflow-y-auto rounded-md border border-border bg-background/95 p-2 shadow-lg backdrop-blur-sm",
+        "absolute bottom-3 left-3 z-[1001] max-h-[min(11rem,calc(100%-4.5rem))] w-[min(23rem,calc(100%-4.5rem))] overflow-y-auto rounded-md border border-border bg-background/95 p-2.5 shadow-lg backdrop-blur-sm",
         "text-foreground"
       )}
       aria-label={selection.kind === "county" ? "Selected county details" : selection.kind === "marine" ? "Selected marine zone details" : "Selected alert details"}

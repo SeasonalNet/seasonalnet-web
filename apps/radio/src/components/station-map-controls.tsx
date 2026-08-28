@@ -1,6 +1,6 @@
 "use client"
 
-import { Check, Ellipsis, Eye, EyeOff, Map, Radar } from "lucide-react"
+import { Check, Eye, EyeOff, Map, Radar, SlidersHorizontal, Wrench } from "lucide-react"
 import { Button } from "@seasonalnet/shell/src/components/ui/button"
 import {
   DropdownMenu,
@@ -16,6 +16,7 @@ import type {
 } from "@/lib/station-alert-config"
 
 type Props = {
+  inline?: boolean
   radarConfig: StationRadarConfig
   radarSource: RadarSourceId
   radarProduct: RadarProductId
@@ -36,6 +37,7 @@ function SelectMark({ selected }: { selected: boolean }) {
 }
 
 export function StationMapControls({
+  inline = false,
   radarConfig,
   radarSource,
   radarProduct,
@@ -56,16 +58,22 @@ export function StationMapControls({
   const hasMultipleSources = sourceEntries.length > 1
 
   return (
-    <div className="absolute right-3 top-3 z-[1001]">
+    <div
+      className={inline ? "w-full" : "absolute right-3 top-3 z-[1001]"}
+      onClick={(event) => event.stopPropagation()}
+    >
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Button
-            variant="outline"
-            size="icon-sm"
-            className="border-border bg-background/90 shadow-sm backdrop-blur-sm"
+            variant={inline ? "ghost" : "outline"}
+            size={inline ? "sm" : "icon-sm"}
+            className={inline
+              ? "h-7 w-full justify-start gap-1.5 px-1.5 text-xs"
+              : "border-border bg-background/90 shadow-sm backdrop-blur-sm"}
             aria-label="Map options"
           >
-            <Ellipsis className="h-4 w-4" aria-hidden="true" />
+            <SlidersHorizontal className="h-4 w-4" aria-hidden="true" />
+            {inline ? <span>Options</span> : null}
           </Button>
         </DropdownMenuTrigger>
         <DropdownMenuContent align="end" className="w-72">

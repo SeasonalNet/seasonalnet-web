@@ -56,15 +56,23 @@ export function BustedAudio({ src, mediaMeta, mediaMetaUrl, mediaMetaPollMs }: P
   const audioRef = React.useRef<HTMLAudioElement | null>(null);
   const resumeAfterBustRef = React.useRef(false);
 
-  const [token, setToken] = React.useState(() => newToken());
+  // Keep the server and first client render identical. The cache-busting
+  // token is only needed once the browser has hydrated the audio control.
+  const [token, setToken] = React.useState("");
   const [playing, setPlaying] = React.useState(false);
   const [dynMeta, setDynMeta] = React.useState<MediaSessionMeta | null>(null);
 
   // The actual stream URL the browser fetches
   const bustedSrc = React.useMemo(() => {
+    if (!token) return src;
     const join = src.includes("?") ? "&" : "?";
     return `${src}${join}cb=${encodeURIComponent(token)}`;
   }, [src, token]);
+
+  React.useEffect(() => {
+    const timeoutId = window.setTimeout(() => setToken(newToken()), 0);
+    return () => window.clearTimeout(timeoutId);
+  }, []);
 
   // If the page comes back from BFCache (back/forward cache), refresh token automatically
   React.useEffect(() => {
