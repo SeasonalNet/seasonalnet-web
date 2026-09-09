@@ -20,3 +20,6 @@ allowBuilds:
   msw: true
   sharp: true
   unrs-resolver: true
+
+minimumReleaseAgeExclude:
+  - qs@6.15.4
