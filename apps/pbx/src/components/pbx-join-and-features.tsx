@@ -1,6 +1,6 @@
 import type { ReactNode } from "react"
 import type { LucideIcon } from "lucide-react"
-import { Bot, Code, KeyRound, Network, PhoneCall, RadioTower, Shield, Users, Voicemail } from "lucide-react"
+import { Bot, Code, KeyRound, Network, PhoneCall, LayoutPanelLeft, Shield, Users, Voicemail } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@seasonalnet/shell/src/components/ui/card"
 import { BlurFade } from "@/components/magic/blur-fade"
 import { SectionHeader } from "@/components/pbx-section"
@@ -16,51 +16,51 @@ const featureCards: Feature[] = [
   {
     title: "Voice + DTMF captcha",
     icon: Shield,
-    body: "Randomized voice challenges with DTMF fallback keep spam and bot calls away from sensitive call paths.",
+    body: "Randomized voice challenges with a DTMF fallback help keep actual humans as your callers.",
   },
   {
     title: "Discord onboarding",
     icon: Bot,
-    body: "The bot creates extensions, binds ownership, and delivers initial SIP details without exposing FreePBX admin controls.",
+    body: "A Discord bot that lets you join the server, get an extension, and get set up quickly with little fuss.",
   },
   {
     title: "AstroCom routing",
     icon: Network,
     body: (
       <>
-        SeasonalPBX participates in AstroCom IAX2 routing, including <span className="font-medium text-foreground">404-0000</span> for SeasonalPBX and <span className="font-medium text-foreground">548-0000</span> for LiteNet.
+        A PBX that participates in AstroCom&apos;s inter-PBX routing network. You can dial straight into AstroCom and other PBXs on the network from your extension.
       </>
     ),
   },
   {
     title: "Voicemail included",
     icon: Voicemail,
-    body: "User extensions are provisioned with voicemail so missed calls have a normal place to land.",
+    body: "Extensions that are provisioned with private voicemail, so you can receive messages from others.",
   },
   {
-    title: "Paging + conference",
+    title: "Paging + conferences",
     icon: Users,
-    body: "Shared calling features are available today, including a one-page group and a public conference room.",
+    body: "A page group that lets you communicate with others, and the ability to host conferences with multiple participants.",
   },
   {
     title: "Credential lifecycle",
     icon: KeyRound,
-    body: "Long SIP secrets are treated as provisioning credentials: reveal for setup, rotate when leaked, and redact elsewhere.",
+    body: "SIP credential handling that is easy to deal with. Reveal when needed, rotate when needed, and redacted in other places.",
   },
   {
     title: "FreePBX-backed calls",
     icon: PhoneCall,
-    body: "Extension, trunk, voicemail, and routing behavior stays on the FreePBX/Asterisk side where calls are enforced.",
+    body: "FreePBX and Asterisk under the hood, a reliable software duo.",
   },
   {
     title: "OpenAPI control plane",
     icon: Code,
-    body: "pbx-controld adds API contracts, sanity checks, idempotency, audit trails, and downstream job guardrails.",
+    body: "An open-source pbx-controld daemon on the backend that helps provision and manage your extension throughout its lifecycle.",
   },
   {
-    title: "Lab interconnect ready",
-    icon: RadioTower,
-    body: "Built for hobbyist telecom experiments without pushing normal workflows into admin-only surfaces.",
+    title: "Self-service dashboard",
+    icon: LayoutPanelLeft,
+    body: "Web self-service. You can manage your extension from the web.",
   },
 ]
 
@@ -92,7 +92,7 @@ export function PBXFeaturesGrid() {
         <SectionHeader
           eyebrow="Features"
           title="What SeasonalPBX gives you"
-          description="All the tools a hobbyist homelab-run PBX should have: managed extensions, voicemail, caller filtering, inter-PBX routing, and API-backed provisioning guardrails."
+          description="All the tools a hobbyist PBX should have: managed extensions, voicemail, caller filtering, inter-PBX routing, and automated provisioning."
         />
       </BlurFade>
 

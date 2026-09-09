@@ -272,7 +272,7 @@ function EmptyExtensionCard({ loading, onClaim, available }: { loading: boolean;
   return (
     <ControlSection
       title="Claim your SeasonalPBX extension"
-      description="The dashboard will claim a managed extension from the public pool and provision it through pbx-controld."
+      description="The dashboard will claim a managed extension from the public pool and provision it for you."
       icon={Sparkles}
       contentClassName="space-y-4"
     >
@@ -481,7 +481,7 @@ function TipsSection({ credentialLifecycleEnabled }: { credentialLifecycleEnable
       contentClassName="pb-5"
     >
       <div className="grid gap-4 md:grid-cols-3">
-        <TipItem title="Transport" description="Use TCP unless your client requires otherwise." />
+        <TipItem title="Transport" description="Use UDP unless your client requires otherwise." />
         <TipItem
           title="Credential model"
           description={
@@ -490,7 +490,7 @@ function TipsSection({ credentialLifecycleEnabled }: { credentialLifecycleEnable
               : "Credential lifecycle actions are hidden for reserved and non-managed extension classes."
           }
         />
-        <TipItem title="Downstream writes" description="Supported changes queue through pbx-controld and apply to FreePBX safely." />
+        <TipItem title="Downstream writes" description="Valid, supported changes will queue through our backend and apply to FreePBX." />
       </div>
     </ControlSection>
   )
