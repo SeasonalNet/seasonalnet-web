@@ -13,7 +13,7 @@ This is platform reference material. It is not a live status page.
 
 ### Seasonal Agent
 
-Role: local assistant runtime for operator-facing support, reasoning, and bounded read-only inspection.
+Role: local, former assistant runtime for operator-facing support, reasoning, and bounded read-only inspection.
 
 Boundary: answers about live state should use tools when available.
 
@@ -30,7 +30,6 @@ Boundary: SeasonalWeather is one subsystem within SeasonalNet, not a synonym for
 Role: telephony, call control, phone provisioning, and related communications functions. SeasonalPBX is the current FreePBX/Asterisk service VM at `192.168.1.12`; it is not a Phone-LAN router or gateway. SeasonalNet-DSW1 owns the routed gateway for Phone-LAN VLAN 30 and the Voice VLAN 10 / Management VLAN 42 gateways used by SeasonalCME. SeasonalCME-R1 remains the CME application node at `10.10.0.10` plus `fd97:418:22dd:10::10`, while FW4C provides the production upstream firewall/NAT boundary.
 
 Boundary: voice systems are part of SeasonalNet's communications domain.
-
 
 ### SeasonalVPN
 
@@ -62,12 +61,11 @@ SeasonalDNS runs at `192.168.1.14` on SeasonalR230. It manages internal records 
 
 Boundary: SeasonalDNS is not public authoritative DNS for `seasonalnet.org`; Cloudflare remains authoritative for public SeasonalNet DNS.
 
-
 ### SeasonalCA
 
 Role: LAN private certificate authority for internal SeasonalNet TLS.
 
-SeasonalCA runs at `192.168.1.21` and provides the SeasonalCA / Smallstep step-ca service for LAN trust. Internal DNS names include `seasonalca.lan.seasonalnet.org` and `ca.lan.seasonalnet.org`.
+SeasonalCA runs at `192.168.1.21` and provides the SeasonalCA / Smallstep step-ca service for LAN trust. Internal DNS names include `seasonalca.lan.seasonalnet.org` and `ca.lan.seasonalnet.org`. Legacy Cisco infrastructure uses a separate RSA chain/SCEP path exposed internally as `ca-rsa.lan.seasonalnet.org`, keeping legacy RSA enrollment separate from the primary CA path.
 
 Boundary: SeasonalCA is an internal trust service for LAN/private TLS. It is not a public WebPKI CA and should not be documented as authoritative for public `seasonalnet.org` certificates.
 
@@ -75,7 +73,7 @@ Boundary: SeasonalCA is an internal trust service for LAN/private TLS. It is not
 
 Role: first-pass observability spine for SeasonalNet infrastructure.
 
-SeasonalMonitor runs on `192.168.1.15` and provides Prometheus, Grafana, blackbox_exporter, snmp_exporter, Redfish/iDRAC monitoring, and host-native node_exporter. Its current targets include SeasonalMonitor itself, SeasonalDNS, SeasonalR230, R230 iDRAC, SeasonalR340 / R340 iDRAC, SeasonalNet-SW1, SeasonalNet-SW2, and CME rack backhaul reachability.
+SeasonalMonitor runs on `192.168.1.15` and provides Prometheus, Grafana, blackbox_exporter, snmp_exporter, Redfish/iDRAC monitoring, and host-native node_exporter. Its network-device monitoring configuration is being reconciled with the completed NET-MGMT migration and current DSW1/ASW1/SW3 topology; the observability role itself is unchanged.
 
 Grafana is publicly reachable at `https://grafana.seasonalnet.org` through SeasonalWeb and uses Authentik OAuth/OIDC. A local Grafana admin account is retained as break-glass access. Prometheus remains private and should not be published directly.
 
@@ -85,7 +83,7 @@ Boundary: SeasonalMonitor is observability infrastructure. It does not replace S
 
 Role: primary Proxmox host for the active SeasonalNet service VM fleet.
 
-SeasonalR230 is the Dell PowerEdge R230 Proxmox host at `192.168.1.30`, with iDRAC at `192.168.1.32`. It is connected through the CME rack VLAN 99 Main-LAN transit path. The current R230 service VM fleet is SeasonalDNS (VMID 101), SeasonalAuth (102), SeasonalForge (103), SeasonalMail (104), SeasonalMonitor (105), SeasonalPBX (106), SeasonalWX (107), SeasonalRain (108), SeasonalWeb / SeasonalNet (109), SeasonalCA (114), and SeasonalVPN (115). These VMs have QEMU Guest Agent enabled/responding, Proxmox autostart configured, and verified PBS backups on SeasonalBack.
+SeasonalR230 is the Dell PowerEdge R230 Proxmox host at `192.168.1.30`, with iDRAC at `10.41.0.32` on BMC-MGMT/VLAN 41. It is connected through the CME rack VLAN 99 Main-LAN transit path. The current R230 service VM fleet is SeasonalDNS (VMID 101), SeasonalAuth (102), SeasonalForge (103), SeasonalMail (104), SeasonalMonitor (105), SeasonalPBX (106), SeasonalWX (107), SeasonalRain (108), SeasonalWeb / SeasonalNet (109), SeasonalCA (114), and SeasonalVPN (115). These VMs have QEMU Guest Agent enabled/responding, Proxmox autostart configured, and verified PBS backups on SeasonalBack.
 
 Boundary: SeasonalR230 is the primary VM host, not the backup service. Backup service ownership remains with SeasonalBack.
 
@@ -125,7 +123,7 @@ Boundary: SeasonalSand is a controlled execution/sandbox service. It should not 
 
 Role: secondary Proxmox host and backup/storage/sandbox/database/Docker support platform for local SeasonalNet infrastructure.
 
-SeasonalR340 is the Dell PowerEdge R340 Proxmox host at `192.168.1.31`, with iDRAC at `192.168.1.33`. It is connected through the CME rack VLAN 99 Main-LAN transit path and hosts SeasonalBack (VMID 100), SeasonalNAS (VMID 110), SeasonalSand (VMID 111), SeasonalDB (VMID 112), and SeasonalDock (VMID 113).
+SeasonalR340 is the Dell PowerEdge R340 Proxmox host at `192.168.1.31`, with iDRAC at `10.41.0.33` on BMC-MGMT/VLAN 41. It is connected through the CME rack VLAN 99 Main-LAN transit path and hosts SeasonalBack (VMID 100), SeasonalNAS (VMID 110), SeasonalSand (VMID 111), SeasonalDB (VMID 112), and SeasonalDock (VMID 113).
 
 SeasonalBack is the Proxmox Backup Server VM hosted on SeasonalR340. It uses `192.168.1.16`; `seasonalback.lan.seasonalnet.org` resolves to that address, and `back.lan.seasonalnet.org` is a service alias. Its datastore is named `seasonalback` at `/mnt/datastore/seasonalback`. The current datastore backing is the PBS VM root filesystem / single virtual disk, not a separate mounted data disk.
 

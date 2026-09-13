@@ -28,23 +28,23 @@ It is a personal homelab and service platform, not a multi-team enterprise envir
 
 ### Seasonal Agent
 
-Seasonal Agent is the local assistant runtime used for operator support, inspection, reasoning, and bounded read-only tool execution.
+Seasonal Agent is the former local assistant runtime used for operator support, inspection, reasoning, and bounded read-only tool execution.
 
 Seasonal Agent is a subsystem of SeasonalNet. It is not the whole platform.
 
 ### SeasonalWeather
 
-SeasonalWeather is the weather, alerting, and radio-oriented subsystem. The current runtime VM is SeasonalWX at `192.168.1.10`; the older VM named SeasonalWeather has been retired and replaced.
+SeasonalWeather is the weather, alerting, and radio-oriented subsystem (primary station name: "Jetstream / WXK435"). The current runtime VM is SeasonalWX at `192.168.1.10`; the older VM named SeasonalWeather has been retired and replaced.
 
 SeasonalWeather is an important subsystem within SeasonalNet, but it does not define all of SeasonalNet.
 
 ### Voice and communications systems
 
-These include SeasonalPBX, Cisco Unified Communications Manager Express, phone provisioning, and related communications services.
+These include SeasonalPBX and Cisco Unified Communications Manager Express.
 
-SeasonalPBX is the current FreePBX/Asterisk service VM at `192.168.1.12`. It is no longer the Phone-LAN router or gateway. SeasonalNet-DSW1 owns the routed gateways for Phone-LAN VLAN 30, SeasonalCME Voice VLAN 10, and infrastructure Management VLAN 42. FW4C is the production edge firewall/router between DSW1 and Main LAN.
-
-`pbx-controld` is the PBX control-plane daemon for coordinating bot-managed and portal-managed extension state.
+- SeasonalPBX is the current FreePBX/Asterisk service VM at `192.168.1.12`. It handles traditional SIP and public community PBX traffic.
+- For internal, older Cisco based telephony lab usage. SeasonalCME-R1 runs older Cisco 79xx series phones through CUCME/CME.
+- `pbx-controld` is the PBX control-plane daemon for coordinating bot-managed and portal-managed extension states on SeasonalPBX.
 
 ### VPN and remote administration
 
@@ -72,15 +72,17 @@ The active R230 service fleet is SeasonalDNS (VMID 101), SeasonalAuth (102), Sea
 
 SeasonalMonitor is the current observability spine for infrastructure reachability, dashboards, SNMP, and Redfish collection. Grafana is exposed publicly at `grafana.seasonalnet.org` through SeasonalWeb with Authentik OAuth/OIDC; Prometheus remains a private backend service.
 
-Admin workstations such as seasonal-victus (`192.168.1.40`) and seasonal-teal-laptop (`192.168.1.41`) are admin clients. They should not become long-lived application deployment hosts or accumulate project dependency trees when a service VM is more appropriate.
+Admin workstations such as slate (`192.168.1.40`) and teal (`192.168.1.41`) are admin clients. They are not deployment hosts.
 
 ## Network addressing model
 
-Main LAN uses native ISP-assigned IPv6. Routed private IPv6 segments use the SeasonalNet ULA allocation `fd97:418:22dd::/48`, subdivided into one `/64` per LAN or functional segment.
+Main-LAN uses native ISP-assigned IPv6, and a `192.168.1.0/24` IPv4 RFC1918 LAN for addressing.
 
-OSPFv2 and OSPFv3 provide IPv4 and IPv6 routing between SeasonalNet-DSW1, FW4C, and SeasonalCME-R1. The WNC-CR200A uses explicit static return routes through FW4C for VLANs 10, 30, and 42, while SeasonalVPN retains its own Main-LAN return path.
+Routed private IPv6 segments use the SeasonalNet ULA allocation `fd97:418:22dd::/48`, subdivided into one `/64` per LAN or functional segment.
 
-## Grounding and truth rules
+OSPF provides dynamic routing for IPv4/v6 subnets between DSW1, the FW4C, and CME-R1. The WNC-CR200A has return routes for internal VLANs through the FW4C.
+
+## Grounding and truth rules for agents
 
 Documentation describes intended design, stable terminology, and platform reference facts.
 

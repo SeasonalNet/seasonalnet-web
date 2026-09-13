@@ -5,7 +5,7 @@ description: "Address bands, infrastructure inventory, and routing notes for the
 
 - **Subnet:** `192.168.1.0/24`
 - **Gateway:** `192.168.1.1` (Verizon WNC-CR200A)
-- **Last updated:** 2026-08-11
+- **Last updated:** 2026-09-12
 
 ---
 
@@ -13,7 +13,7 @@ description: "Address bands, infrastructure inventory, and routing notes for the
 
 | Range | Purpose |
 |---|---|
-| `.1` | Gateway (Verizon WNC-CR200A) |
+| `.1` | Gateway |
 | `.2 – .5` | Network infrastructure / reserved infrastructure |
 | `.6 – .22` | Active servers and service VMs (static, assigned in-guest) |
 | `.23 – .29` | Reserved future servers / service VMs |
@@ -78,8 +78,8 @@ VMs in this band are static-addressed service hosts. SeasonalR230 hosts the orig
 
 | IP | Device | Notes |
 |---|---|---|
-| `192.168.1.40` | victus (Victus by HP Gaming Laptop 15-fa1xxx) | Ubuntu desktop/admin workstation on static Ethernet; not an ad-hoc dependency/build host |
-| `192.168.1.41` | teal | Ubuntu laptop / secondary admin workstation and build/test host; DNS `seasonal-teal-laptop.lan.seasonalnet.org` |
+| `192.168.1.40` | slate | Ubuntu desktop/admin workstation on static Ethernet; not an ad-hoc dependency/build host |
+| `192.168.1.41` | teal | Ubuntu laptop / secondary admin workstation and build/test host; DNS `teal.lan.seasonalnet.org` |
 | `192.168.1.42` | cobalt | Ubuntu laptop / third admin workstation; DNS `cobalt.lan.seasonalnet.org` |
 | `192.168.1.43 – 192.168.1.49` | *(reserved)* | Future fixed admin clients |
 
@@ -111,7 +111,7 @@ VMs in this band are static-addressed service hosts. SeasonalR230 hosts the orig
 | `10.255.255.0/30` / `fd97:418:22dd:255::/64` | DSW1–FW4C routed transit | DSW1 `.1` / `::1`; FW4C `.2` / `::2` |
 | `10.88.0.0/24` / `fd97:418:22dd:88::/64` | SeasonalVPN routed VPN LAN | SeasonalVPN (`192.168.1.22`) |
 
-The VLAN 40–43 management/control-plane family and its current migration state are documented in [`management-vlans-map.md`](/docs/topology/lans/management-vlans).
+The VLAN 40–43 management/control-plane family and current device assignments are documented in [`management-vlans-map.md`](/docs/topology/lans/management-vlans).
 
 ---
 
@@ -135,8 +135,10 @@ The VLAN 40–43 management/control-plane family and its current migration state
 | SeasonalCA internal DNS records | SeasonalDNS | `seasonalca.lan.seasonalnet.org` and `ca.lan.seasonalnet.org` → `192.168.1.21`. |
 | SeasonalVPN internal DNS records | SeasonalDNS | `seasonalvpn.lan.seasonalnet.org` → `192.168.1.22`; `vpn.lan.seasonalnet.org` is an internal alias. |
 | FW4C internal DNS record | SeasonalDNS | `fw4c.lan.seasonalnet.org` → `192.168.1.5`. |
-| Distribution switch internal DNS record | SeasonalDNS | `seasonalnet-dsw1.lan.seasonalnet.org` → current `10.42.0.1`. `dsw1.lan.seasonalnet.org` is an alias. The management identity is scheduled to move to NET-MGMT/VLAN 40. |
-| Access switch internal DNS records | SeasonalDNS | `seasonalnet-sw1.lan.seasonalnet.org` → `10.42.0.2`; `seasonalnet-sw2.lan.seasonalnet.org` → `10.42.0.3`; `seasonalnet-sw3.lan.seasonalnet.org` → `10.42.0.4`. Shorthand `<swX.lan.seasonalnet.org>`, where X is the switch number, are aliases. These are transitional CME-MGMT/VLAN 42 addresses scheduled to move to NET-MGMT/VLAN 40. |
+| Distribution switch internal DNS record | SeasonalDNS | `seasonalnet-dsw1.lan.seasonalnet.org` → `10.40.0.1`; `dsw1.lan.seasonalnet.org` is an alias. |
+| Access switch internal DNS records | SeasonalDNS | `seasonalnet-asw1.lan.seasonalnet.org` → `10.40.0.2`; `seasonalnet-sw3.lan.seasonalnet.org` → `10.40.0.3`. Shorthand `asw1.lan.seasonalnet.org` and `sw3.lan.seasonalnet.org` are aliases. |
+| Autonomous AP internal DNS records | SeasonalDNS | SeasonalAP-3602i management resolves to `10.40.0.4`; SeasonalAP-2702E management resolves to `10.40.0.5`. |
+| CME router internal DNS record | SeasonalDNS | `seasonalcme-r1.lan.seasonalnet.org` → `10.42.0.2` for CME-MGMT; CME service traffic remains sourced from `10.10.0.10`. |
 | NP-R1 internal DNS record | SeasonalDNS | `seasonalnet-np-r1.lan.seasonalnet.org` → `192.168.1.54`. `np-r1.lan.seasonalnet.org` is an alias. |
 | SeasonalMonitor public Grafana DNS | Cloudflare / SeasonalWeb | `grafana.seasonalnet.org` is a Cloudflare-proxied public hostname terminating at SeasonalWeb (`192.168.1.8`), then reverse-proxied to Grafana on SeasonalMonitor (`192.168.1.15:3000`). Prometheus remains private. |
 | Public docs DNS | Cloudflare / SeasonalWeb | `docs.seasonalnet.org` is served through the SeasonalWeb / SeasonalNet docs deployment. `VMs/` remains excluded from published docs. |
@@ -173,8 +175,8 @@ SeasonalWeb receives public HTTP/HTTPS traffic and routes hostname-based service
 
 | Hostname | SeasonalWeb backend | Authentication / Exposure | Notes |
 |---|---|---|---|
-| `docs.seasonalnet.org` | SeasonalWeb / SeasonalNet docs app | Public via Cloudflare | Rendered public documentation site. `VMs/` content must remain excluded. |
-| `grafana.seasonalnet.org` | `http://192.168.1.15:3000` | Public via Cloudflare; Grafana uses Authentik OAuth/OIDC with a local break-glass admin account retained | SeasonalMonitor dashboard front door. Prometheus (`192.168.1.15:9090`) is intentionally not published. |
+| `docs.seasonalnet.org` | SeasonalWeb / SeasonalNet docs app | Public via Cloudflare | Rendered public documentation site. |
+| `grafana.seasonalnet.org` | `http://192.168.1.15:3000` | Public via Cloudflare | SeasonalMonitor dashboard. |
 
 ## Port Forwarding (Verizon WNC-CR200A)
 
