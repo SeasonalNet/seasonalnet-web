@@ -37,16 +37,16 @@ const policyLinks: ReadonlyArray<FooterPortal> = [
 
 export function ShellFooter({ site }: ShellFooterProps) {
   return (
-    <footer className="mx-auto max-w-6xl px-4 pb-10">
-      <div className="mt-12 rounded-2xl border bg-card">
-        <div className="grid gap-6 p-6 md:grid-cols-2 lg:grid-cols-4">
-          <div>
+    <footer className="mt-12 border-y bg-card/40">
+      <div className="mx-auto max-w-6xl px-4 py-8 sm:py-10">
+        <div className="grid gap-8 sm:grid-cols-2 lg:grid-cols-[1.35fr_repeat(3,minmax(0,1fr))]">
+          <div className="sm:col-span-2 lg:col-span-1">
             <div className="text-sm font-semibold">{site.name}</div>
-            <div className="mt-2 text-sm text-muted-foreground">{site.description}</div>
+            <div className="mt-2 max-w-xs text-sm leading-6 text-muted-foreground">{site.description}</div>
           </div>
 
           <div>
-            <div className="text-sm font-semibold">Links</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Links</div>
             <Separator className="my-3" />
             <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
               {site.portals.map((p) => (
@@ -64,7 +64,7 @@ export function ShellFooter({ site }: ShellFooterProps) {
           </div>
 
           <div>
-            <div className="text-sm font-semibold">Policies</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Policies</div>
             <Separator className="my-3" />
             <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm text-muted-foreground">
               {policyLinks.map((policy) => (
@@ -82,13 +82,16 @@ export function ShellFooter({ site }: ShellFooterProps) {
           </div>
 
           <div>
-            <div className="text-sm font-semibold">Notes</div>
+            <div className="text-xs font-semibold uppercase tracking-[0.18em] text-muted-foreground">Notes</div>
             <Separator className="my-3" />
-            <div className="text-sm text-muted-foreground">{site.footerNote}</div>
-            <div className="mt-2 text-xs text-muted-foreground/80">
-              © {new Date().getFullYear()} {site.name}
-            </div>
+            <div className="text-sm leading-6 text-muted-foreground">{site.footerNote}</div>
           </div>
+        </div>
+
+        <Separator className="my-6" />
+        <div className="flex flex-col gap-1 text-xs text-muted-foreground sm:flex-row sm:items-center sm:justify-between">
+          <span>© {new Date().getFullYear()} {site.name}</span>
+          <span>SeasonalNet web services</span>
         </div>
       </div>
     </footer>

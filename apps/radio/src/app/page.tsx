@@ -4,7 +4,6 @@ import { Badge } from "@seasonalnet/shell/src/components/ui/badge"
 import { Separator } from "@seasonalnet/shell/src/components/ui/separator"
 import { StationTile } from "@/components/radio/station-tile"
 import { RADIO_STATIONS } from "@/lib/radio-stations"
-import { SiteFooter } from "@/components/site-footer"
 
 export default function Page() {
   return (
@@ -37,10 +36,6 @@ export default function Page() {
           ))}
         </div>
       </section>
-        <div className="mt-10">
-      <SiteFooter />
-    </div>
-
 </main>
   )
 }

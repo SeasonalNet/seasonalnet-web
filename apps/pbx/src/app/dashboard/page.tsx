@@ -1,4 +1,3 @@
-import { SiteFooter } from "@/components/site-footer"
 import { PBXDashboard } from "@/components/pbx-dashboard"
 import { BlurFade } from "@/components/magic/blur-fade"
 
@@ -21,10 +20,6 @@ export default function DashboardPage() {
 
         <PBXDashboard />
       </section>
-
-      <div className="mt-10">
-        <SiteFooter />
-      </div>
     </main>
   )
 }

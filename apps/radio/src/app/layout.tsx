@@ -4,6 +4,7 @@ import "maplibre-gl/dist/maplibre-gl.css"
 
 import { ThemeProvider } from "@seasonalnet/shell/src/components/theme-provider"
 import { SiteHeader } from "@/components/site-header"
+import { SiteFooter } from "@/components/site-footer"
 import { SiteAnnouncements } from "@seasonalnet/shell/src/components/site-announcements"
 
 export const metadata: Metadata = {
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <SiteAnnouncements />
           </div>
           {children}
+          <SiteFooter />
         </ThemeProvider>
       </body>
     </html>

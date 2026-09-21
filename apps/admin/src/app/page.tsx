@@ -1,6 +1,5 @@
 import { Badge } from "@/components/ui/badge"
 import { Separator } from "@/components/ui/separator"
-import { SiteFooter } from "@/components/site-footer"
 import { AdminWorkspace } from "@/components/admin/admin-workspace"
 import { buildAdminModules } from "@/lib/admin/modules"
 import { getSeasonalWeatherOverview } from "@/lib/server/modules/seasonalweather"
@@ -63,10 +62,6 @@ export default async function Page({ searchParams }: PageProps) {
 
         <AdminWorkspace modules={modules} selectedModuleId={selectedModuleId} />
       </section>
-
-      <div className="mt-10">
-        <SiteFooter />
-      </div>
     </main>
   )
 }

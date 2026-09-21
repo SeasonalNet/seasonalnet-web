@@ -5,6 +5,7 @@ import "./globals.css"
 import { ThemeProvider } from "@seasonalnet/shell/src/components/theme-provider"
 import { Toaster } from "@seasonalnet/shell/src/components/ui/sonner"
 import { SiteHeader } from "@/components/site-header"
+import { SiteFooter } from "@/components/site-footer"
 
 export const metadata: Metadata = {
   title: "SeasonalNet Agent",
@@ -28,6 +29,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <div className="flex min-h-dvh flex-col lg:h-dvh lg:overflow-hidden">
             <SiteHeader />
             {children}
+            <SiteFooter />
             <Toaster position="top-right" richColors />
           </div>
         </ThemeProvider>

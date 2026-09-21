@@ -1,7 +1,6 @@
 import { redirect } from "next/navigation"
 
 import { auth, isAuthorizedSession, sessionDisplayName, signIn } from "@/auth"
-import { SiteFooter } from "@/components/site-footer"
 import { Badge } from "@seasonalnet/shell/src/components/ui/badge"
 
 type Props = {
@@ -63,10 +62,6 @@ export default async function LoginPage({ searchParams }: Props) {
           </form>
         </div>
       </section>
-
-      <div className="mt-10">
-        <SiteFooter />
-      </div>
     </main>
   )
 }

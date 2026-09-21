@@ -1,5 +1,4 @@
 import { BlurFade } from "@/components/magic/blur-fade"
-import { SiteFooter } from "@/components/site-footer"
 import { site } from "@/lib/site"
 
 import { Card, CardDescription, CardHeader, CardTitle } from "@seasonalnet/shell/src/components/ui/card"
@@ -84,12 +83,6 @@ export default function Page() {
           ))}
         </div>
       </section>
-
-      <div className="mt-12">
-        <BlurFade delay={0.28}>
-          <SiteFooter />
-        </BlurFade>
-      </div>
     </main>
   )
 }

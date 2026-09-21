@@ -1,7 +1,6 @@
 import { auth, isAuthorizedSession, sessionDisplayName, signIn } from "@/auth"
 import { redirect } from "next/navigation"
 import { Badge } from "@/components/ui/badge"
-import { SiteFooter } from "@/components/site-footer"
 
 type Props = {
   searchParams?: Promise<{ next?: string; error?: string }>
@@ -62,10 +61,6 @@ export default async function LoginPage({ searchParams }: Props) {
           </form>
         </div>
       </section>
-
-      <div className="mt-10">
-        <SiteFooter />
-      </div>
     </main>
   )
 }

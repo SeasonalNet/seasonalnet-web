@@ -1,7 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@seasonalnet/shell/src/components/ui/card"
 import { Badge } from "@seasonalnet/shell/src/components/ui/badge"
 import { Separator } from "@seasonalnet/shell/src/components/ui/separator"
-import { SiteFooter } from "@/components/site-footer"
 
 const examples = [
   { label: "Wallpapers directory", value: "/wallpapers/" },
@@ -45,10 +44,6 @@ export default function Page() {
           </div>
         </div>
       </section>
-        <div className="mt-10">
-      <SiteFooter />
-    </div>
-
 </main>
   )
 }

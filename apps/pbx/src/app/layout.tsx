@@ -3,6 +3,7 @@ import "./globals.css"
 
 import { ThemeProvider } from "@seasonalnet/shell/src/components/theme-provider"
 import { SiteHeader } from "@/components/site-header"
+import { SiteFooter } from "@/components/site-footer"
 import { SiteAnnouncements } from "@seasonalnet/shell/src/components/site-announcements"
 import { Toaster } from "@seasonalnet/shell/src/components/ui/sonner"
 
@@ -22,6 +23,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             <SiteAnnouncements />
           </div>
           {children}
+          <SiteFooter />
           <Toaster richColors closeButton position="top-right" />
         </ThemeProvider>
       </body>

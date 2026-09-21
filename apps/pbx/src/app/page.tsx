@@ -1,5 +1,4 @@
 import { Button } from "@seasonalnet/shell/src/components/ui/button"
-import { SiteFooter } from "@/components/site-footer"
 import { PBXMetricsPanel } from "@/components/pbx-metrics"
 import { PBXFeaturesGrid } from "@/components/pbx-join-and-features"
 import { BlurFade } from "@/components/magic/blur-fade"
@@ -45,10 +44,6 @@ export default function Page() {
       <section className="mt-12">
         <PBXMetricsPanel />
       </section>
-
-      <div className="mt-12">
-        <SiteFooter />
-      </div>
     </main>
   )
 }

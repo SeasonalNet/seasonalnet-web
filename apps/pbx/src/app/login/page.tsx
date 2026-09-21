@@ -2,7 +2,6 @@ import { auth, isAuthorizedSession, sessionDisplayName, signIn } from "@/auth"
 import { redirect } from "next/navigation"
 import { Badge } from "@seasonalnet/shell/src/components/ui/badge"
 import { Button } from "@seasonalnet/shell/src/components/ui/button"
-import { SiteFooter } from "@/components/site-footer"
 import { MessagesSquare } from "lucide-react"
 
 export const dynamic = "force-dynamic"
@@ -71,10 +70,6 @@ export default async function LoginPage({ searchParams }: Props) {
           </div>
         </div>
       </section>
-
-      <div className="mt-10">
-        <SiteFooter />
-      </div>
     </main>
   )
 }
