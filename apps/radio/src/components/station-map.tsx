@@ -10,16 +10,20 @@
 
 import dynamic from "next/dynamic";
 import type { ComponentProps } from "react";
+import { Skeleton } from "@seasonalnet/shell/src/components/ui/skeleton";
 import type StationMapClient from "./station-map-client";
 
 // Skeleton shown while the map JS loads (Leaflet plus the vector basemap renderer)
 function MapSkeleton() {
   return (
     <div
-      className="w-full rounded-md border border-border bg-muted/30 animate-pulse"
+      className="w-full rounded-md border border-border bg-muted/30"
       style={{ height: 340 }}
+      role="status"
       aria-label="Loading map…"
-    />
+    >
+      <Skeleton className="h-full w-full rounded-md" />
+    </div>
   );
 }
 

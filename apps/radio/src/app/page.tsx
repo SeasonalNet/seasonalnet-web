@@ -30,9 +30,12 @@ export default function Page() {
         </div>
 
         {/* Station tiles */}
-        <div className="space-y-6">
-          {RADIO_STATIONS.map((s) => (
-            <StationTile key={s.id} station={s} />
+        <div>
+          {RADIO_STATIONS.map((s, index) => (
+            <div key={s.id}>
+              {index > 0 ? <div aria-hidden="true" className="my-12 h-px w-full bg-border/60" /> : null}
+              <StationTile station={s} />
+            </div>
           ))}
         </div>
       </section>

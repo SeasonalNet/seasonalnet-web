@@ -1,182 +1,125 @@
-"use client";
-// src/components/radio/station-alert-map-section.tsx
-//
-// Renders the service-area Leaflet map wired to both alert feeds.
+"use client"
 
-import * as React from "react";
-import { fetchWithTimeout } from "@seasonalnet/shell/src/lib/fetch";
-import { Button } from "@seasonalnet/shell/src/components/ui/button";
-import { RefreshCw } from "lucide-react";
-import StationMap from "@/components/station-map";
-import { STATION_ALERTS } from "@/lib/station-alert-config";
-import type { NwsAlertFeature, StationHandledAlert } from "@/lib/alert-map-utils";
+import * as React from "react"
+import { Button } from "@seasonalnet/shell/src/components/ui/button"
+import { Skeleton } from "@seasonalnet/shell/src/components/ui/skeleton"
+import { RefreshCw } from "lucide-react"
+import StationMap from "@/components/station-map"
+import { STATION_ALERTS } from "@/lib/station-alert-config"
+import { STATION_HANDLED_ALERTS } from "@/lib/station-handled-alert-config"
+import type { NwsAlertFeature, StationHandledAlert as MapStationHandledAlert } from "@/lib/alert-map-utils"
+import {
+  useStationAlertFeed,
+  type ActiveAlert,
+  type ActiveAlertsPayload,
+  type StationHandledAlert as StationFeedAlert,
+  type StationHandledAlertsPayload,
+} from "@/components/radio/station-alert-feeds"
 
-// ---------------------------------------------------------------------------
-// Real API shapes (from station-alerts.tsx / station-handled-alerts.tsx)
-// ---------------------------------------------------------------------------
-
-type ApiAlert = {
-  id: string;
-  event: string;
-  headline: string;
-  nwsHeadline: string | null;
-  description: string | null;
-  instruction: string | null;
-  severity: string;
-  urgency: string;
-  certainty: string;
-  area: string;
-  effective: string | null;
-  ends: string | null;
-  expires: string | null;
-  sent: string | null;
-  sameCodes: string[];
-  geometry: GeoJSON.Geometry | null;
-  links: { nws: string };
-};
-
-type AlertsPayload = {
-  stationId: string;
-  serviceAreaName: string;
-  generatedAt: string;
-  source: "nws";
-  alerts: ApiAlert[];
-};
-
-type FeedSender = { name: string; kind?: "relay" | "origin" | "unknown" };
-
-type StationFeedAlert = {
-  id: string;
-  event: string;
-  headline: string;
-  severity: string;
-  urgency: string;
-  certainty: string;
-  area: string;
-  effective?: string | null;
-  ends: string | null;
-  expires: string | null;
-  sent?: string | null;
-  sameCodes?: string[];
-  source?: string | null;
-  from: FeedSender | null;
-  links?: { primary?: string; nws?: string };
-};
-
-type HandledPayload =
-  | { ok: true;  enabled: true;  stationId: string; generatedAt: string; source: string; alerts: StationFeedAlert[] }
-  | { ok: false; enabled: true;  stationId: string; generatedAt: string; source: string; error?: string; alerts: StationFeedAlert[] }
-  | { ok: true;  enabled: false; stationId: string; generatedAt: string; source: string; alerts: StationFeedAlert[] };
-
-// ---------------------------------------------------------------------------
-// Normalise to the shapes station-map-client.tsx expects
-// ---------------------------------------------------------------------------
-
-function normaliseCapAlerts(alerts: ApiAlert[]): NwsAlertFeature[] {
-  return alerts.map(a => ({
-    id: a.id,
+function normaliseCapAlerts(alerts: ActiveAlert[]): NwsAlertFeature[] {
+  return alerts.map((alert) => ({
+    id: alert.id,
     type: "Feature" as const,
-    geometry: a.geometry ?? null,
+    geometry: alert.geometry ?? null,
     properties: {
-      id: a.id,
-      event: a.event,
-      severity: a.severity as NwsAlertFeature["properties"]["severity"],
-      urgency: a.urgency as NwsAlertFeature["properties"]["urgency"],
-      certainty: a.certainty,
-      nwsHeadline: a.nwsHeadline,
-      headline: a.headline,
-      description: a.description,
-      instruction: a.instruction,
-      areaDesc: a.area,
-      effective: a.effective ?? "",
-      expires: a.expires ?? a.ends ?? "",
+      id: alert.id,
+      event: alert.event,
+      severity: alert.severity as NwsAlertFeature["properties"]["severity"],
+      urgency: alert.urgency as NwsAlertFeature["properties"]["urgency"],
+      certainty: alert.certainty,
+      nwsHeadline: alert.nwsHeadline ?? null,
+      headline: alert.headline,
+      description: alert.description ?? null,
+      instruction: alert.instruction ?? null,
+      areaDesc: alert.area,
+      effective: alert.effective ?? "",
+      expires: alert.expires ?? alert.ends ?? "",
       senderName: "",
       status: "Actual",
       messageType: "Alert",
-      parameters: { SAME: a.sameCodes ?? [] },
+      parameters: { SAME: alert.sameCodes ?? [] },
     },
-  }));
+  }))
 }
 
-function normaliseHandledAlerts(alerts: StationFeedAlert[]): StationHandledAlert[] {
-  return alerts.map(a => ({
-    id: a.id,
-    eventType: a.event,
-    severity: a.severity,
-    source: a.source ?? a.from?.name,
-    areaDesc: a.area,
-    headline: a.headline,
-    sameCodes: a.sameCodes ?? [],
+function normaliseHandledAlerts(alerts: StationFeedAlert[]): MapStationHandledAlert[] {
+  return alerts.map((alert) => ({
+    id: alert.id,
+    eventType: alert.event,
+    severity: alert.severity,
+    source: alert.source ?? alert.from?.name,
+    areaDesc: alert.area,
+    headline: alert.headline,
+    sameCodes: alert.sameCodes ?? [],
     fipsCodes: [],
-    effective: a.effective ?? undefined,
-    expires: a.ends ?? a.expires ?? undefined,
-  }));
+    effective: alert.effective ?? undefined,
+    expires: alert.ends ?? alert.expires ?? undefined,
+  }))
 }
 
-// ---------------------------------------------------------------------------
-// Component
-// ---------------------------------------------------------------------------
-
-export function StationAlertMapSection({
-  stationId,
-}: {
-  stationId: string;
-}) {
-  const config = STATION_ALERTS[stationId];
-
-  const [capAlerts,     setCapAlerts]     = React.useState<NwsAlertFeature[]>([]);
-  const [handledAlerts, setHandledAlerts] = React.useState<StationHandledAlert[]>([]);
-  const [loading,       setLoading]       = React.useState(true);
-  const [updatedAt,     setUpdatedAt]     = React.useState<Date | null>(null);
-  const [error,         setError]         = React.useState<string | null>(null);
-
-  const load = React.useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const [alertsRes, handledRes] = await Promise.all([
-        fetchWithTimeout(`/api/stations/${encodeURIComponent(stationId)}/alerts`,         { cache: "no-store" }),
-        fetchWithTimeout(`/api/stations/${encodeURIComponent(stationId)}/handled-alerts`, { cache: "no-store" }),
-      ]);
-
-      if (alertsRes.ok) {
-        const json = (await alertsRes.json()) as AlertsPayload;
-        setCapAlerts(normaliseCapAlerts(json.alerts ?? []));
-      }
-
-      if (handledRes.ok) {
-        const json = (await handledRes.json()) as HandledPayload;
-        setHandledAlerts(normaliseHandledAlerts(json.alerts ?? []));
-      }
-
-      setUpdatedAt(new Date());
-    } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "Failed to load alert data.");
-    } finally {
-      setLoading(false);
-    }
-  }, [stationId]);
+export function StationAlertMapSection({ stationId }: { stationId: string }) {
+  const config = STATION_ALERTS[stationId]
+  const handledConfig = STATION_HANDLED_ALERTS[stationId]
+  const mapContainerRef = React.useRef<HTMLDivElement>(null)
+  const [mapVisible, setMapVisible] = React.useState(false)
 
   React.useEffect(() => {
-    const initialId = window.setTimeout(() => void load(), 0);
-    const t = setInterval(load, 60_000);
-    return () => {
-      window.clearTimeout(initialId);
-      clearInterval(t);
-    };
-  }, [load]);
+    const element = mapContainerRef.current
+    if (!element) return
 
-  if (!config) return null;
+    if (typeof IntersectionObserver === "undefined") {
+      const initialId = window.setTimeout(() => setMapVisible(true), 0)
+      return () => window.clearTimeout(initialId)
+    }
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry?.isIntersecting) {
+          setMapVisible(true)
+          observer.disconnect()
+        }
+      },
+      { rootMargin: "600px 0px" },
+    )
+    observer.observe(element)
+
+    return () => observer.disconnect()
+  }, [])
+
+  const activeFeed = useStationAlertFeed<ActiveAlertsPayload>(stationId, "active", { enabled: mapVisible })
+  const handledFeed = useStationAlertFeed<StationHandledAlertsPayload>(stationId, "handled", {
+    enabled: mapVisible && Boolean(handledConfig),
+    pollMs: Math.max(10, Math.floor(handledConfig?.pollSeconds ?? 60)) * 1000,
+  })
+
+  const capAlerts = React.useMemo(
+    () => normaliseCapAlerts(activeFeed.data?.alerts ?? []),
+    [activeFeed.data],
+  )
+  const handledAlerts = React.useMemo(
+    () => normaliseHandledAlerts(handledFeed.data?.alerts ?? []),
+    [handledFeed.data],
+  )
+  const loading = mapVisible && (activeFeed.isFetching || handledFeed.isFetching)
+  const error = mapVisible ? activeFeed.error ?? handledFeed.error : null
+  const updatedAt = activeFeed.data?.generatedAt ?? handledFeed.data?.generatedAt
+  const refreshActive = activeFeed.refresh
+  const refreshHandled = handledFeed.refresh
+  const load = React.useCallback(() => {
+    refreshActive()
+    refreshHandled()
+  }, [refreshActive, refreshHandled])
+
+  if (!config) return null
 
   return (
-    <div className="mt-6 space-y-3">
-      {/* Header */}
+    <div ref={mapContainerRef} className="mt-6 space-y-3" aria-busy={loading}>
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
         <div className="min-w-0 flex-1 space-y-0.5">
           <div className="text-sm font-medium">Service Area Map</div>
           <div className="text-xs text-muted-foreground">
             {config.serviceAreaName}
-            {updatedAt && ` · Updated: ${updatedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
+            {updatedAt && ` · Updated: ${new Date(updatedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}`}
           </div>
         </div>
         <Button
@@ -184,22 +127,27 @@ export function StationAlertMapSection({
           size="sm"
           onClick={load}
           disabled={loading}
-          className="gap-2 self-start sm:self-auto shrink-0"
+          className="gap-2 self-start shrink-0 sm:self-auto"
         >
           <RefreshCw className={loading ? "h-4 w-4 animate-spin" : "h-4 w-4"} />
           Refresh
         </Button>
       </div>
 
-      {error && (
-        <p className="text-xs text-destructive">{error}</p>
-      )}
+      {error ? <p className="text-xs text-destructive">{error}</p> : null}
 
-      <StationMap
-        config={config}
-        capAlerts={capAlerts}
-        handledAlerts={handledAlerts}
-      />
+      {mapVisible ? (
+        <StationMap config={config} capAlerts={capAlerts} handledAlerts={handledAlerts} />
+      ) : (
+        <div
+          className="w-full rounded-md border border-border bg-muted/30"
+          style={{ height: 340 }}
+          role="status"
+          aria-label="Map will load when it approaches the viewport"
+        >
+          <Skeleton className="h-full w-full rounded-md" />
+        </div>
+      )}
     </div>
-  );
+  )
 }
