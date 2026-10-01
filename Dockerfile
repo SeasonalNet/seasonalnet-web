@@ -1,6 +1,6 @@
 ARG APP=www
 
-FROM node:22-bookworm-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5 AS build
+FROM node:22-bookworm-slim@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c AS build
 
 ARG APP
 ENV COREPACK_HOME=/tmp/corepack
@@ -11,7 +11,7 @@ COPY . .
 RUN pnpm install --frozen-lockfile
 RUN pnpm --filter @seasonalnet/${APP} build
 
-FROM node:22-bookworm-slim@sha256:83f487e0a63425e5b4d146fb5e5be574bcbe1b7b843d3ebafdd95eaf7767a7e5
+FROM node:22-bookworm-slim@sha256:43ac6c60b8f89723f746e8a92ce91abd5017e627ce1ddfe4238355d3a30b772c
 
 ARG APP
 ENV NODE_ENV=production \
