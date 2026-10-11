@@ -17,5 +17,8 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
 
-minimumReleaseAgeExclude:
-  - braces@3.0.4
+# Temporary exception for a disputed advisory affecting development tooling.
+# Remove when the advisory is corrected or the dependency tree no longer uses braces.
+audit:
+  ignore:
+    - GHSA-vfj7-8cjw-p6xm
