@@ -24,13 +24,13 @@ RUN groupadd --system --gid 10001 seasonalweb \
 
 WORKDIR /app
 COPY --from=build --chown=10001:10001 /repo/apps/${APP}/.next/standalone ./
-COPY --from=build --chown=10001:10001 /repo/apps/${APP}/.next/static ./.next/static
-COPY --from=build --chown=10001:10001 /repo/apps/${APP}/public ./public
+COPY --from=build --chown=10001:10001 /repo/apps/${APP}/.next/static ./apps/${APP}/.next/static
+COPY --from=build --chown=10001:10001 /repo/apps/${APP}/public ./apps/${APP}/public
 
 USER 10001:10001
 EXPOSE 3000
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=15s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:3000/').then(r => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:3000/', { redirect: 'manual', signal: AbortSignal.timeout(4000) }).then(r => process.exit(r.status < 400 ? 0 : 1)).catch(() => process.exit(1))"
 
 CMD ["sh", "-c", "exec node /app/apps/${APP}/server.js"]
