@@ -20,8 +20,7 @@ export default function Page() {
 
           <h1 className="mt-4 text-3xl font-semibold tracking-tight md:text-4xl">Provisioning</h1>
           <p className="mt-2 max-w-2xl text-sm text-muted-foreground md:text-base">
-            Wallpapers, phone assets, and tokenized provisioning endpoints live here. The UI is just a friendly map; the
-            endpoints are the real magic.
+            Wallpapers, phone assets, and tokenized provisioning endpoints live here.
           </p>
 
           <Separator className="my-6" />
@@ -37,10 +36,6 @@ export default function Page() {
                 </CardContent>
               </Card>
             ))}
-          </div>
-
-          <div className="mt-6 text-xs text-muted-foreground">
-            Note: CME lab HTTP exceptions and token rate-limits are handled at NGINX (as they should be).
           </div>
         </div>
       </section>

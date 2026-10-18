@@ -4,7 +4,7 @@
 
 This repository contains the SeasonalNet frontend monorepo.
 
-It is the canonical source workspace for SeasonalNet web applications and shared frontend packages. Agents working here must treat this repository as the place where frontend source changes are developed, reviewed, and committed, while remembering that the live sites may still be served from separate deployment directories on the host.
+It is the canonical source workspace for SeasonalNet web applications and shared frontend packages. Agents working here must treat this repository as the place where frontend source changes are developed, reviewed, and committed, while remembering that the live sites may still be served from different containers running on the host.
 
 ## Repository identity
 
@@ -15,26 +15,12 @@ It is the canonical source workspace for SeasonalNet web applications and shared
 
 ## Operational context
 
-This repository is **not automatically the live web root**.
+This repository is **not automatically the live web stack; but it is the source-of-truth application code wise**.
 
-On SeasonalWeb, the currently served frontend deployments may still live under `/opt/seasonalnet/` in directories or short-path aliases such as:
+On `moon`, the currently served frontend deployments may still live under older containers as at the present
+CI does not build and replicate containers from this repository onto it.
 
-- `www-spa`
-- `radio-spa`
-- `pbx-spa`
-- `prov-spa`
-- `admin-spa`
-- `agent-spa`
-- `docs-spa`
-- other existing deployment-prefixed variants already present on the system
-
-When working in `/opt/git-staging/seasonalnet-web` or another clone of this repository:
-
-- treat it as the canonical development/staging tree
-- use it for code changes, validation, and commits
-- do not assume changes here are live
-- do not silently edit `/opt/seasonalnet/*` deployment trees as a substitute for repository work
-- do not confuse deployment aliases with canonical source directories
+As such; remember that what runs in production may not immediately be running what Git shows as latest.
 
 ## Source layout
 
@@ -210,27 +196,4 @@ Avoid:
 
 - silent architecture drift between apps
 - app-local shell forks that should be shared
-- introducing sidebars or color-heavy UI into the standard front-door surfaces without a clear reason
-- writing docs that imply `/opt/git-staging/seasonalnet-web` is already the live runtime tree
-
-## Commit conventions
-
-Use conventional commits.
-
-Use `docs:` for documentation-only changes.
-
-Examples:
-
-- `feat: extract shared footer into shell package`
-- `fix: align pbx layout with canonical shell spacing`
-- `refactor: move shared card primitives into packages/shell`
-- `docs: expand monorepo README and AGENTS guidance`
-
-## When repository and host reality differ
-
-If the codebase and the live host layout are not yet fully aligned:
-
-- document the mismatch plainly
-- preserve canonical source structure in the repository
-- avoid encoding deployment quirks as permanent source-layout decisions
-- prefer moving the live environment toward the repo, not the repo toward ad-hoc deployment sprawl
+- introducing sidebars or color-heavy UI into the standard front-door surfaces without a clear reason.
