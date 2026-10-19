@@ -4,6 +4,7 @@ import "./globals.css"
 import { ThemeProvider } from "@seasonalnet/shell/src/components/theme-provider"
 import { SiteHeader } from "@/components/site-header"
 import { SiteFooter } from "@/components/site-footer"
+import { ShellLayout } from "@seasonalnet/shell/src/components/shell-layout"
 import { SiteAnnouncements } from "@seasonalnet/shell/src/components/site-announcements"
 
 export const metadata: Metadata = {
@@ -16,13 +17,13 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
     <html lang="en" suppressHydrationWarning>
       <body className="min-h-screen bg-background text-foreground antialiased transition-colors duration-300">
         <ThemeProvider>
-          <SiteHeader />
-
-          <div className="mx-auto max-w-6xl px-4">
-            <SiteAnnouncements />
-          </div>
-          {children}
-          <SiteFooter />
+          <ShellLayout
+            header={<SiteHeader />}
+            announcements={<SiteAnnouncements />}
+            footer={<SiteFooter />}
+          >
+            {children}
+          </ShellLayout>
         </ThemeProvider>
       </body>
     </html>
