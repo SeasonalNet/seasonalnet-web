@@ -22,3 +22,6 @@ allowBuilds:
 audit:
   ignore:
     - GHSA-vfj7-8cjw-p6xm
+
+overrides:
+  vite@>=8.2.0 <=8.2.3: ^8.2.4
