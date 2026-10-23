@@ -4,7 +4,10 @@
 
 This repository contains the SeasonalNet frontend monorepo.
 
-It is the canonical source workspace for SeasonalNet web applications and shared frontend packages. Agents working here must treat this repository as the place where frontend source changes are developed, reviewed, and committed, while remembering that the live sites may still be served from different containers running on the host.
+It is the canonical source workspace for SeasonalNet web applications and shared frontend packages. Agents
+working here must treat this repository as the place where frontend source changes are developed,
+reviewed, and committed, while remembering that the live sites may still be served from different
+containers running on the host.
 
 ## Repository identity
 
@@ -17,8 +20,8 @@ It is the canonical source workspace for SeasonalNet web applications and shared
 
 This repository is **not automatically the live web stack; but it is the source-of-truth application code wise**.
 
-On `moon`, the currently served frontend deployments may still live under older containers as at the present
-CI does not build and replicate containers from this repository onto it.
+On `moon`, the currently served frontend deployments may still live under older containers for a
+little while until `moon` updates its copies of the images with whats on the registries.
 
 As such; remember that what runs in production may not immediately be running what Git shows as latest.
 

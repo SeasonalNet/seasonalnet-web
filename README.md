@@ -2,15 +2,14 @@
 
 SeasonalNet frontend monorepo for the public site family and related web front ends.
 
-This repository is the source-of-truth workspace for the Next.js applications that back the SeasonalNet web stack.
-
 ## What this repository is
 
 This repository is the **development and source-of-truth monorepo** for the SeasonalNet web stack; it's outputs are
 (at the present; manually) built into Docker containers that run on `moon` for every SPA this repo manages.
 
-What is developed here is not necessarily immediately what runs on the live subdomains. That still requires
-a manual container build and cloning over to `moon` to become truly deployed.
+> [!NOTE]
+> What is developed and present here is not necessarily immediately what runs on the live subdomains. That still requires
+> `moon` to pick up new images from the registries and switch over to them to become truly fully deployed.
 
 ## Repository goals
 
@@ -65,16 +64,14 @@ The package area deals with shared front-end UI shell code for every SPA.
 
 ## License
 
-`seasonalnet-web` is licensed under the GNU AGPLv3 license. (Version 3 only) See [LICENSE](./LICENSE).
+> [!NOTE]
+> `seasonalnet-web` is licensed under the GNU AGPLv3 license. (Version 3 only) See [LICENSE](./LICENSE).
 
 ## See also
 
 - [AGENTS.md](./AGENTS.md) for agent-focused repository rules and workflow constraints
 - [CONTRIBUTING.md](./CONTRIBUTING.md) for developer and contributing guidance
+- [CONTAINER_SECURITY.md](CONTAINER_SECURITY.md) for the hardened Compose
+launch, writable paths, and deployment requirements
 - individual `apps/*/README.md` files for app-specific notes as they are expanded
-- `apps/docs/PUBLISHING.md` for the public documentation publishing policy
-
-## Hardened containers
-
-See [CONTAINER_SECURITY.md](CONTAINER_SECURITY.md) for the hardened Compose
-launch, writable paths, and deployment requirements.
+- `apps/docs/PUBLISHING.md` for the public documentation publishing policy.
