@@ -20,3 +20,6 @@ yarn-error.log*
 *.bak
 *.bak.*
 .DS_Store
+
+# Container validation tooling
+tools/container/__pycache__/

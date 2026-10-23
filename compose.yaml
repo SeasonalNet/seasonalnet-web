@@ -1,0 +1,23 @@
+services:
+  seasonalnet-web:
+    build:
+      context: .
+      args:
+        APP: ${APP:-www}
+    image: seasonalnet-web-${APP:-www}:local
+    restart: unless-stopped
+    init: true
+    read_only: true
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,nodev,mode=1777
+    ports:
+      - "127.0.0.1:${PUBLISH_PORT:-3000}:3000"
+    volumes:
+      - next-cache:/app/apps/${APP:-www}/.next/cache
+
+volumes:
+  next-cache:

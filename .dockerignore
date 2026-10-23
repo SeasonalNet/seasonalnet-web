@@ -10,3 +10,9 @@ coverage
 .env*
 *.log
 apps/docs/.source
+*.pem
+*.key
+*.p12
+secrets
+**/__pycache__
+**/*.pyc

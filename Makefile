@@ -29,3 +29,13 @@ test:
 
 test-watch:
 	$(PNPM) run test:watch
+
+.PHONY: container container-check
+IMAGE ?= seasonalnet-web-$(APP):local
+
+container:
+	docker buildx build --load --build-arg APP=$(APP) --tag "$(IMAGE)" .
+
+container-check: container
+	python3 -m unittest discover -s tools/container -p 'test_*.py'
+	python3 tools/container/check-image.py "$(IMAGE)"

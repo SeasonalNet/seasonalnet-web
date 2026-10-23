@@ -73,3 +73,8 @@ The package area deals with shared front-end UI shell code for every SPA.
 - [CONTRIBUTING.md](./CONTRIBUTING.md) for developer and contributing guidance
 - individual `apps/*/README.md` files for app-specific notes as they are expanded
 - `apps/docs/PUBLISHING.md` for the public documentation publishing policy
+
+## Hardened containers
+
+See [CONTAINER_SECURITY.md](CONTAINER_SECURITY.md) for the hardened Compose
+launch, writable paths, and deployment requirements.

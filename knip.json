@@ -2,7 +2,10 @@
   "$schema": "https://unpkg.com/knip@6/schema.json",
   "workspaces": {
     ".": {
-      "entry": ["tools/quality/check-suppressions.mjs"],
+      "entry": [
+        "tools/quality/check-suppressions.mjs",
+        "tools/container/functional.mjs"
+      ],
       "project": ["tools/**/*.mjs"]
     },
     "apps/docs": {

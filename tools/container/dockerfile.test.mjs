@@ -5,7 +5,7 @@ import { runInNewContext } from "node:vm"
 import { describe, expect, it, vi } from "vitest"
 
 const dockerfile = readFileSync(new URL("../../Dockerfile", import.meta.url), "utf8")
-const healthCheck = dockerfile.match(/CMD node -e "([^"]+)"/)[1]
+const healthCheck = JSON.parse(dockerfile.split("\n").find((line) => line.trimStart().startsWith('CMD ["/nodejs/bin/node", "-e",')).trim().slice(4))[2]
 
 function runHealthCheck(fetch) {
   return new Promise((resolve) => {
