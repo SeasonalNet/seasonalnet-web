@@ -1,17 +1,21 @@
 ARG APP=www
 
-FROM node:22-bookworm-slim@sha256:de170b39439eb0e5a3444ad7d60b015614a381e10fecae2e30ec9e735122f38d AS build
+FROM node:24-bookworm-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205 AS build
 
 ARG APP
 ENV COREPACK_HOME=/tmp/corepack
 WORKDIR /repo
 
-RUN corepack enable && corepack prepare pnpm@11.22.0 --activate
+RUN corepack enable && corepack prepare pnpm@12.15.0 --activate
 COPY . .
 RUN pnpm install --frozen-lockfile
+ARG APP_VERSION=0.0.0+unknown
+ARG APP_REVISION=unknown
+ENV APP_VERSION=${APP_VERSION} APP_REVISION=${APP_REVISION}
+
 RUN pnpm --filter @seasonalnet/${APP} build
 
-FROM node:22-bookworm-slim@sha256:de170b39439eb0e5a3444ad7d60b015614a381e10fecae2e30ec9e735122f38d AS runtime-files
+FROM node:24-bookworm-slim@sha256:55fb5f5a527ea2c5c4a95f963e48ef90aa38c7b346054fdc8ee9957a2b55d205 AS runtime-files
 
 ARG APP
 ENV NODE_ENV=production \
@@ -31,9 +35,21 @@ RUN install -d -o 10001 -g 10001 /app/apps/${APP}/.next/cache
 
 RUN printf 'import("./apps/%s/server.js");\n' "${APP}" > /app/launch.mjs
 
+ARG APP_VERSION=0.0.0+unknown
+ARG APP_REVISION=unknown
+ENV APP_VERSION=${APP_VERSION} APP_REVISION=${APP_REVISION}
+
+RUN node -e "const fs=require('node:fs'); for(const file of ['package.json', 'apps/'+process.env.APP+'/package.json']) { if(fs.existsSync(file)) { const p=JSON.parse(fs.readFileSync(file,'utf8')); p.version=process.env.APP_VERSION; fs.writeFileSync(file,JSON.stringify(p,null,2)+'\\n'); } }"
+
 RUN chmod -R go-w /app
 
-FROM gcr.io/distroless/nodejs22-debian13:nonroot@sha256:b0b1352373f14fe86376d423e6d283ea6b85b912ff55ca89bed8d2fe11c257b8 AS runtime
+FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:cb606325b7ec4af55462cb0b424a53b452a5b4a894ffe841fcf1048d216fb9f8 AS runtime
+
+ARG APP_VERSION=0.0.0+unknown
+ARG APP_REVISION=unknown
+ENV APP_VERSION=${APP_VERSION} APP_REVISION=${APP_REVISION}
+LABEL org.opencontainers.image.version="${APP_VERSION}" org.opencontainers.image.revision="${APP_REVISION}"
+
 USER 0
 ENV PATH=/nodejs/bin
 ARG APP

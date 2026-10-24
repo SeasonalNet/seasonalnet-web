@@ -10,7 +10,7 @@
  *   node scripts/generate-marine-zone-geojson.mjs
  *
  * Requires:
- *   - Node 18+ (built-in fetch)
+ *   - Node 24 LTS (built-in fetch)
  *   - system unzip command available
  *   - pnpm package: shapefile
  *

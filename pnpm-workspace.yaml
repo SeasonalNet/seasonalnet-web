@@ -3,7 +3,7 @@ packages:
   - "packages/*"
 
 # Resolve only releases that have had at least one day of public exposure.
-# Explicit configuration makes the age gate strict instead of pnpm 11's
+# Explicit configuration makes the age gate strict instead of pnpm 12's
 # backward-compatible fallback behavior.
 minimumReleaseAge: 1440
 minimumReleaseAgeStrict: true

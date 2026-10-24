@@ -1,7 +1,9 @@
+import { versionConfig } from "../../tools/version-config.mjs";
 import { createMDX } from 'fumadocs-mdx/next';
 
 /** @type {import('next').NextConfig} */
 const config = {
+  ...versionConfig(),
   output: 'standalone',
   experimental: { useTypeScriptCli: false },
   reactCompiler: true,

@@ -1,3 +1,5 @@
+APP_VERSION ?= $(shell sh tools/version.sh)
+APP_REVISION ?= $(shell sh tools/version.sh --revision)
 PNPM ?= pnpm
 APP ?= www
 
@@ -20,7 +22,7 @@ build:
 
 supply-chain:
 	$(PNPM) audit signatures
-	$(PNPM) audit --audit-level moderate
+	$(PNPM) audit --audit-level low
 
 ci: supply-chain quality build
 
@@ -34,7 +36,7 @@ test-watch:
 IMAGE ?= seasonalnet-web-$(APP):local
 
 container:
-	docker buildx build --load --build-arg APP=$(APP) --tag "$(IMAGE)" .
+	docker buildx build --load --build-arg "APP_VERSION=$(APP_VERSION)" --build-arg "APP_REVISION=$(APP_REVISION)" --build-arg APP=$(APP) --tag "$(IMAGE)" .
 
 container-check: container
 	python3 -m unittest discover -s tools/container -p 'test_*.py'

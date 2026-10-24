@@ -75,3 +75,7 @@ The package area deals with shared front-end UI shell code for every SPA.
 launch, writable paths, and deployment requirements
 - individual `apps/*/README.md` files for app-specific notes as they are expanded
 - `apps/docs/PUBLISHING.md` for the public documentation publishing policy.
+
+## Software versions
+
+See [VERSIONING.md](VERSIONING.md) for Git-derived versions, release tags and local builds.

@@ -1,7 +1,7 @@
 {
   "name": "seasonalnet-web",
   "private": true,
-  "packageManager": "pnpm@11.22.0",
+  "packageManager": "pnpm@12.15.0",
   "scripts": {
     "lint": "pnpm --recursive run lint && pnpm run lint:root",
     "lint:root": "eslint eslint.config.mjs vitest.config.mjs tools/**/*.mjs",
