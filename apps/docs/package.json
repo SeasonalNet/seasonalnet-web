@@ -17,7 +17,7 @@
     "@seasonalnet/shell": "workspace:*",
     "fumadocs-core": "^16.17.7",
     "fumadocs-ui": "^16.17.7",
-    "lucide-react": "^0.563.0",
+    "lucide-react": "^0.577.0",
     "next": "^16.4.2",
     "react": "19.2.8",
     "react-dom": "19.2.8",
