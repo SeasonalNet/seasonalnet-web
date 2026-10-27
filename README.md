@@ -5,7 +5,7 @@ SeasonalNet frontend monorepo for the public site family and related web front e
 ## What this repository is
 
 This repository is the **development and source-of-truth monorepo** for the SeasonalNet web stack; it's outputs are
-(at the present; manually) built into Docker containers that run on `moon` for every SPA this repo manages.
+built into Docker containers that run on `moon` for every SPA this repo manages.
 
 > [!NOTE]
 > What is developed and present here is not necessarily immediately what runs on the live subdomains. That still requires
@@ -73,9 +73,6 @@ The package area deals with shared front-end UI shell code for every SPA.
 - [CONTRIBUTING.md](./CONTRIBUTING.md) for developer and contributing guidance
 - [CONTAINER_SECURITY.md](CONTAINER_SECURITY.md) for the hardened Compose
 launch, writable paths, and deployment requirements
+- [VERSIONING.md](VERSIONING.md) for Git-derived versions, release tags and local builds.
 - individual `apps/*/README.md` files for app-specific notes as they are expanded
-- `apps/docs/PUBLISHING.md` for the public documentation publishing policy.
-
-## Software versions
-
-See [VERSIONING.md](VERSIONING.md) for Git-derived versions, release tags and local builds.
+- and `apps/docs/PUBLISHING.md` for the public documentation publishing policy.
