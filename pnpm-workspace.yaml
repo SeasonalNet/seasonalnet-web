@@ -16,12 +16,12 @@ allowBuilds:
   msw: true
   sharp: true
   unrs-resolver: true
-
-# Temporary exception for a disputed advisory affecting development tooling.
-# Remove when the advisory is corrected or the dependency tree no longer uses braces.
+  
+# /// exceptions for dependencies with disputed GHSA's; presently braces and deepmerge /// 
 audit:
   ignore:
     - GHSA-vfj7-8cjw-p6xm
+    - GHSA-gcqx-w48m-w2h4  
 
 overrides:
   vite@>=8.2.0 <=8.2.3: ^8.2.4
