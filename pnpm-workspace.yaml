@@ -20,7 +20,6 @@ allowBuilds:
 # /// exceptions for dependencies with disputed GHSA's; presently braces and deepmerge /// 
 audit:
   ignore:
-    - GHSA-vfj7-8cjw-p6xm
     - GHSA-gcqx-w48m-w2h4  
 
 overrides:
