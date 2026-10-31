@@ -17,11 +17,12 @@ allowBuilds:
   sharp: true
   unrs-resolver: true
   
-# /// exceptions for dependencies with disputed GHSA's; presently braces and deepmerge /// 
+# /// exceptions for dependencies with disputed GHSA's; presently deepmerge ///
 audit:
   ignore:
     - GHSA-gcqx-w48m-w2h4  
 
 overrides:
+  minimatch@<11.0.1: ^11.0.1
   vite@>=8.2.0 <=8.2.3: ^8.2.4
   zod@<4.6.6: ^4.6.6
