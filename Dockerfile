@@ -1,6 +1,6 @@
 ARG APP=www
 
-FROM node:24-bookworm-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c AS build
+FROM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9 AS build
 
 ARG APP
 ENV COREPACK_HOME=/tmp/corepack
@@ -15,7 +15,7 @@ ENV APP_VERSION=${APP_VERSION} APP_REVISION=${APP_REVISION}
 
 RUN pnpm --filter @seasonalnet/${APP} build
 
-FROM node:24-bookworm-slim@sha256:c86ecead9e55a5210ac1727de38a4ca840bf03dcaf34dc9749addbf383b1920c AS runtime-files
+FROM node:24-bookworm-slim@sha256:01d566e8d94d8c619591d78652babfccd3c6992a3dffa9ed5ab39e11cf6c70e9 AS runtime-files
 
 ARG APP
 ENV NODE_ENV=production \
