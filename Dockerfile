@@ -43,7 +43,7 @@ RUN node -e "const fs=require('node:fs'); for(const file of ['package.json', 'ap
 
 RUN chmod -R go-w /app
 
-FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:088a01637f22908632ba09018be2e0b516f2fa6f7869c191d29491139db43c78 AS runtime
+FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:9fc11f6ee65993285c0fe3c4c9bbc4fd275fd4470572f58834ce490df91056e3 AS runtime
 
 ARG APP_VERSION=0.0.0+unknown
 ARG APP_REVISION=unknown
