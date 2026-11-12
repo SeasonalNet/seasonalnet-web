@@ -40,4 +40,17 @@ describe("getCachedValue", () => {
     await expect(second).resolves.toEqual({ value: "loaded", status: "coalesced" })
     expect(loader).toHaveBeenCalledTimes(1)
   })
+
+  it("evicts the oldest value when the cache reaches its limit", async () => {
+    const prefix = `capacity-test-${crypto.randomUUID()}`
+    const firstLoader = vi.fn(async () => "first")
+
+    await getCachedValue({ key: `${prefix}-0`, ttlMs: 60_000 }, firstLoader)
+    for (let index = 1; index <= 256; index += 1) {
+      await getCachedValue({ key: `${prefix}-${index}`, ttlMs: 60_000 }, async () => index)
+    }
+    await getCachedValue({ key: `${prefix}-0`, ttlMs: 60_000 }, firstLoader)
+
+    expect(firstLoader).toHaveBeenCalledTimes(2)
+  })
 })

@@ -21,9 +21,19 @@ type CachedValue<T> = {
 
 const values = new Map<string, CacheEntry<unknown>>()
 const inflight = new Map<string, Promise<CachedValue<unknown>>>()
+const maxEntries = 256
 
 function nowMs() {
   return Date.now()
+}
+
+function storeValue(key: string, entry: CacheEntry<unknown>) {
+  values.delete(key)
+  values.set(key, entry)
+  if (values.size > maxEntries) {
+    const oldestKey = values.keys().next().value
+    if (oldestKey !== undefined) values.delete(oldestKey)
+  }
 }
 
 export async function getCachedValue<T>(
@@ -48,7 +58,7 @@ export async function getCachedValue<T>(
   const pending = loader()
     .then((value) => {
       const expiresAt = nowMs() + ttlMs
-      values.set(options.key, {
+      storeValue(options.key, {
         value,
         expiresAt,
         staleUntil: expiresAt + staleTtlMs,

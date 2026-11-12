@@ -1,28 +1,14 @@
 import { afterEach, describe, expect, it, vi } from "vitest"
 
-import { loadAnnouncements as loadAdminAnnouncements } from "./admin/src/lib/announcements"
-import { loadAnnouncements as loadDocsAnnouncements } from "./docs/src/lib/announcements"
-import { loadAnnouncements as loadPbxAnnouncements } from "./pbx/src/lib/announcements"
-import { loadAnnouncements as loadProvAnnouncements } from "./prov/src/lib/announcements"
-import { loadAnnouncements as loadRadioAnnouncements } from "./radio/src/lib/announcements"
-import { loadAnnouncements as loadWwwAnnouncements } from "./www/src/lib/announcements"
+import { loadAnnouncements } from "../packages/shell/src/lib/server/announcements"
 
 vi.mock("server-only", () => ({}))
-
-const implementations = [
-  ["admin", loadAdminAnnouncements],
-  ["docs", loadDocsAnnouncements],
-  ["pbx", loadPbxAnnouncements],
-  ["prov", loadProvAnnouncements],
-  ["radio", loadRadioAnnouncements],
-  ["www", loadWwwAnnouncements],
-] as const
 
 afterEach(() => {
   vi.unstubAllGlobals()
 })
 
-describe.each(implementations)("%s announcements contract", (_name, loadAnnouncements) => {
+describe("announcements contract", () => {
   it("derives the site, filters malformed entries, and fills collection metadata", async () => {
     const upstream = {
       data: [

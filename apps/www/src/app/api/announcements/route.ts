@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server"
-import { loadAnnouncements } from "@/lib/announcements"
+import { loadAnnouncements } from "@seasonalnet/shell/src/lib/server/announcements"
 
 export const runtime = "nodejs"
 

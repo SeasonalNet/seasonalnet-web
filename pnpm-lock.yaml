@@ -359,9 +359,6 @@ importers:
       react-dom:
         specifier: 19.3.1
         version: 19.3.1(react@19.3.1)
-      server-only:
-        specifier: ^0.0.1
-        version: 0.0.1
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3
@@ -420,18 +417,12 @@ importers:
       next-auth:
         specifier: 5.0.0-beta.32
         version: 5.0.0-beta.32(next@16.4.5(@babel/core@7.29.7(supports-color@7.2.0))(@types/node@20.19.43)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1))(react@19.3.1)
-      next-themes:
-        specifier: ^0.4.6
-        version: 0.4.6(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react:
         specifier: 19.3.1
         version: 19.3.1
       react-dom:
         specifier: 19.3.1
         version: 19.3.1(react@19.3.1)
-      server-only:
-        specifier: ^0.0.1
-        version: 0.0.1
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3
@@ -478,18 +469,12 @@ importers:
       next:
         specifier: ^16.4.2
         version: 16.4.5(@babel/core@7.29.7(supports-color@7.2.0))(@types/node@20.19.43)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
-      next-themes:
-        specifier: ^0.4.6
-        version: 0.4.6(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react:
         specifier: 19.3.1
         version: 19.3.1
       react-dom:
         specifier: 19.3.1
         version: 19.3.1(react@19.3.1)
-      server-only:
-        specifier: ^0.0.1
-        version: 0.0.1
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3
@@ -615,18 +600,12 @@ importers:
       next:
         specifier: ^16.4.2
         version: 16.4.5(@babel/core@7.29.7(supports-color@7.2.0))(@types/node@20.19.43)(babel-plugin-react-compiler@1.0.0)(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
-      next-themes:
-        specifier: ^0.4.6
-        version: 0.4.6(react-dom@19.3.1(react@19.3.1))(react@19.3.1)
       react:
         specifier: 19.3.1
         version: 19.3.1
       react-dom:
         specifier: 19.3.1
         version: 19.3.1(react@19.3.1)
-      server-only:
-        specifier: ^0.0.1
-        version: 0.0.1
       tailwindcss:
         specifier: ^4.3.3
         version: 4.3.3

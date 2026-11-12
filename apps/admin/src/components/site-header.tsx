@@ -1,4 +1,5 @@
 import { AccountMenuClient } from "@seasonalnet/shell/src/components/account/account-menu-client"
+import { ModeToggle } from "@seasonalnet/shell/src/components/mode-toggle"
 import { ShellHeader } from "@seasonalnet/shell/src/components/site-header"
 
 import {
@@ -8,7 +9,6 @@ import {
   sessionDisplayName,
   sessionInitials,
 } from "@/auth"
-import { ModeToggle } from "@/components/mode-toggle"
 import { site } from "@/lib/site"
 
 export async function SiteHeader() {

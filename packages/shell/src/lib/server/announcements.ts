@@ -1,5 +1,6 @@
 import "server-only"
-import { fetchWithTimeout } from "@seasonalnet/shell/src/lib/fetch"
+
+import { fetchWithTimeout } from "../fetch"
 
 export type SiteAnnouncement = {
   id: string
@@ -27,10 +28,10 @@ type ApiCollection<T> = {
   links?: { self?: string; next?: string }
 }
 
-const RAW_SEASONAL_APID_BASE_URL = process.env.SEASONAL_APID_BASE_URL || "http://127.0.0.1:9088"
-const SEASONAL_APID_BASE_URL = (/^https?:\/\//i.test(RAW_SEASONAL_APID_BASE_URL)
-  ? RAW_SEASONAL_APID_BASE_URL
-  : `http://${RAW_SEASONAL_APID_BASE_URL}`
+const rawSeasonalApidBaseUrl = process.env.SEASONAL_APID_BASE_URL || "http://127.0.0.1:9088"
+const seasonalApidBaseUrl = (/^https?:\/\//i.test(rawSeasonalApidBaseUrl)
+  ? rawSeasonalApidBaseUrl
+  : `http://${rawSeasonalApidBaseUrl}`
 ).replace(/\/$/, "")
 
 function normalizeHost(host: string) {
@@ -38,8 +39,7 @@ function normalizeHost(host: string) {
 }
 
 function deriveSiteIdFromHost(host: string) {
-  const h = normalizeHost(host)
-  const first = h.split(".")[0]
+  const first = normalizeHost(host).split(".")[0]
   return first || ""
 }
 
@@ -84,7 +84,7 @@ function normalizeDocument(value: unknown, self: string): ApiCollection<SiteAnno
 
 export async function loadAnnouncements(opts?: { host?: string; site?: string }): Promise<ApiCollection<SiteAnnouncement>> {
   const site = opts?.site ?? process.env.SEASONALNET_SITE_ID ?? deriveSiteIdFromHost(opts?.host ?? "")
-  const upstream = new URL("/v1/public/announcements", SEASONAL_APID_BASE_URL)
+  const upstream = new URL("/v1/public/announcements", seasonalApidBaseUrl)
   if (site) upstream.searchParams.set("site", site)
 
   const self = `${upstream.pathname}${upstream.search}`
