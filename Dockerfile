@@ -1,12 +1,12 @@
 ARG APP=www
 
-FROM node:24-bookworm-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54 AS build
+FROM node:26-bookworm-slim@sha256:5df79989ed685e09f0a98019db4cebfb22fb9df1a53c0161664a011f7ff6b0f1 AS build
 
 ARG APP
-ENV COREPACK_HOME=/tmp/corepack
 WORKDIR /repo
 
-RUN corepack enable && corepack prepare pnpm@12.15.0 --activate
+RUN npm install --global pnpm@12.21.0 \
+    && test "$(pnpm --version)" = "12.21.0"
 COPY . .
 RUN pnpm install --frozen-lockfile
 ARG APP_VERSION=0.0.0+unknown
@@ -15,7 +15,7 @@ ENV APP_VERSION=${APP_VERSION} APP_REVISION=${APP_REVISION}
 
 RUN pnpm --filter @seasonalnet/${APP} build
 
-FROM node:24-bookworm-slim@sha256:dc26ae92c9fb15cf6b1d63e20f0944b2efe0f115b20e00be48fb23fceb061c54 AS runtime-files
+FROM node:26-bookworm-slim@sha256:5df79989ed685e09f0a98019db4cebfb22fb9df1a53c0161664a011f7ff6b0f1 AS runtime-files
 
 ARG APP
 ENV NODE_ENV=production \
@@ -43,7 +43,7 @@ RUN node -e "const fs=require('node:fs'); for(const file of ['package.json', 'ap
 
 RUN chmod -R go-w /app
 
-FROM gcr.io/distroless/nodejs24-debian13:nonroot@sha256:6abfcb367ebc291572c774c1592a986be2ab26a2486f73093401327495a5962a AS runtime
+FROM gcr.io/distroless/nodejs26-debian13:nonroot@sha256:1d736cf8b5716c07a245301f92717143215d248fd55771ee1936ef4b3302e531 AS runtime
 
 ARG APP_VERSION=0.0.0+unknown
 ARG APP_REVISION=unknown
