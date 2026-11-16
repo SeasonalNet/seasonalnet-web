@@ -102,6 +102,12 @@ It does **not** cover:
 
 ## Publication
 
-This documentation is published through the SeasonalWeb / SeasonalNet Next.js docs deployment at `docs.seasonalnet.org`. The rendered site must continue to conform to the uniform SeasonalNet SPA design: shared header/footer and black-and-white theming.
+This documentation is published through the moon-hosted SeasonalNet Next.js docs deployment at `docs.seasonalnet.org`. The rendered site must continue to conform to the uniform SeasonalNet SPA design: shared header/footer and black-and-white theming.
 
 `VMs/` remains local-only and must stay excluded from the repository and published documentation source.
+
+## Continuous integration
+
+SeasonalForge is the authoritative CI provider. Ordinary documentation and security jobs use independent runner-label dimensions in the form `[docker, normal, general]`: `docker` selects the execution environment, `normal` selects ordinary CI capacity, and `general` selects a non-builder runner. Builder jobs select the separate `builder` role.
+
+Slate and Teal provide normal CI capacity. Cobalt is a CI-only, lower-performance host and provides intentionally opt-in `slow` capacity; ordinary jobs must not use it as fallback capacity. Machine identity (`slate`, `teal`, or `cobalt`) remains independent from the execution-environment, performance, and runner-role labels.

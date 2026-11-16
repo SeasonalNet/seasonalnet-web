@@ -35,7 +35,7 @@ Boundary: voice systems are part of SeasonalNet's communications domain.
 
 Role: authenticated remote-access VPN and routed administration plane.
 
-SeasonalVPN is a Debian 13 VM hosted on SeasonalR230 as Proxmox VMID `115`. It uses `192.168.1.22` on Main LAN and runs Defguard/WireGuard services. The VPN overlay uses `10.88.0.0/24` for IPv4 and `fd97:418:22dd:88::/64` for IPv6 ULA addressing, with gateway addresses `10.88.0.1` and `fd97:418:22dd:88::1`.
+SeasonalVPN is a Dockerized Defguard VPN stack running on `moon` under SeasonalR230. It uses `192.168.1.23` on Main LAN and runs Defguard/WireGuard services. The VPN overlay uses `10.88.0.0/24` for IPv4 and `fd97:418:22dd:88::/64` for IPv6 ULA addressing, with gateway addresses `10.88.0.1` and `fd97:418:22dd:88::1`.
 
 Boundary: SeasonalVPN provides controlled remote access. It does not replace Main-LAN routing policy, and VPN clients remain subject to Defguard/MFA and routed access controls.
 
@@ -43,13 +43,13 @@ Boundary: SeasonalVPN provides controlled remote access. It does not replace Mai
 
 Role: authoritative coordination layer for bot-managed and portal-managed PBX extension state.
 
-`pbx-controld` runs on SeasonalDock at `/opt/pbx-controld` under Docker Compose. It is a Node.js / TypeScript Fastify service bound to `127.0.0.1:9091` inside SeasonalDock. It uses the `pbx_control` PostgreSQL database on SeasonalDB (`192.168.1.19`) and the `pbx` schema for extension ownership, operations, audit logs, reconcile runs, and migration state.
+`pbx-controld` runs on `moon` under Docker Compose. It is a Node.js / TypeScript Fastify service. It uses the `pbx_control` PostgreSQL database on `moon` (`192.168.1.23`) and the `pbx` schema for extension ownership, operations, audit logs, reconcile runs, and migration state.
 
 Boundary: `pbx-controld` is intended to prevent the SPA, Discord bot, and FreePBX from each maintaining conflicting extension truth. UI clients and bot clients should use the control-plane API rather than mutating bot-managed extension state directly.
 
 ### Auth, Git, DNS, mail, and platform support services
 
-Role: identity, code hosting, internal DNS, LAN private CA, mail, and supporting service infrastructure. SeasonalAuth provides the Authentik identity layer at `192.168.1.6`; SeasonalForge provides Forgejo/git service at `192.168.1.7` / `git.seasonalnet.org`; SeasonalMail is the mailcow-backed mail server at `192.168.1.13` for `mail.seasonalnet.org`; SeasonalCA provides the LAN private CA at `192.168.1.21`.
+Role: identity, code hosting, internal DNS, LAN private CA, mail, and supporting service infrastructure. `moon` provides Authentik, Forgejo (`git.seasonalnet.org`), the mailcow stack (`mail.seasonalnet.org`), and SeasonalCA from the shared Docker host at `192.168.1.23`.
 
 Boundary: these services support operator workflows and platform administration.
 
@@ -57,7 +57,7 @@ Boundary: these services support operator workflows and platform administration.
 
 Role: internal Main-LAN DNS resolver and local DNS management service running Technitium DNS Server.
 
-SeasonalDNS runs at `192.168.1.14` on SeasonalR230. It manages internal records under `lan.seasonalnet.org`. Cloudflare remains authoritative for public `seasonalnet.org` DNS. Admin/static hosts should prefer SeasonalDNS directly for internal DNS lookups to avoid stale router-side local-name answers.
+SeasonalDNS runs on `moon` and retains `192.168.1.14` as its Main-LAN service address. It manages internal records under `lan.seasonalnet.org`. Cloudflare remains authoritative for public `seasonalnet.org` DNS. Admin/static hosts should prefer SeasonalDNS directly for internal DNS lookups to avoid stale router-side local-name answers.
 
 Boundary: SeasonalDNS is not public authoritative DNS for `seasonalnet.org`; Cloudflare remains authoritative for public SeasonalNet DNS.
 
@@ -65,7 +65,7 @@ Boundary: SeasonalDNS is not public authoritative DNS for `seasonalnet.org`; Clo
 
 Role: LAN private certificate authority for internal SeasonalNet TLS.
 
-SeasonalCA runs at `192.168.1.21` and provides the SeasonalCA / Smallstep step-ca service for LAN trust. Internal DNS names include `seasonalca.lan.seasonalnet.org` and `ca.lan.seasonalnet.org`. Legacy Cisco infrastructure uses a separate RSA chain/SCEP path exposed internally as `ca-rsa.lan.seasonalnet.org`, keeping legacy RSA enrollment separate from the primary CA path.
+SeasonalCA runs at `192.168.1.23` on `moon` and provides the SeasonalCA / Smallstep step-ca service for LAN trust. Internal DNS names include `seasonalca.lan.seasonalnet.org` and `ca.lan.seasonalnet.org`. Legacy Cisco infrastructure uses a separate RSA chain/SCEP path exposed internally as `ca-rsa.lan.seasonalnet.org`, keeping legacy RSA enrollment separate from the primary CA path.
 
 Boundary: SeasonalCA is an internal trust service for LAN/private TLS. It is not a public WebPKI CA and should not be documented as authoritative for public `seasonalnet.org` certificates.
 
@@ -73,9 +73,9 @@ Boundary: SeasonalCA is an internal trust service for LAN/private TLS. It is not
 
 Role: first-pass observability spine for SeasonalNet infrastructure.
 
-SeasonalMonitor runs on `192.168.1.15` and provides Prometheus, Grafana, blackbox_exporter, snmp_exporter, Redfish/iDRAC monitoring, and host-native node_exporter. Its network-device monitoring configuration is being reconciled with the completed NET-MGMT migration and current DSW1/ASW1/SW3 topology; the observability role itself is unchanged.
+SeasonalMonitor runs as a containerized stack on `moon` and provides Prometheus, Grafana, blackbox_exporter, snmp_exporter, Redfish/iDRAC monitoring, and node_exporter coverage. Its network-device monitoring configuration follows the current NET-MGMT and DSW1/ASW1/SW3 topology.
 
-Grafana is publicly reachable at `https://grafana.seasonalnet.org` through SeasonalWeb and uses Authentik OAuth/OIDC. A local Grafana admin account is retained as break-glass access. Prometheus remains private and should not be published directly.
+Grafana is publicly reachable at `https://grafana.seasonalnet.org` through the `moon` web front door and uses Authentik OAuth/OIDC. A local Grafana admin account is retained as break-glass access. Prometheus remains private and should not be published directly.
 
 Boundary: SeasonalMonitor is observability infrastructure. It does not replace SeasonalAgent and does not mutate infrastructure. The standard Prometheus/Grafana/SNMP/Redfish foundation should remain the base before adding custom monitoring behavior.
 
@@ -83,51 +83,27 @@ Boundary: SeasonalMonitor is observability infrastructure. It does not replace S
 
 Role: primary Proxmox host for the active SeasonalNet service VM fleet.
 
-SeasonalR230 is the Dell PowerEdge R230 Proxmox host at `192.168.1.30`, with iDRAC at `10.41.0.32` on BMC-MGMT/VLAN 41. It is connected through the CME rack VLAN 99 Main-LAN transit path. The current R230 service VM fleet is SeasonalDNS (VMID 101), SeasonalAuth (102), SeasonalForge (103), SeasonalMail (104), SeasonalMonitor (105), SeasonalPBX (106), SeasonalWX (107), SeasonalRain (108), SeasonalWeb / SeasonalNet (109), SeasonalCA (114), and SeasonalVPN (115). These VMs have QEMU Guest Agent enabled/responding, Proxmox autostart configured, and verified PBS backups on SeasonalBack.
+SeasonalR230 is the Dell PowerEdge R230 Proxmox host at `192.168.1.30`, with iDRAC at `10.41.0.32` on BMC-MGMT/VLAN 41. It is connected through the CME rack VLAN 99 Main-LAN transit path. Its current service VMs are `moon` (VMID 100), SeasonalPBX (106), and SeasonalWX (107).
 
-Boundary: SeasonalR230 is the primary VM host, not the backup service. Backup service ownership remains with SeasonalBack.
-
-### SeasonalDB
-
-Role: shared PostgreSQL database host for SeasonalNet control-plane data.
-
-SeasonalDB is a Debian 13 VM hosted on SeasonalR340 as Proxmox VMID `112`. It uses `192.168.1.19` on Main LAN via interface `ens18`, with hostname/DNS `seasonaldb.lan.seasonalnet.org`. PostgreSQL 18 runs under Docker Compose from `/opt/seasonaldb`, with data under `/srv/seasonaldb/postgres` and backups under `/srv/seasonaldb/backups`. The current primary application database is `pbx_control`; its `pbx` schema includes extension ownership, operation, audit, reconcile, and migration tables for `pbx-controld`.
-
-Boundary: SeasonalDB is a database host. It should not be treated as a general application host.
-
-### SeasonalDock
-
-Role: Docker/control-plane application host.
-
-SeasonalDock is a Debian 13 VM hosted on SeasonalR340 as Proxmox VMID `113`. It uses `192.168.1.20` on Main LAN via interface `ens18`, with hostname/DNS `seasonaldock.lan.seasonalnet.org`. Docker Engine and Docker Compose are installed from Docker's official Debian repository. Its first hosted application is `pbx-controld` at `/opt/pbx-controld`.
-
-Boundary: SeasonalDock hosts containerized application/control-plane services. It keeps Node.js/TypeScript runtime and dependency churn off admin workstations such as seasonal-victus.
+Boundary: SeasonalR230 is the primary VM host, not the backup service. Backup service ownership remains with `arctic`.
 
 ### SeasonalNAS
 
 Role: shared storage / NAS service VM for SeasonalNet support workloads.
 
-SeasonalNAS is a Debian 13 VM hosted on SeasonalR340 as Proxmox VMID `110`. It uses `192.168.1.17` on Main LAN via interface `ens18`, with hostname/DNS `seasonalnas.lan.seasonalnet.org`. It provides shared storage paths used by other internal services; SeasonalSand mounts SeasonalNAS-backed workspace and artifact paths for sandbox job execution.
+SeasonalNAS is a Debian 13 VM hosted on SeasonalR340 as Proxmox VMID `110`. It uses `192.168.1.17` on Main LAN, with hostname/DNS `seasonalnas.lan.seasonalnet.org`. It provides shared storage paths used by internal services.
 
 Boundary: SeasonalNAS is the storage service VM, not the R340 hypervisor itself. Do not treat Docker bridge addresses on SeasonalNAS as routed Main-LAN service addresses.
 
-### SeasonalSand / SeasonalSandbox
+### SeasonalR340 and arctic
 
-Role: isolated sandbox execution service for bounded internal automation workloads.
+Role: secondary Proxmox host and backup/storage platform for local SeasonalNet infrastructure.
 
-SeasonalSand is a Debian 13 VM hosted on SeasonalR340 as Proxmox VMID `111`. It uses `192.168.1.18` on Main LAN via interface `ens18`, with hostname/DNS `seasonalsand.lan.seasonalnet.org`. It runs `seasonal-sandboxd` under Docker Compose. The sandbox API is bound host-local inside the VM on `127.0.0.1:9090`, and the service uses SeasonalNAS-backed workspace and artifact paths.
+SeasonalR340 is the Dell PowerEdge R340 Proxmox host at `192.168.1.31`, with iDRAC at `10.41.0.33` on BMC-MGMT/VLAN 41. It is connected through the CME rack VLAN 99 Main-LAN transit path and hosts SeasonalNAS (VMID 110) and `arctic` (VMID 116).
 
-Boundary: SeasonalSand is a controlled execution/sandbox service. It should not be documented as a general-purpose shell host, public API, or replacement for Seasonal Agent.
+`arctic` is the Proxmox Backup Server VM hosted on SeasonalR340 at `192.168.1.24`. It replaces the former SeasonalBack VM at `192.168.1.16`.
 
-### SeasonalR340 and SeasonalBack
-
-Role: secondary Proxmox host and backup/storage/sandbox/database/Docker support platform for local SeasonalNet infrastructure.
-
-SeasonalR340 is the Dell PowerEdge R340 Proxmox host at `192.168.1.31`, with iDRAC at `10.41.0.33` on BMC-MGMT/VLAN 41. It is connected through the CME rack VLAN 99 Main-LAN transit path and hosts SeasonalBack (VMID 100), SeasonalNAS (VMID 110), SeasonalSand (VMID 111), SeasonalDB (VMID 112), and SeasonalDock (VMID 113).
-
-SeasonalBack is the Proxmox Backup Server VM hosted on SeasonalR340. It uses `192.168.1.16`; `seasonalback.lan.seasonalnet.org` resolves to that address, and `back.lan.seasonalnet.org` is a service alias. Its datastore is named `seasonalback` at `/mnt/datastore/seasonalback`. The current datastore backing is the PBS VM root filesystem / single virtual disk, not a separate mounted data disk.
-
-Boundary: SeasonalBack is the backup service VM. SeasonalNAS is the storage service VM. SeasonalSand is the sandbox service VM. SeasonalDB is the database service VM. SeasonalDock is the container/control-plane application host. SeasonalR340 is the hypervisor and hardware platform. Do not document PBS, NAS, sandbox, database, or Docker application services as running directly on the R340 host unless that design changes.
+Boundary: `arctic` is the backup service VM, SeasonalNAS is the storage service VM, and SeasonalR340 is the hypervisor. Do not document PBS or NAS services as running directly on the R340 host.
 
 ### Retired systems
 
@@ -135,9 +111,11 @@ The older VM named SeasonalWeather is retired and replaced by SeasonalWX at `192
 
 SeasonalUtilities is retired. It previously occupied `192.168.1.11` and hosted utility functions such as Uptime Kuma, but the VM has been archived and removed from the active VirtualBox inventory. Treat `192.168.1.11` as reserved until a replacement utility host is deliberately assigned. The former public status service is retired.
 
+The former dedicated SeasonalAuth, SeasonalForge, SeasonalWeb, SeasonalRain, SeasonalMail, SeasonalMonitor, SeasonalBack, SeasonalSand, SeasonalDB, SeasonalDock, SeasonalCA, and SeasonalVPN VM assignments are retired. Their former Main-LAN addresses remain reserved unless explicitly reused; their active service roles were consolidated onto `moon`, replaced by `arctic`, or retired.
+
 ### Web front doors and SPAs
 
-Role: browser-facing interfaces for platform functions such as docs, radio, PBX, provisioning, and agent access. SeasonalWeb / SeasonalNet runs as VMID 109 on SeasonalR230 and serves the reverse-proxy and Next.js SPA front-door role, including the public documentation site.
+Role: browser-facing interfaces for platform functions such as docs, radio, PBX, provisioning, and agent access. The reverse proxy and SeasonalNet SPAs run on `moon`, including the public documentation site.
 
 Boundary: a web front door may expose part of SeasonalNet, but not the full live platform state by itself.
 

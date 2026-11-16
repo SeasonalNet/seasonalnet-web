@@ -9,7 +9,7 @@ description: "Voice and management VLAN topology for the SeasonalCME segment"
 - **CME management IPv6 ULA:** `fd97:418:22dd:42::/64`
 - **Voice gateway:** `10.10.0.1` / `fd97:418:22dd:10::1` (SeasonalNet-DSW1 `Vlan10`)
 - **CME management gateway:** `10.42.0.1` / `fd97:418:22dd:42::1` (SeasonalNet-DSW1 `Vlan42`)
-- **Last updated:** 2026-09-12
+- **Last updated:** 2026-11-15
 
 ---
 
@@ -127,7 +127,7 @@ The DSW1/ASW1 LACP trunk carries all production access VLANs, except 98. SW3 has
 | `Gi1/0/11` | Access VLAN 99 | SeasonalR340 | Proxmox host attachment | Server Infra |
 | `Gi1/0/12` | Access VLAN 41 | SeasonalR340-iDRAC | R340 OOB management | Server Infra |
 | `Gi1/0/13 — 16` | N/A | Reserved — Server/BMC/Storage | Held in shutdown state, no VLAN assignment | Server Infra |
-| `Gi1/0/17` | Access VLAN 99 | Teal | Teal admin workstation | Good Access |
+| `Gi1/0/17` | Access VLAN 99 | teal | Secondary admin/build workstation and normal CI host | Good Access |
 | `Gi1/0/18 — 24` | N/A | Reserved — Good Access clients | Held in shutdown state, no VLAN assignment | Good Access |
 | `Gi1/0/25` | Access VLAN 10 | Cisco 8841-3PCC | IP phone | General Client |
 | `Gi1/0/26` | Access VLAN 10 | Cisco 7945G | IP phone | General Client |
@@ -212,7 +212,7 @@ The DSW1/ASW1 LACP trunk carries all production access VLANs, except 98. SW3 has
 | SIP source | `Gi0/0.10` | SIP control and media bind to the Voice VLAN 10 service interface |
 | SCCP DSP services | `Gi0/0.10` / `10.10.0.10` | MTP and conferencing profiles register to the local CME service address |
 | Management interface | `Gi0/0.42` | CME-MGMT only; not used as the voice-service identity |
-| Services URL | `http://192.168.1.8/cme/services/` | SeasonalWeb-hosted phone services |
+| Services URL | `http://192.168.1.23/cme/services/` | `moon`-hosted phone services |
 | MOH multicast | `239.42.0.42:16384` | IPv4 multicast MOH configuration |
 
 ---

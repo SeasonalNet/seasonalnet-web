@@ -79,20 +79,13 @@ Main LAN (192.168.1.0/24 + native ISP IPv6)
     |               `- direct fiber trunk to SeasonalNet-SW3
     |
     |-- SeasonalR230 (PVE 192.168.1.30; iDRAC 10.41.0.32 on BMC-MGMT)
-    |       |-- Core service VM fleet (VMIDs 101-109)
-    |       |-- SeasonalCA (VMID 114, 192.168.1.21)
-    |       `-- SeasonalVPN (VMID 115, 192.168.1.22)
-    |               `-- 10.88.0.0/24 + fd97:418:22dd:88::/64
+    |       |-- `moon` (VMID 100, 192.168.1.23)
+    |       |-- SeasonalPBX (VMID 106, 192.168.1.12)
+    |       `-- SeasonalWX (VMID 107, 192.168.1.10)
     |
     |-- SeasonalR340 (PVE 192.168.1.31; iDRAC 10.41.0.33 on BMC-MGMT)
-    |       |-- SeasonalBack (192.168.1.16)
-    |       |-- SeasonalNAS (192.168.1.17)
-    |       |-- SeasonalSand (192.168.1.18)
-    |       |-- SeasonalDB (192.168.1.19)
-    |       `-- SeasonalDock (192.168.1.20)
-    |
-    |-- SeasonalPBX (192.168.1.12)
-    |       `-- PBX/Asterisk service only; not Phone-LAN router
+    |       |-- `arctic` (VMID 116, 192.168.1.24)
+    |       `-- SeasonalNAS (VMID 110, 192.168.1.17)
     |
     `-- SeasonalNet-NP-R1 (192.168.1.54)
             `-- non-production lab router; no production VLAN gateway role
@@ -106,10 +99,10 @@ Main LAN (192.168.1.0/24 + native ISP IPv6)
 |---|---|
 | `192.168.1.1` | Gateway |
 | `192.168.1.2` – `192.168.1.5` | Network infrastructure / reserved infrastructure |
-| `192.168.1.6` – `192.168.1.22` | Active servers and service VMs |
-| `192.168.1.23` – `192.168.1.29` | Reserved future servers / service VMs |
+| `192.168.1.6` – `192.168.1.22` | Service addresses and reserved former service assignments |
+| `192.168.1.23` – `192.168.1.29` | Current consolidated services and reserved future service VMs |
 | `192.168.1.30` – `192.168.1.39` | Hypervisors and reserved server infrastructure; `.32`/`.33` are free after BMC migration to VLAN 41 |
-| `192.168.1.40` – `192.168.1.49` | Admin workstations / fixed laptops |
+| `192.168.1.40` – `192.168.1.49` | Admin workstations and CI runner hosts |
 | `192.168.1.50` – `192.168.1.99` | Static non-server devices |
 | `192.168.1.100` – `192.168.1.254` | DHCP clients |
 
@@ -160,7 +153,7 @@ Primary static routes use metric `10`. Future alternate or backup routes use met
 | `10.41.0.0/24` | `192.168.1.5` | `10` | BMC-MGMT IPv4 return route through FW4C |
 | `10.42.0.0/24` | `192.168.1.5` | `10` | CME-MGMT IPv4 return route through FW4C |
 | `10.43.0.0/24` | `192.168.1.5` | `10` | HOST-MGMT IPv4 return route through FW4C |
-| `10.88.0.0/24` | `192.168.1.22` | `10` | SeasonalVPN IPv4 return route |
+| `10.88.0.0/24` | `192.168.1.23` | `10` | SeasonalVPN IPv4 return route through `moon` |
 | `fd97:418:22dd:10::/64` | FW4C Main-LAN link-local | `10` | SeasonalCME Voice ULA return route |
 | `fd97:418:22dd:30::/64` | FW4C Main-LAN link-local | `10` | Phone-LAN ULA return route |
 | `fd97:418:22dd:42::/64` | FW4C Main-LAN link-local | `10` | SeasonalCME Management ULA return route |
@@ -172,41 +165,41 @@ Primary static routes use metric `10`. Future alternate or backup routes use met
 
 | Service | Port(s) | Protocol | Target |
 |---|---|---|---|
-| HTTP | 80 | TCP | SeasonalWeb (`192.168.1.8`) |
-| HTTPS | 443 | TCP | SeasonalWeb (`192.168.1.8`) |
+| HTTP | 80 | TCP | `moon` (`192.168.1.23`) |
+| HTTPS | 443 | TCP | `moon` (`192.168.1.23`) |
 | SIP | 5060 | TCP+UDP | SeasonalPBX (`192.168.1.12`) |
 | SIP TLS | 5061 | TCP | SeasonalPBX (`192.168.1.12`) |
 | IAX2 | 4569 | UDP | SeasonalPBX (`192.168.1.12`) |
 | RTP | 10000–20000 | UDP | SeasonalPBX (`192.168.1.12`) |
-| SMTP | 25 | TCP | SeasonalMail (`192.168.1.13`) |
-| Submission | 587 | TCP | SeasonalMail (`192.168.1.13`) |
-| SMTPS | 465 | TCP | SeasonalMail (`192.168.1.13`) |
-| IMAP | 143 | TCP | SeasonalMail (`192.168.1.13`) |
-| POP3 | 110 | TCP | SeasonalMail (`192.168.1.13`) |
-| POP3S | 995 | TCP | SeasonalMail (`192.168.1.13`) |
+| SMTP | 25 | TCP | `moon` (`192.168.1.23`) |
+| Submission | 587 | TCP | `moon` (`192.168.1.23`) |
+| SMTPS | 465 | TCP | `moon` (`192.168.1.23`) |
+| IMAP | 143 | TCP | `moon` (`192.168.1.23`) |
+| POP3 | 110 | TCP | `moon` (`192.168.1.23`) |
+| POP3S | 995 | TCP | `moon` (`192.168.1.23`) |
 
-SeasonalWeb performs hostname-based routing for public web services behind the shared 80/443 forwards. `grafana.seasonalnet.org` is routed to Grafana on SeasonalMonitor; Prometheus remains private.
+`moon` performs hostname-based routing for public web services behind the shared 80/443 forwards. `grafana.seasonalnet.org` is routed to Grafana on SeasonalMonitor; Prometheus remains private.
 
 ---
 
 ## DNS / DHCP
 
-Cloudflare remains authoritative public DNS for `seasonalnet.org`. SeasonalDNS provides internal recursion and `lan.seasonalnet.org` records. SeasonalVPN uses `seasonalvpn.lan.seasonalnet.org` with `vpn.lan.seasonalnet.org` as an internal alias at `192.168.1.22`.
+Cloudflare remains authoritative public DNS for `seasonalnet.org`. SeasonalDNS runs on `moon` and retains `192.168.1.14` as its Main-LAN service address for internal recursion and `lan.seasonalnet.org` records. SeasonalVPN uses `seasonalvpn.lan.seasonalnet.org` with `vpn.lan.seasonalnet.org` as an internal alias at `192.168.1.23`.
 
 | Segment | DNS | DHCP / address assignment |
 |---|---|---|
-| Main LAN | SeasonalDNS (`192.168.1.14`) for internal DNS | WNC-CR200A for IPv4 DHCP and native IPv6 RA/DHCPv6 |
-| SeasonalCME Voice VLAN 10 | SeasonalDNS plus voice-specific options | SeasonalNet-DSW1 owns the IPv4 gateway and DHCPv4 boundary; CME-R1 remains static at `.10` |
-| Phone-LAN VLAN 30 | SeasonalDNS (`192.168.1.14`) | SeasonalNet-DSW1 owns the routed gateway and current DHCPv4 boundary |
-| NET-MGMT VLAN 40 | SeasonalDNS for managed infrastructure | Static infrastructure addressing; active for DSW1, ASW1, SW3, and the autonomous AP management identities |
-| BMC-MGMT VLAN 41 | SeasonalDNS for BMC FQDNs | Static IPv4 BMC assignments; DSW1 owns the dual-stack gateway SVI while iDRAC IPv6 remains disabled |
-| CME-MGMT VLAN 42 | SeasonalDNS for CME infrastructure | Static infrastructure addressing; DSW1 is the gateway and SeasonalCME-R1 uses `.2` / `::2` for management |
-| HOST-MGMT VLAN 43 | SeasonalDNS when host identities are assigned | Routed/reserved; no production host-management cutover yet |
+| Main LAN | SeasonalDNS on `moon` (`192.168.1.14`) | WNC-CR200A for IPv4 DHCP and native IPv6 RA/DHCPv6 |
+| SeasonalCME Voice VLAN 10 | `moon` plus voice-specific options | SeasonalNet-DSW1 owns the IPv4 gateway and DHCPv4 boundary; CME-R1 remains static at `.10` |
+| Phone-LAN VLAN 30 | SeasonalDNS on `moon` (`192.168.1.14`) | SeasonalNet-DSW1 owns the routed gateway and current DHCPv4 boundary |
+| NET-MGMT VLAN 40 | `moon` for managed infrastructure | Static infrastructure addressing; active for DSW1, ASW1, SW3, and the autonomous AP management identities |
+| BMC-MGMT VLAN 41 | `moon` for BMC FQDNs | Static IPv4 BMC assignments; DSW1 owns the dual-stack gateway SVI while iDRAC IPv6 remains disabled |
+| CME-MGMT VLAN 42 | `moon` for CME infrastructure | Static infrastructure addressing; DSW1 is the gateway and SeasonalCME-R1 uses `.2` / `::2` for management |
+| HOST-MGMT VLAN 43 | `moon` when host identities are assigned | Routed/reserved; no production host-management cutover yet |
 | SeasonalVPN | Routed through SeasonalVPN/Defguard policy | Defguard assigns VPN client addresses |
 
 IPv6 gateway ownership for VLANs 10, 30, 40, 41, 42, and 43 is on DSW1. Exact client RA/DHCPv6 behavior follows the live DSW1 configuration and device capability.
 
-Admin/static hosts should prefer SeasonalDNS directly for internal DNS.
+Admin/static hosts should prefer the SeasonalDNS service address at `192.168.1.14` for internal DNS.
 
 ---
 

@@ -7,7 +7,7 @@ description: "Routing, services, and attached-device map for the Phone-LAN segme
 - **IPv6 ULA:** `fd97:418:22dd:30::/64`
 - **Gateway:** `10.30.0.1` / `fd97:418:22dd:30::1` (SeasonalNet-DSW1 `Vlan30`)
 - **VLAN ID:** `30`
-- **Last updated:** 2026-09-12
+- **Last updated:** 2026-11-15
 
 ---
 
@@ -77,11 +77,11 @@ The retired TL-SF1005P no longer owns an active switching role in the documented
 
 | Port | Mode / VLAN | Connected device | Notes |
 |---|---|---|---|
-| `Gi0/1` | Access VLAN 99 | slate | Main-LAN admin attachment |
+| `Gi0/1` | Access VLAN 99 | slate | Main-LAN attachment for the primary admin/development and normal CI host |
 | `Gi0/2` | 802.1Q trunk, native VLAN 40 | SeasonalAP-2702E | Allows VLANs 30 and 40; AP management on NET-MGMT, service WLAN on Phone-LAN |
 | `Gi0/3` | Access VLAN 30 | Cisco IP Phone 7841 | Phone-LAN endpoint |
 | `Gi0/4` | Access VLAN 30 | Cisco SPA525G2 | Phone-LAN endpoint |
-| `Gi0/5` | Access VLAN 99 | cobalt | Main-LAN admin attachment, warm testing host |
+| `Gi0/5` | Access VLAN 99 | cobalt | Main-LAN attachment for the CI-only slow runner host |
 | `Gi0/6 – Gi0/7` | Access VLAN 30 | Unused | Spare Phone-LAN access capacity |
 | `Gi0/8` | Access VLAN 1 | Unused | Default access VLAN; assign deliberately before use |
 | `Gi0/9` | Shutdown | Unused copper uplink | Administratively disabled |

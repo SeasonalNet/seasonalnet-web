@@ -3,11 +3,11 @@ title: "SeasonalNet VPN LAN"
 description: "Network topology for the SeasonalNet VPN segment."
 ---
 
-- **Main-LAN host:** `192.168.1.22`
+- **Main-LAN host:** `moon` (`192.168.1.23`)
 - **IPv4 VPN subnet:** `10.88.0.0/24`
 - **IPv6 VPN ULA:** `fd97:418:22dd:88::/64`
 - **VPN gateways:** `10.88.0.1` / `fd97:418:22dd:88::1`
-- **Last updated:** 2026-07-27
+- **Last updated:** 2026-11-15
 
 ---
 
@@ -34,13 +34,13 @@ Defguard may assign host routes such as `/32` and `/128` to individual clients e
 
 | Address | Device / service | Interface | Notes |
 |---|---|---|---|
-| `192.168.1.22` | SeasonalVPN VM | `ens18` | Debian 13 VM hosted on SeasonalR230 as VMID `115` |
+| `192.168.1.23` | Defguard on `moon` | Main-LAN service host | Dockerized VPN control and gateway services on SeasonalR230 VMID `100` |
 | `10.88.0.1/24` | Defguard gateway | `wg0` | VPN IPv4 gateway |
 | `fd97:418:22dd:88::1/64` | Defguard gateway | `wg0` | VPN IPv6 ULA gateway |
 
 Internal DNS names:
 
-- `seasonalvpn.lan.seasonalnet.org` → `192.168.1.22`
+- `seasonalvpn.lan.seasonalnet.org` → `192.168.1.23`
 - `vpn.lan.seasonalnet.org` → alias for SeasonalVPN
 
 ---
@@ -62,7 +62,7 @@ The public Edge URL is `https://web-vpn.seasonalnet.org`. VPN policy can quarant
 
 | Route / relationship | Owner | Notes |
 |---|---|---|
-| `10.88.0.0/24` via `192.168.1.22` | WNC-CR200A | Main-LAN IPv4 return route; metric `10` |
+| `10.88.0.0/24` via `192.168.1.23` | WNC-CR200A | Main-LAN IPv4 return route; metric `10` |
 | `fd97:418:22dd:88::/64` via SeasonalVPN Main-LAN link-local | WNC-CR200A | Main-LAN IPv6 ULA return route; metric `10` |
 | DSW1/FW4C access to SeasonalVPN | DSW1 and FW4C routing policy | The former SeasonalEDGE-R1 redistribution path is retired; routed VLANs reach SeasonalVPN through the current distribution/edge design |
 | Internal SeasonalNet prefixes | SeasonalVPN / upstream routing policy | Routed access is permitted according to Defguard and host/router policy |
@@ -87,7 +87,7 @@ Remote client
     |
     | WireGuard / Defguard + MFA policy
     |
-SeasonalVPN VM (192.168.1.22, VMID 115)
+Defguard on moon (192.168.1.23, VMID 100)
     |- wg0 IPv4: 10.88.0.1/24
     `- wg0 IPv6: fd97:418:22dd:88::1/64
             |
