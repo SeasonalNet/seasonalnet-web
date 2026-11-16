@@ -10,6 +10,15 @@ import { SiteAnnouncements } from "@seasonalnet/shell/src/components/site-announ
 export const metadata: Metadata = {
   title: "SeasonalNet",
   description: "A personal platform for everything Seasonal.",
+  icons: {
+    icon: [
+      { url: "/favicon-light.ico", media: "(prefers-color-scheme: light)" },
+      { url: "/favicon-dark.ico", media: "(prefers-color-scheme: dark)" },
+      { url: "/favicon.ico" },
+      { url: "/favicon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
 }
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

@@ -83,10 +83,7 @@ export function ShellHeader({ site, rightSlot }: ShellHeaderProps) {
       <div className="mx-auto flex min-h-[3.75rem] max-w-6xl items-center gap-2 px-4 py-2">
         <div className="flex min-w-0 items-center gap-2">
           <BrandMark className="h-7 w-24 shrink-0 sm:h-8 sm:w-32" />
-          <div className="min-w-0 leading-tight">
-            <div className="truncate text-sm font-semibold">{site.name}</div>
-            <div className="truncate text-xs text-muted-foreground">{site.subtitle}</div>
-          </div>
+          <div className="min-w-0 truncate text-xs text-muted-foreground">{site.subtitle}</div>
         </div>
 
         <div className="ml-3 hidden min-w-0 flex-1 items-center justify-center md:flex md:justify-start">

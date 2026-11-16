@@ -11,6 +11,15 @@ import { Toaster } from "@/components/ui/sonner"
 export const metadata: Metadata = {
   title: "SeasonalNet Admin",
   description: "Centralized control plane for SeasonalNet systems.",
+  icons: {
+    icon: [
+      { url: "/favicon-light.ico", media: "(prefers-color-scheme: light)" },
+      { url: "/favicon-dark.ico", media: "(prefers-color-scheme: dark)" },
+      { url: "/favicon.ico" },
+      { url: "/favicon-192.png", sizes: "192x192", type: "image/png" },
+    ],
+    apple: "/apple-touch-icon.png",
+  },
 }
 
 export const dynamic = "force-dynamic"
