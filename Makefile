@@ -6,7 +6,7 @@ APP ?= www
 .DEFAULT_GOAL := quality
 .NOTPARALLEL: ci
 
-.PHONY: install dev quality supply-chain build ci test test-watch
+.PHONY: install dev quality supply-chain build build-ci ci test test-watch
 
 install:
 	$(PNPM) install --frozen-lockfile
@@ -20,11 +20,14 @@ quality:
 build:
 	$(PNPM) run build
 
+build-ci:
+	$(PNPM) run build:ci
+
 supply-chain:
 	$(PNPM) audit signatures
 	$(PNPM) audit --audit-level low
 
-ci: supply-chain quality build
+ci: supply-chain quality build-ci
 
 test:
 	$(PNPM) run test

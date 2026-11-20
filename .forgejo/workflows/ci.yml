@@ -99,9 +99,14 @@ jobs:
         run: make quality
 
       - name: Build all applications
-        run: make build
+        run: make build-ci
 
   publish-container:
+    strategy:
+      fail-fast: false
+      max-parallel: 4
+      matrix:
+        app: [www, radio, pbx, prov, admin, agent, docs]
     env:
       APP_VERSION: ${{ needs.version.outputs.version }}
       APP_REVISION: ${{ needs.version.outputs.revision }}
@@ -143,18 +148,19 @@ jobs:
           HARBOR_CI_USERNAME: ${{ secrets.HARBOR_CI_USERNAME }}
           HARBOR_CI_PASSWORD: ${{ secrets.HARBOR_CI_PASSWORD }}
         run: printf '%s' "$HARBOR_CI_PASSWORD" | docker login registry.lan.seasonalnet.org --username "$HARBOR_CI_USERNAME" --password-stdin
-      - name: Build and push all frontend images
+      - name: Build and push frontend image
         shell: bash
+        env:
+          BUILD_APP: ${{ matrix.app }}
         run: |
           set -euo pipefail
-          for app in www radio pbx prov admin agent docs; do
-            image="registry.lan.seasonalnet.org/seasonalnet/seasonalnet-web-$app"
-            tags=(--tag "$image:sha-${GITHUB_SHA:0:12}")
-            if [[ "$GITHUB_REF" == refs/heads/main ]]; then
-              tags+=(--tag "$image:latest")
-            elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
-              tags+=(--tag "$image:$IMAGE_TAG")
-              if [[ "$IMAGE_STABLE" == true ]]; then tags+=(--tag "$image:latest"); fi
-            fi
-            sh tools/build-image.sh --push --build-arg "APP=$app" "${tags[@]}" .
-          done
+          app="$BUILD_APP"
+          image="registry.lan.seasonalnet.org/seasonalnet/seasonalnet-web-$app"
+          tags=(--tag "$image:sha-${GITHUB_SHA:0:12}")
+          if [[ "$GITHUB_REF" == refs/heads/main ]]; then
+            tags+=(--tag "$image:latest")
+          elif [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            tags+=(--tag "$image:$IMAGE_TAG")
+            if [[ "$IMAGE_STABLE" == true ]]; then tags+=(--tag "$image:latest"); fi
+          fi
+          sh tools/build-image.sh --push --build-arg "APP=$app" "${tags[@]}" .
