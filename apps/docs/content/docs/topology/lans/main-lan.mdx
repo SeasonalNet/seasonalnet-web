@@ -5,7 +5,7 @@ description: "Address bands, infrastructure inventory, and routing notes for the
 
 - **Subnet:** `192.168.1.0/24`
 - **Gateway:** `192.168.1.1` (Verizon WNC-CR200A)
-- **Last updated:** 2026-11-15
+- **Last updated:** 2026-11-25
 
 ---
 
@@ -52,7 +52,7 @@ This band contains active service addresses, consolidated service hosts, and res
 | `192.168.1.14` | SeasonalDNS service | Hosted on `moon` | Technitium DNS service address for internal recursion and `lan.seasonalnet.org`; not public authoritative DNS |
 | `192.168.1.15` | *(reserved)* | Former VMID `105` | Former SeasonalMonitor VM address |
 | `192.168.1.16` | *(reserved)* | Former PBS VM address | Former SeasonalBack address; replaced by `arctic` at `.24` |
-| `192.168.1.17` | SeasonalNAS | Proxmox VMID `110` | NAS / shared storage VM hosted on SeasonalR340. Main interface `ens18`; static IPv4 `192.168.1.17/24`; hostname/DNS `seasonalnas.lan.seasonalnet.org`. Runs Docker and storage-facing services; includes Docker bridge networks on RFC1918 `172.17.0.0/16` and `172.18.0.0/16`. |
+| `192.168.1.17` | *(reserved)* | Former Proxmox VMID `110` | Former NAS / shared storage VM hosted on SeasonalR340. Main interface `ens18`; static IPv4 `192.168.1.17/24`; former hostname/DNS `seasonalnas.lan.seasonalnet.org`. Previously ran Docker and storage-facing services, including Docker bridge networks on RFC1918 `172.17.0.0/16` and `172.18.0.0/16`. |
 | `192.168.1.18` | *(reserved)* | Former VMID `111` | Former SeasonalSand / SeasonalSandbox VM address |
 | `192.168.1.19` | *(reserved)* | Former VMID `112` | Former SeasonalDB / PostgreSQL VM address |
 | `192.168.1.20` | *(reserved)* | Former VMID `113` | Former SeasonalDock application-host address |
@@ -60,7 +60,8 @@ This band contains active service addresses, consolidated service hosts, and res
 | `192.168.1.22` | *(reserved)* | Former VMID `115` | Former SeasonalVPN VM address |
 | `192.168.1.23` | `moon` | Proxmox VMID `100` | Primary Docker service host on SeasonalR230; hosts consolidated web, identity, Git, mail, monitoring, VPN, CA, database, bot, and control-plane services |
 | `192.168.1.24` | `arctic` | Proxmox VMID `116` | Proxmox Backup Server VM hosted on SeasonalR340 |
-| `192.168.1.25 – 192.168.1.29` | *(reserved)* | | Future service VMs / server workloads |
+| `192.168.1.25` | `meteor` | Proxmox VMID `103` | OpenMediaVault NAS / shared-storage VM hosted on SeasonalR340 |
+| `192.168.1.26 – 192.168.1.29` | *(reserved)* | | Future service VMs / server workloads |
 
 ---
 
@@ -69,7 +70,7 @@ This band contains active service addresses, consolidated service hosts, and res
 | IP | Device | Notes |
 |---|---|---|
 | `192.168.1.30` | SeasonalR230 | Dell PowerEdge R230 / primary Proxmox VM host on Main LAN via CME rack VLAN 99 transit path. Hosts `moon` (`100`), SeasonalPBX (`106`), and SeasonalWX (`107`). DNS aliases include `r230.lan.seasonalnet.org` and `seasonalr230.lan.seasonalnet.org`. |
-| `192.168.1.31` | SeasonalR340 | Dell PowerEdge R340 / Proxmox VE host on Main LAN via CME rack VLAN 99 transit path. Hosts SeasonalNAS (`110`) and `arctic` (`116`). DNS aliases include `r340.lan.seasonalnet.org` and `seasonalr340.lan.seasonalnet.org`. |
+| `192.168.1.31` | SeasonalR340 | Dell PowerEdge R340 / Proxmox VE host on Main LAN via CME rack VLAN 99 transit path. Hosts `meteor` (`103`) and `arctic` (`116`). DNS aliases include `r340.lan.seasonalnet.org` and `seasonalr340.lan.seasonalnet.org`. |
 | `192.168.1.32` | *(free)* | Former SeasonalR230-iDRAC address; BMC moved to `10.41.0.32` on VLAN 41 / BMC-MGMT |
 | `192.168.1.33` | *(free)* | Former SeasonalR340-iDRAC address; BMC moved to `10.41.0.33` on VLAN 41 / BMC-MGMT |
 | `192.168.1.34 – 192.168.1.39` | *(reserved)* | Future VM hosts and server infrastructure |
@@ -129,7 +130,7 @@ The VLAN 40–43 management/control-plane family and current device assignments 
 | iDRAC internal DNS records | SeasonalDNS | `r230-idrac.lan.seasonalnet.org` / `seasonalr230-idrac.lan.seasonalnet.org` → `10.41.0.32`; `r340-idrac.lan.seasonalnet.org` / `seasonalr340-idrac.lan.seasonalnet.org` → `10.41.0.33` on BMC-MGMT. |
 | Consolidated service records | SeasonalDNS | Active service names for the former dedicated Auth, Forge, Mail, Monitor, DB, Dock, CA, VPN, and web hosts resolve to services on `moon` at `192.168.1.23`. |
 | Backup service records | SeasonalDNS | Backup-service names resolve to `arctic` at `192.168.1.24`. |
-| SeasonalNAS internal DNS record | SeasonalDNS | `seasonalnas.lan.seasonalnet.org` → `192.168.1.17`. |
+| Shared-storage records | `meteor` | NAS/shared-storage records point at `meteor.lan.seasonalnet.org`. |
 | SeasonalPBX internal DNS record | SeasonalDNS | `seasonalpbx.lan.seasonalnet.org` → `192.168.1.12`. SeasonalPBX is the current PBX service VM and is no longer the Phone-LAN gateway. |
 | SeasonalCA internal DNS records | SeasonalDNS | `seasonalca.lan.seasonalnet.org` and `ca.lan.seasonalnet.org` resolve to the CA service on `moon` at `192.168.1.23`. |
 | SeasonalVPN internal DNS records | SeasonalDNS | `seasonalvpn.lan.seasonalnet.org` → `192.168.1.23`; `vpn.lan.seasonalnet.org` is an internal alias. |

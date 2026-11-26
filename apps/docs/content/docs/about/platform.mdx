@@ -66,9 +66,9 @@ The current first dedicated control-plane daemon is `pbx-controld`, hosted on `m
 
 These include VM hosts, network topology, observability checks, backup systems, storage systems, database services, Docker/container services, sandbox execution services, VPN services, and supporting operational tooling.
 
-SeasonalR230 and SeasonalR340 are the active Proxmox hosts. SeasonalR230 hosts the consolidated `moon` service VM plus SeasonalPBX and SeasonalWX. SeasonalR340 hosts the `arctic` backup VM and SeasonalNAS.
+SeasonalR230 and SeasonalR340 are the active Proxmox hosts. SeasonalR230 hosts the consolidated `moon` service VM plus SeasonalPBX and SeasonalWX. SeasonalR340 hosts the `arctic` backup VM and the `meteor` VM.
 
-The active R230 service fleet is `moon` (100), SeasonalPBX (106) and SeasonalWX (107). The active R340 support VM set is `arctic` (VMID 116) and SeasonalNAS (110).
+The active R230 service fleet is `moon` (100), SeasonalPBX (106) and SeasonalWX (107). The active R340 support VM set is `arctic` (VMID 116) and `meteor` (103).
 
 SeasonalMonitor is the current observability spine for infrastructure reachability, dashboards, SNMP, and Redfish collection. Grafana is exposed publicly at `grafana.seasonalnet.org` through `moon` with Authentik OAuth/OIDC; Prometheus remains a private backend service.
 

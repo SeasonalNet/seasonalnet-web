@@ -87,23 +87,23 @@ SeasonalR230 is the Dell PowerEdge R230 Proxmox host at `192.168.1.30`, with iDR
 
 Boundary: SeasonalR230 is the primary VM host, not the backup service. Backup service ownership remains with `arctic`.
 
-### SeasonalNAS
+### meteor
 
 Role: shared storage / NAS service VM for SeasonalNet support workloads.
 
-SeasonalNAS is a Debian 13 VM hosted on SeasonalR340 as Proxmox VMID `110`. It uses `192.168.1.17` on Main LAN, with hostname/DNS `seasonalnas.lan.seasonalnet.org`. It provides shared storage paths used by internal services.
+`meteor` is an OpenMediaVault VM hosted on SeasonalR340 as Proxmox VMID `103`. It uses `192.168.1.25` on Main LAN, with hostname/DNS `meteor.lan.seasonalnet.org`. It provides shared storage paths used by internal services.
 
-Boundary: SeasonalNAS is the storage service VM, not the R340 hypervisor itself. Do not treat Docker bridge addresses on SeasonalNAS as routed Main-LAN service addresses.
+Boundary: `meteor` is the storage service VM, not the R340 hypervisor itself.
 
 ### SeasonalR340 and arctic
 
 Role: secondary Proxmox host and backup/storage platform for local SeasonalNet infrastructure.
 
-SeasonalR340 is the Dell PowerEdge R340 Proxmox host at `192.168.1.31`, with iDRAC at `10.41.0.33` on BMC-MGMT/VLAN 41. It is connected through the CME rack VLAN 99 Main-LAN transit path and hosts SeasonalNAS (VMID 110) and `arctic` (VMID 116).
+SeasonalR340 is the Dell PowerEdge R340 Proxmox host at `192.168.1.31`, with iDRAC at `10.41.0.33` on BMC-MGMT/VLAN 41. It is connected through the CME rack VLAN 99 Main-LAN transit path and hosts `meteor` (VMID 103) and `arctic` (VMID 116).
 
 `arctic` is the Proxmox Backup Server VM hosted on SeasonalR340 at `192.168.1.24`. It replaces the former SeasonalBack VM at `192.168.1.16`.
 
-Boundary: `arctic` is the backup service VM, SeasonalNAS is the storage service VM, and SeasonalR340 is the hypervisor. Do not document PBS or NAS services as running directly on the R340 host.
+Boundary: `arctic` is the backup service VM, `meteor` is the storage service VM, and SeasonalR340 is the hypervisor. Do not document PBS or NAS services as running directly on the R340 host.
 
 ### Retired systems
 
